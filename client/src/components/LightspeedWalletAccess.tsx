@@ -25,23 +25,17 @@ export const LightspeedWalletAccess = () => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  // Fetch wallet with instant access
+  // Fetch wallet with instant access using working endpoint
   const { data: walletResponse, isLoading, error, refetch } = useQuery<WalletResponse>({
-    queryKey: ['/api/user/wallet'],
+    queryKey: ['/api/instant-wallet/access'],
     retry: 2,
     retryDelay: 1000,
     staleTime: 30000, // 30 seconds
-  });
-
-  // Fetch balance separately for real-time updates
-  const { data: balanceData, refetch: refetchBalance } = useQuery<{success: boolean, balance: number}>({
-    queryKey: ['/api/user/wallet/balance'],
-    enabled: !!walletResponse?.wallet?.address,
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 15000, // Refresh every 15 seconds
   });
 
   const wallet = walletResponse?.wallet;
-  const currentBalance = balanceData?.balance ?? wallet?.balance ?? 0;
+  const currentBalance = wallet?.balance ?? 0;
 
   const copyAddress = async () => {
     if (wallet?.address) {
@@ -56,7 +50,7 @@ export const LightspeedWalletAccess = () => {
   };
 
   const refreshWallet = async () => {
-    await Promise.all([refetch(), refetchBalance()]);
+    await refetch();
     toast({
       title: "Wallet Refreshed",
       description: "Latest wallet data retrieved",
