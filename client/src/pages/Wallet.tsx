@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Wallet, Send, Download, ArrowUpRight, ArrowDownLeft, Shield, CheckCircle, XCircle, Loader2, Copy, QrCode, RefreshCw } from 'lucide-react';
+import { Wallet, Send, Download, ArrowUpRight, ArrowDownLeft, Shield, CheckCircle, XCircle, Loader2, Copy, QrCode, RefreshCw, Star } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { ProductionWalletSetup } from '@/components/ProductionWalletSetup';
 
 interface WalletBalance {
   address: string;
@@ -45,6 +47,8 @@ export default function WalletPage() {
   const [addressValidation, setAddressValidation] = useState<AddressValidation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [hasProductionWallet, setHasProductionWallet] = useState(false);
+  const [productionWalletData, setProductionWalletData] = useState<any>(null);
   const { toast } = useToast();
 
   const userId = 1; // Demo user ID
@@ -269,18 +273,47 @@ export default function WalletPage() {
     }
   }, [addressValidation, sendAmount, balance]);
 
+  const handleProductionWalletCreated = (walletData: any) => {
+    setHasProductionWallet(true);
+    setProductionWalletData(walletData);
+    toast({
+      title: "Production Wallet Ready",
+      description: "Your secure wallet is now ready for real transfers from Robinhood and other platforms",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Secure Solana Wallet
+            SniperX Secure Wallet
           </h1>
           <p className="text-gray-400">
-            Send and receive SOL with enterprise-grade security and validation
+            Production-ready wallet for real transfers from Robinhood, Coinbase & other platforms
           </p>
         </div>
+
+        {/* Production Wallet Status */}
+        {!hasProductionWallet && (
+          <Alert className="border-amber-500/20 bg-amber-950/30">
+            <Shield className="h-4 w-4 text-amber-400" />
+            <AlertDescription className="text-amber-200">
+              Create a production wallet to enable real transfers from Robinhood and other crypto platforms
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {hasProductionWallet && productionWalletData && (
+          <Alert className="border-green-500/20 bg-green-950/30">
+            <CheckCircle className="h-4 w-4 text-green-400" />
+            <AlertDescription className="text-green-200">
+              Production wallet active: {productionWalletData.address.slice(0, 8)}...{productionWalletData.address.slice(-8)} 
+              - Ready for real transfers
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Wallet Balance Card */}
@@ -341,7 +374,7 @@ export default function WalletPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="send" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-700">
+                <TabsList className="grid w-full grid-cols-3 bg-slate-700">
                   <TabsTrigger value="send" className="flex items-center gap-2">
                     <Send className="h-4 w-4" />
                     Send SOL
@@ -349,6 +382,10 @@ export default function WalletPage() {
                   <TabsTrigger value="receive" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Receive SOL
+                  </TabsTrigger>
+                  <TabsTrigger value="production" className="flex items-center gap-2 text-amber-400">
+                    <Star className="h-4 w-4" />
+                    Production
                   </TabsTrigger>
                 </TabsList>
 
@@ -534,6 +571,24 @@ export default function WalletPage() {
                       <div className="text-gray-400">Loading wallet information...</div>
                     )}
                   </div>
+                </TabsContent>
+
+                {/* Production Wallet Creation Tab */}
+                <TabsContent value="production" className="space-y-4 mt-6">
+                  <div className="bg-amber-950/30 border border-amber-500/20 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="h-5 w-5 text-amber-400" />
+                      <h3 className="font-semibold text-amber-200">Production Wallet Setup</h3>
+                    </div>
+                    <p className="text-amber-200/80 text-sm">
+                      Create a secure production wallet with bank-grade encryption for real transfers from Robinhood, Coinbase, and other platforms.
+                    </p>
+                  </div>
+                  
+                  <ProductionWalletSetup
+                    userId={userId}
+                    onWalletCreated={handleProductionWalletCreated}
+                  />
                 </TabsContent>
               </Tabs>
             </CardContent>
