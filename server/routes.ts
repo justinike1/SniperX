@@ -23,6 +23,7 @@ import { fiatGatewayService } from "./services/fiatGatewayService";
 import { supremeTradingBot } from "./services/supremeTradingBot";
 import { ultraFastMarketData } from "./services/ultraFastMarketData";
 import { ultimateDynamicTrader } from "./services/ultimateDynamicTrader";
+import { strategicMemecoinBot } from "./services/strategicMemecoinBot";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -122,6 +123,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Initialize Ultimate Dynamic Trader for intelligent buy/sell balancing
     ultimateDynamicTrader.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    // Initialize Strategic Memecoin Bot for advanced memecoin trading
+    strategicMemecoinBot.setWebSocketBroadcast((message: WebSocketMessage) => {
       broadcastToUser(userId, message);
     });
     
@@ -3060,5 +3066,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start profit maximization system
   profitMaximizer.startProfitMaximization();
   
+  // === STRATEGIC MEMECOIN BOT API ENDPOINTS ===
+  
+  // Get Strategic Memecoin Bot status
+  app.get('/api/strategic-memecoin/status', async (req, res) => {
+    try {
+      const status = strategicMemecoinBot.getStatus();
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error('Error fetching Strategic Memecoin Bot status:', error);
+      res.status(500).json({ message: 'Failed to fetch bot status' });
+    }
+  });
+
+  // Get memecoin opportunities
+  app.get('/api/strategic-memecoin/opportunities', async (req, res) => {
+    try {
+      const opportunities = strategicMemecoinBot.getOpportunities();
+      res.json({ success: true, opportunities });
+    } catch (error) {
+      console.error('Error fetching memecoin opportunities:', error);
+      res.status(500).json({ message: 'Failed to fetch opportunities' });
+    }
+  });
+
+  // Get Strategic Memecoin Bot performance
+  app.get('/api/strategic-memecoin/performance', async (req, res) => {
+    try {
+      const performance = strategicMemecoinBot.getPerformance();
+      res.json({ success: true, performance });
+    } catch (error) {
+      console.error('Error fetching Strategic Memecoin Bot performance:', error);
+      res.status(500).json({ message: 'Failed to fetch performance' });
+    }
+  });
+
+  // Activate Strategic Memecoin Bot
+  app.post('/api/strategic-memecoin/activate', async (req, res) => {
+    try {
+      const { riskMode, maxInvestment, profitTarget, autoExecute, strategies } = req.body;
+      
+      const config = {
+        riskMode: riskMode || 'balanced',
+        maxInvestment: maxInvestment || 1000,
+        profitTarget: profitTarget || 5000,
+        autoExecute: autoExecute || false,
+        strategies: strategies || ['viralDetection', 'whaleActivity', 'socialMomentum']
+      };
+
+      await strategicMemecoinBot.activateBot(config);
+      res.json({ 
+        success: true, 
+        message: 'Strategic Memecoin Bot activated successfully',
+        config 
+      });
+    } catch (error) {
+      console.error('Error activating Strategic Memecoin Bot:', error);
+      res.status(500).json({ message: 'Failed to activate bot' });
+    }
+  });
+
+  // Deactivate Strategic Memecoin Bot
+  app.post('/api/strategic-memecoin/deactivate', async (req, res) => {
+    try {
+      await strategicMemecoinBot.deactivateBot();
+      res.json({ 
+        success: true, 
+        message: 'Strategic Memecoin Bot deactivated successfully' 
+      });
+    } catch (error) {
+      console.error('Error deactivating Strategic Memecoin Bot:', error);
+      res.status(500).json({ message: 'Failed to deactivate bot' });
+    }
+  });
+
+  // Execute memecoin trading opportunity
+  app.post('/api/strategic-memecoin/execute', async (req, res) => {
+    try {
+      const { opportunity } = req.body;
+      
+      if (!opportunity || !opportunity.tokenAddress) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Valid opportunity data required' 
+        });
+      }
+
+      const success = await strategicMemecoinBot.executeOpportunity(opportunity);
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: `Successfully executed trade for ${opportunity.tokenSymbol}`,
+          opportunity 
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Failed to execute trade - insufficient balance or risk limits exceeded' 
+        });
+      }
+    } catch (error) {
+      console.error('Error executing memecoin opportunity:', error);
+      res.status(500).json({ message: 'Failed to execute trading opportunity' });
+    }
+  });
+
   return httpServer;
 }
