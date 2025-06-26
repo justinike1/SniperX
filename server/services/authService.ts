@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { storage } from '../storage';
 
@@ -54,20 +54,22 @@ export class AuthService {
   }
 
   private encryptPrivateKey(privateKey: string, userPassword: string): string {
-    // In production, use proper encryption with the user's password
-    // For now, we'll use a simple encoding (replace with proper encryption)
-    const crypto = require('crypto');
-    const cipher = crypto.createCipher('aes-256-cbc', userPassword);
+    // Use modern crypto with proper IV
+    const key = Buffer.from(userPassword.padEnd(32, '0').slice(0, 32));
+    const iv = randomBytes(16);
+    const cipher = createCipheriv('aes-256-cbc', key, iv);
     let encrypted = cipher.update(privateKey, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+    return iv.toString('hex') + ':' + encrypted;
   }
 
   private decryptPrivateKey(encryptedKey: string, userPassword: string): string {
     try {
-      const crypto = require('crypto');
-      const decipher = crypto.createDecipher('aes-256-cbc', userPassword);
-      let decrypted = decipher.update(encryptedKey, 'hex', 'utf8');
+      const [ivHex, encrypted] = encryptedKey.split(':');
+      const key = Buffer.from(userPassword.padEnd(32, '0').slice(0, 32));
+      const iv = Buffer.from(ivHex, 'hex');
+      const decipher = createDecipheriv('aes-256-cbc', key, iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;
     } catch (error) {
@@ -94,8 +96,12 @@ export class AuthService {
       const wallet = this.generateUserWallet();
       const encryptedPrivateKey = this.encryptPrivateKey(wallet.privateKey, userData.password);
 
+      // Generate username from email
+      const username = userData.email.split('@')[0] + '_' + Date.now();
+
       // Create user with wallet
       const newUser = await storage.createUser({
+        username: username,
         email: userData.email,
         password: hashedPassword,
         firstName: userData.firstName || null,
