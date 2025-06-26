@@ -17,6 +17,8 @@ import { WallStreetDisruptor } from '@/components/WallStreetDisruptor';
 import { MarketManipulationDetector } from '@/components/MarketManipulationDetector';
 import { InstitutionalPortfolioManager } from '@/components/InstitutionalPortfolioManager';
 import { DeploymentOptimizer } from '@/components/DeploymentOptimizer';
+import { GlobalTradingIntelligence } from '@/components/GlobalTradingIntelligence';
+import { AdvancedSentimentAnalysis } from '@/components/AdvancedSentimentAnalysis';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -213,6 +215,10 @@ export default function Dashboard() {
       <InstitutionalPortfolioManager />
       
       <DeploymentOptimizer />
+      
+      <GlobalTradingIntelligence />
+      
+      <AdvancedSentimentAnalysis />
       
       <MarketIntelligence />
       
