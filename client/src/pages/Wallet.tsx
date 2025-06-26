@@ -66,13 +66,30 @@ export default function WalletPage() {
   const fetchWalletBalance = async () => {
     try {
       setIsLoading(true);
-      const response = await apiRequest('GET', `/api/wallet/balance/${userId}`);
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      const response = await fetch('/api/wallet/balance', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch wallet balance');
+      }
+      
       const data = await response.json();
       
-      // Production mode - handle real wallet data
+      // Handle authenticated user wallet data
       setBalance({
         address: data.address,
-        balanceSOL: parseFloat(data.balance),
+        balance: parseFloat(data.balance || '0'),
+        balanceSOL: data.balanceSOL || 0,
         profitLoss: data.profitLoss,
         profitPercentage: data.profitPercentage,
         totalValue: data.totalValue,
