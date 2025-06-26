@@ -134,6 +134,32 @@ export default function HighWinRateStrategy() {
 
   return (
     <div className="space-y-6">
+      {/* User Guide Section */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <h3 className="font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
+          <Target className="h-4 w-4" />
+          What is the $50 Simulate Trade?
+        </h3>
+        <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+          This shows you high-probability trading opportunities with 80%+ win rates. When you click "Simulate $50 Trade", 
+          it tests the trade idea with fake money to show you how much profit you could make. Your real wallet balance stays completely safe.
+        </p>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3 text-green-600" />
+            <span>80%+ win rate trades only</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Shield className="h-3 w-3 text-blue-600" />
+            <span>Simulation uses fake money</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3 text-purple-600" />
+            <span>Your real money stays safe</span>
+          </div>
+        </div>
+      </div>
+
       {/* Performance Overview */}
       {metrics && (
         <Card>

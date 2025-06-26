@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Play, Square, Settings, TrendingUp, Shield, Clock, DollarSign } from 'lucide-react';
+import { Play, Square, Settings, TrendingUp, Shield, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -186,8 +186,35 @@ export function AutomatedLightTrading() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Control Button */}
-          <div className="flex justify-center">
+          {/* User Guide Section */}
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">What is Automated Light Trading?</h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+              This is a conservative AI trading bot that automatically buys and sells cryptocurrency with very small amounts (only 1% of your balance at a time). 
+              It's designed to be super safe with automatic stop-losses at 2% to protect your money.
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3 text-green-600" />
+                <span>Maximum 2% loss per trade</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-3 w-3 text-green-600" />
+                <span>8% profit target automatically</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-blue-600" />
+                <span>Trades every 30 seconds</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-purple-600" />
+                <span>Your wallet balance stays safe</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Control Buttons */}
+          <div className="flex gap-4 justify-center">
             <Button
               onClick={handleStartStop}
               disabled={startTradingMutation.isPending || stopTradingMutation.isPending}
@@ -197,7 +224,7 @@ export function AutomatedLightTrading() {
               {stats?.isActive ? (
                 <>
                   <Square className="h-5 w-5 mr-2" />
-                  Stop Light Trading
+                  EMERGENCY STOP
                 </>
               ) : (
                 <>
