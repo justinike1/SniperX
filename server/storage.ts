@@ -220,6 +220,7 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id, 
+      encryptedPrivateKey: null,
       isActive: true,
       createdAt: new Date()
     };
