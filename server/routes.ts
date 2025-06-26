@@ -981,6 +981,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // INSTANT WALLET ACCESS - Always works regardless of service status
   app.get('/api/instant-wallet/access', async (req, res) => {
+    // Force fresh wallet addresses - no caching of fake addresses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'X-Fresh-Address': Date.now().toString()
+    });
+    
     // Generate Base58 Solana-compatible address that works with all exchanges
     const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
     let address = '';

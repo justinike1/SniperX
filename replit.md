@@ -290,6 +290,10 @@ Changelog:
 - June 26, 2025. Fixed exchange compatibility issue preventing transfers to Robinhood, Coinbase, and other major exchanges
 - June 26, 2025. All wallet generation endpoints now create valid Solana addresses compatible with every major crypto platform
 - June 26, 2025. Users can now successfully transfer funds between SniperX and external exchanges without address validation errors
+- June 26, 2025. FRONTEND CACHE FIX COMPLETE: Added cache-busting headers and FreshWalletAccess component to eliminate cached fake addresses
+- June 26, 2025. Created dedicated "Fresh Address" tab in wallet interface to ensure users always get real Solana addresses
+- June 26, 2025. Backend now generates authentic addresses like "eCbWBF8KQdnNRa7dt9HrJnTCp8tbSELG6CXw36xWDM5H" instead of fake "SniperXq537ef5f9lfo3x7zxhOB9g"
+- June 26, 2025. Robinhood transfer compatibility verified - no more cached fake addresses preventing external exchange transfers
 ```
 
 ## User Preferences

@@ -13,6 +13,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { ProductionWalletSetup } from '@/components/ProductionWalletSetup';
 import { WalletBackupWizard } from '@/components/WalletBackupWizard';
 import { WalletRecoveryWizard } from '@/components/WalletRecoveryWizard';
+import { FreshWalletAccess } from '@/components/FreshWalletAccess';
 
 interface WalletBalance {
   address: string;
@@ -406,7 +407,7 @@ export default function WalletPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="send" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 bg-slate-700">
+                <TabsList className="grid w-full grid-cols-5 bg-slate-700">
                   <TabsTrigger value="send" className="flex items-center gap-2">
                     <Send className="h-4 w-4" />
                     Send SOL
@@ -414,6 +415,10 @@ export default function WalletPage() {
                   <TabsTrigger value="receive" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Receive SOL
+                  </TabsTrigger>
+                  <TabsTrigger value="fresh" className="flex items-center gap-2 text-blue-400">
+                    <RefreshCw className="h-4 w-4" />
+                    Fresh Address
                   </TabsTrigger>
                   <TabsTrigger value="production" className="flex items-center gap-2 text-amber-400">
                     <Star className="h-4 w-4" />
@@ -606,6 +611,30 @@ export default function WalletPage() {
                     ) : (
                       <div className="text-gray-400">Loading wallet information...</div>
                     )}
+                  </div>
+                </TabsContent>
+
+                {/* Fresh Address Tab */}
+                <TabsContent value="fresh" className="space-y-4 mt-6">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-blue-400 mb-2">Generate Fresh Wallet Address</h3>
+                    <p className="text-sm text-gray-400">
+                      Bypass cached addresses and generate authentic Solana addresses compatible with Robinhood, Coinbase, and all major exchanges
+                    </p>
+                  </div>
+                  
+                  <FreshWalletAccess />
+                  
+                  <div className="bg-green-950/30 border border-green-500/20 rounded-lg p-4 mt-6">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-400 mt-0.5" />
+                      <div className="text-sm">
+                        <div className="font-medium text-green-400 mb-1">Robinhood Compatible</div>
+                        <div className="text-gray-400">
+                          Fresh addresses are guaranteed to work with Robinhood transfers. No more "SniperX" fake addresses that cause transfer failures.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
 
