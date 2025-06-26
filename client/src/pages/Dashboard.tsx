@@ -13,6 +13,10 @@ import { DimensionalMarketFlow } from '@/components/DimensionalMarketFlow';
 import { InfiniteConsciousnessMatrix } from '@/components/InfiniteConsciousnessMatrix';
 import { BeginnerGuide } from '@/components/BeginnerGuide';
 import { QuickStartTutorial } from '@/components/QuickStartTutorial';
+import { WallStreetDisruptor } from '@/components/WallStreetDisruptor';
+import { MarketManipulationDetector } from '@/components/MarketManipulationDetector';
+import { InstitutionalPortfolioManager } from '@/components/InstitutionalPortfolioManager';
+import { DeploymentOptimizer } from '@/components/DeploymentOptimizer';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -201,6 +205,14 @@ export default function Dashboard() {
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
         onExecuteTrade={handleAITrade}
       />
+      
+      <WallStreetDisruptor />
+      
+      <MarketManipulationDetector />
+      
+      <InstitutionalPortfolioManager />
+      
+      <DeploymentOptimizer />
       
       <MarketIntelligence />
       
