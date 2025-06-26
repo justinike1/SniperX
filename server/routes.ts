@@ -981,8 +981,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Instant wallet access without authentication barriers
   app.get('/api/instant-wallet/access', async (req, res) => {
     try {
-      const sessionId = req.headers['x-session-id'] as string || req.ip || 'default';
-      const wallet = await quickWalletService.getInstantWallet(sessionId);
+      const { Keypair, Connection } = require('@solana/web3.js');
+      
+      // Generate real Solana wallet instantly
+      const keypair = Keypair.generate();
+      const address = keypair.publicKey.toString();
+      
+      // Get real balance from blockchain
+      let balance = 0;
+      try {
+        const connection = new Connection(
+          process.env.HELIUS_API_KEY ? 
+          `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}` :
+          'https://api.mainnet-beta.solana.com'
+        );
+        const balanceLamports = await connection.getBalance(keypair.publicKey);
+        balance = balanceLamports / 1000000000;
+      } catch (balanceError) {
+        balance = 0; // New wallets start with 0 balance
+      }
+      
+      const wallet = {
+        address,
+        balance,
+        isReady: true,
+        userId: Math.floor(Math.random() * 1000000)
+      };
       
       res.json({
         success: true,
@@ -991,23 +1015,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Instant wallet access error:', error);
-      res.json({
-        success: true,
+      res.status(500).json({
+        success: false,
         wallet: {
-          address: 'temp_' + Date.now(),
+          address: null,
           balance: 0,
           isReady: false,
-          userId: Math.floor(Math.random() * 1000000)
+          userId: 0
         },
-        message: 'Temporary wallet created'
+        message: 'Failed to create wallet'
       });
     }
   });
 
   app.post('/api/instant-wallet/create', async (req, res) => {
     try {
-      const sessionId = req.headers['x-session-id'] as string || req.ip || Date.now().toString();
-      const wallet = await quickWalletService.getInstantWallet(sessionId);
+      const { Keypair } = require('@solana/web3.js');
+      
+      // Create real Solana wallet instantly
+      const keypair = Keypair.generate();
+      const address = keypair.publicKey.toString();
+      
+      const wallet = {
+        address,
+        balance: 0, // New wallets start with 0 balance
+        isReady: true,
+        userId: Math.floor(Math.random() * 1000000)
+      };
       
       res.json({
         success: true,
@@ -1016,15 +1050,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Instant wallet creation error:', error);
-      res.json({
-        success: true,
-        wallet: {
-          address: 'new_' + Date.now(),
-          balance: 0,
-          isReady: true,
-          userId: Math.floor(Math.random() * 1000000)
-        },
-        message: 'Wallet created successfully'
+      res.status(500).json({
+        success: false,
+        wallet: null,
+        message: 'Failed to create wallet'
       });
     }
   });
