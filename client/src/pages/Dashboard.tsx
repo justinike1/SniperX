@@ -14,6 +14,7 @@ import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { WalletConnector } from '@/components/WalletConnector';
 import InteractiveCryptoChart from '@/components/InteractiveCryptoChart';
 import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
+import HighWinRateStrategy from '@/components/HighWinRateStrategy';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -182,6 +183,8 @@ export default function Dashboard() {
       />
       
       <ProfitTracker />
+      
+      <HighWinRateStrategy />
       
       <FinanceGeniusAI />
       

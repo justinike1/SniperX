@@ -13,6 +13,7 @@ import { socialIntelligenceService } from "./services/socialIntelligenceService"
 import { scamDetectionService } from "./services/scamDetectionService";
 import { rapidExitEngine } from "./services/rapidExitEngine";
 import { financeGeniusAI } from "./services/financeGeniusAI";
+import { highWinRateStrategy } from "./services/highWinRateStrategy";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -21,7 +22,6 @@ import {
 import { z } from "zod";
 import { authService } from "./services/authService";
 import { walletTransferService } from "./services/walletTransferService";
-import { realTimeMarketDataService } from "./services/realTimeMarketData";
 import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
 
 export interface WebSocketMessage {
@@ -804,24 +804,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // === LIGHTNING TRADING API ENDPOINTS ===
   
-  // Real-time market data endpoints
-  app.get('/api/market/prices', async (req, res) => {
+  // Real-time market data endpoints using existing market data service
+  app.get('/api/market/real-time-prices', async (req, res) => {
     try {
-      const prices = realTimeMarketDataService.getAllPrices();
+      const prices = realMarketData.getCurrentPrices();
       res.json({ success: true, prices });
     } catch (error) {
-      console.error('Error fetching market prices:', error);
-      res.status(500).json({ message: 'Failed to fetch market prices' });
+      console.error('Error fetching real-time prices:', error);
+      res.status(500).json({ message: 'Failed to fetch real-time prices' });
     }
   });
 
-  app.get('/api/market/opportunities', async (req, res) => {
+  app.get('/api/market/live-opportunities', async (req, res) => {
     try {
-      const opportunities = realTimeMarketDataService.getOpportunities();
+      const opportunities = realMarketData.getTradingOpportunities();
       res.json({ success: true, opportunities });
     } catch (error) {
-      console.error('Error fetching trading opportunities:', error);
-      res.status(500).json({ message: 'Failed to fetch trading opportunities' });
+      console.error('Error fetching live opportunities:', error);
+      res.status(500).json({ message: 'Failed to fetch live opportunities' });
     }
   });
 
@@ -829,11 +829,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { address } = req.params;
       const { timeframe = '1H' } = req.query;
-      const history = realTimeMarketDataService.getPriceHistory(address, timeframe as string);
-      res.json({ success: true, history });
+      const data = await realMarketData.getPriceHistory(address, timeframe as string);
+      res.json({ success: true, ...data });
     } catch (error) {
       console.error('Error fetching price history:', error);
       res.status(500).json({ message: 'Failed to fetch price history' });
+    }
+  });
+
+  app.get('/api/market/token-stats/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const stats = await realMarketData.getTokenStats(address);
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error('Error fetching token stats:', error);
+      res.status(500).json({ message: 'Failed to fetch token stats' });
     }
   });
 
@@ -1082,6 +1093,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profitMaximizer: true
       }
     });
+  });
+
+  // === HIGH WIN RATE STRATEGY API ENDPOINTS ===
+  
+  // Get high probability trades for capital recovery
+  app.get('/api/strategy/high-probability-trades', async (req, res) => {
+    try {
+      const trades = highWinRateStrategy.getHighProbabilityTrades();
+      const winRate = highWinRateStrategy.getCurrentWinRate();
+      const riskManagement = highWinRateStrategy.getRiskManagement();
+      
+      res.json({
+        success: true,
+        trades,
+        currentWinRate: winRate,
+        riskManagement,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('Error fetching high probability trades:', error);
+      res.status(500).json({ message: 'Failed to fetch high probability trades' });
+    }
+  });
+
+  // Get capital recovery focused trades
+  app.get('/api/strategy/capital-recovery', async (req, res) => {
+    try {
+      const recoveryTrades = highWinRateStrategy.getCapitalRecoveryTrades();
+      const metrics = highWinRateStrategy.getPerformanceMetrics();
+      
+      res.json({
+        success: true,
+        recoveryTrades,
+        metrics,
+        recommendation: 'Focus on trades with 80%+ win probability and 3:1+ risk/reward ratio',
+        maxPositionSize: '5% of portfolio per trade',
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('Error fetching capital recovery trades:', error);
+      res.status(500).json({ message: 'Failed to fetch capital recovery trades' });
+    }
+  });
+
+  // Simulate trade execution for analysis
+  app.post('/api/strategy/simulate-trade', async (req, res) => {
+    try {
+      const { tradeId, portfolioValue = 1000 } = req.body;
+      const trades = highWinRateStrategy.getHighProbabilityTrades();
+      const trade = trades.find(t => t.tokenAddress === tradeId);
+      
+      if (!trade) {
+        return res.status(404).json({ message: 'Trade not found' });
+      }
+      
+      const simulation = await highWinRateStrategy.executeCapitalRecoveryTrade(trade);
+      
+      res.json({
+        success: true,
+        simulation,
+        analysis: {
+          winProbability: trade.winProbability,
+          riskRewardRatio: trade.riskRewardRatio,
+          maxLoss: `$${(portfolioValue * 0.02).toFixed(2)}`,
+          expectedGain: `$${(portfolioValue * 0.08).toFixed(2)}`,
+          recommendation: trade.winProbability > 85 ? 'STRONG BUY' : 'CAUTIOUS BUY'
+        },
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('Error simulating trade:', error);
+      res.status(500).json({ message: 'Failed to simulate trade' });
+    }
+  });
+
+  // Get performance metrics for strategy evaluation
+  app.get('/api/strategy/performance-metrics', async (req, res) => {
+    try {
+      const metrics = highWinRateStrategy.getPerformanceMetrics();
+      
+      res.json({
+        success: true,
+        metrics,
+        recommendations: [
+          'Start with small position sizes (2-3% per trade)',
+          'Focus on trades with 80%+ win probability',
+          'Maintain strict 2% stop loss discipline',
+          'Take profits at 8%+ gains for optimal risk/reward',
+          'Never risk more than you can afford to lose'
+        ],
+        capitalRecoveryPlan: {
+          timeframe: '2-3 weeks with consistent execution',
+          requiredWinRate: '75%+',
+          averageReturnPerTrade: '6.5%',
+          recommendedTrades: 3
+        },
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('Error fetching performance metrics:', error);
+      res.status(500).json({ message: 'Failed to fetch performance metrics' });
+    }
   });
 
   // Start profit maximization system
