@@ -22,6 +22,7 @@ import { AdvancedSentimentAnalysis } from '@/components/AdvancedSentimentAnalysi
 import { SniperXBotStatus } from '@/components/SniperXBotStatus';
 import { NotificationToast } from '@/components/NotificationToast';
 import { ProfitTracker } from '@/components/ProfitTracker';
+import { WalletConnector } from '@/components/WalletConnector';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -184,6 +185,8 @@ export default function Dashboard() {
       <SniperXBotStatus />
       
       <ProfitTracker />
+      
+      <WalletConnector />
       
       <WalletOverview 
         walletData={walletData} 

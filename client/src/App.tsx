@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import Trades from "@/pages/Trades";
 import Scanner from "@/pages/Scanner";
 import Settings from "@/pages/Settings";
+import WalletTransfer from "@/pages/WalletTransfer";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/trades" component={Trades} />
           <Route path="/scanner" component={Scanner} />
+          <Route path="/wallet" component={WalletTransfer} />
           <Route path="/settings" component={Settings} />
           <Route component={NotFound} />
         </Switch>

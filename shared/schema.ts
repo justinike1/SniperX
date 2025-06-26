@@ -4,13 +4,22 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  walletAddress: text("wallet_address"),
-  encryptedPrivateKey: text("encrypted_private_key"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  walletAddress: text("wallet_address").notNull().unique(),
+  encryptedPrivateKey: text("encrypted_private_key").notNull(),
   phoneNumber: text("phone_number"),
   isActive: boolean("is_active").default(true),
+  emailVerified: boolean("email_verified").default(false),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  twoFactorSecret: text("two_factor_secret"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry"),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const trades = pgTable("trades", {
@@ -63,10 +72,16 @@ export const tokenData = pgTable("token_data", {
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
+  email: true,
   password: true,
+  firstName: true,
+  lastName: true,
   walletAddress: true,
+  encryptedPrivateKey: true,
   phoneNumber: true,
+  isActive: true,
+  emailVerified: true,
+  twoFactorEnabled: true,
 });
 
 export const insertTradeSchema = createInsertSchema(trades).pick({

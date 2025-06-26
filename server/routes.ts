@@ -15,6 +15,8 @@ import {
   insertTradeSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import { authService } from "./services/authService";
+import { walletTransferService } from "./services/walletTransferService";
 
 export interface WebSocketMessage {
   type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION';
@@ -491,6 +493,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error executing smart trade:', error);
       res.status(500).json({ message: 'Failed to execute smart trade' });
+    }
+  });
+
+  // Wallet Transfer API Endpoints
+  app.get('/api/wallet/platforms', async (req, res) => {
+    try {
+      const platforms = walletTransferService.getSupportedPlatforms();
+      res.json(platforms);
+    } catch (error) {
+      console.error('Error fetching platforms:', error);
+      res.status(500).json({ message: 'Failed to fetch supported platforms' });
+    }
+  });
+
+  app.post('/api/wallet/validate', async (req, res) => {
+    try {
+      const { address, platform } = req.body;
+      
+      if (!address || !platform) {
+        return res.status(400).json({ valid: false, message: 'Address and platform are required' });
+      }
+      
+      const valid = await walletTransferService.validateWalletAddress(address, platform);
+      res.json({ valid });
+    } catch (error) {
+      console.error('Error validating wallet:', error);
+      res.status(500).json({ valid: false, message: 'Validation failed' });
+    }
+  });
+
+  app.get('/api/wallet/transfer-options', async (req, res) => {
+    try {
+      const { amount, asset } = req.query;
+      const userId = 1; // Demo user
+      
+      if (!amount || !asset) {
+        return res.json([]);
+      }
+      
+      const options = await walletTransferService.getQuickTransferOptions(
+        userId, 
+        parseFloat(amount as string), 
+        asset as string
+      );
+      
+      res.json(options);
+    } catch (error) {
+      console.error('Error fetching transfer options:', error);
+      res.status(500).json({ message: 'Failed to fetch transfer options' });
+    }
+  });
+
+  app.post('/api/wallet/initiate-transfer', async (req, res) => {
+    try {
+      const { fromPlatform, fromWalletAddress, amount, asset, urgency } = req.body;
+      const userId = 1; // Demo user
+      
+      if (!fromPlatform || !fromWalletAddress || !amount || !asset) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Missing required transfer information' 
+        });
+      }
+      
+      const transferRequest = {
+        userId,
+        fromPlatform,
+        fromWalletAddress,
+        amount: parseFloat(amount),
+        asset,
+        urgency: urgency || 'standard'
+      };
+      
+      const result = await walletTransferService.initiateTransfer(transferRequest);
+      res.json(result);
+    } catch (error) {
+      console.error('Error initiating transfer:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to initiate transfer' 
+      });
+    }
+  });
+
+  app.get('/api/wallet/transfer-status/:transferId', async (req, res) => {
+    try {
+      const { transferId } = req.params;
+      const status = await walletTransferService.getTransferStatus(transferId);
+      res.json(status);
+    } catch (error) {
+      console.error('Error fetching transfer status:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to fetch transfer status' 
+      });
+    }
+  });
+
+  // Authentication API Endpoints
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const userData = req.body;
+      const result = await authService.registerUser(userData);
+      
+      if (result.success) {
+        res.status(201).json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Registration failed' 
+      });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const credentials = req.body;
+      const result = await authService.loginUser(credentials);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(401).json(result);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Login failed' 
+      });
+    }
+  });
+
+  app.post('/api/auth/verify-token', async (req, res) => {
+    try {
+      const { token } = req.body;
+      const result = await authService.verifyToken(token);
+      res.json(result);
+    } catch (error) {
+      console.error('Token verification error:', error);
+      res.status(500).json({ valid: false });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      const success = await authService.requestPasswordReset(email);
+      res.json({ success });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      res.status(500).json({ success: false });
+    }
+  });
+
+  app.post('/api/auth/enable-2fa', async (req, res) => {
+    try {
+      const userId = 1; // Demo user
+      const result = await authService.enableTwoFactor(userId);
+      res.json(result);
+    } catch (error) {
+      console.error('2FA enable error:', error);
+      res.status(500).json({ message: 'Failed to enable 2FA' });
     }
   });
 
