@@ -227,7 +227,7 @@ export default function LiveActionCharts() {
   // Fetch real-time market prices
   const { data: marketPrices, isLoading } = useQuery({
     queryKey: ['/api/market/prices'],
-    refetchInterval: 3000, // Update every 3 seconds for live action
+    refetchInterval: 1000, // Update every 1 second for ultra-fast action
   });
 
   // WebSocket connection for real-time updates
