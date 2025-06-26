@@ -14,6 +14,7 @@ import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { WalletConnector } from '@/components/WalletConnector';
 import InteractiveCryptoChart from '@/components/InteractiveCryptoChart';
 import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
+import LiveActionCharts from '@/components/LiveActionCharts';
 import HighWinRateStrategy from '@/components/HighWinRateStrategy';
 import ContinuousTradingBot from '@/components/ContinuousTradingBot';
 import { NotificationToast } from '@/components/NotificationToast';
@@ -197,6 +198,8 @@ export default function Dashboard() {
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
         onExecuteTrade={handleAITrade}
       />
+      
+      <LiveActionCharts />
       
       <LiveScanner 
         tokens={liveTokens}

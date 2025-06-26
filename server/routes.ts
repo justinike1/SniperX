@@ -6,7 +6,7 @@ import { SolanaService } from "./services/solanaService";
 import { tokenScanner } from "./services/tokenScanner";
 import { TradingBot } from "./services/tradingBot";
 import { notificationService } from "./services/notificationService";
-import { RealMarketDataService } from "./services/realMarketData";
+import { authenticRealTimeMarketDataService } from "./services/authenticRealTimeMarketData";
 import { AdvancedTradingEngine } from "./services/advancedTradingEngine";
 import { ProfitMaximizer } from "./services/profitMaximizer";
 import { socialIntelligenceService } from "./services/socialIntelligenceService";
@@ -30,7 +30,7 @@ export interface WebSocketMessage {
 }
 
 const tradingBots = new Map<number, TradingBot>();
-const realMarketData = new RealMarketDataService();
+// Using authentic real-time market data service
 const advancedTradingEngine = new AdvancedTradingEngine();
 const profitMaximizer = new ProfitMaximizer();
 
@@ -804,10 +804,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // === LIGHTNING TRADING API ENDPOINTS ===
   
-  // Real-time market data endpoints using existing market data service
-  app.get('/api/market/real-time-prices', async (req, res) => {
+  // Authentic real-time market data endpoints with live price tracking
+  app.get('/api/market/prices', async (req, res) => {
     try {
-      const prices = realMarketData.getCurrentPrices();
+      const prices = authenticRealTimeMarketDataService.getCurrentPrices();
       res.json({ success: true, prices });
     } catch (error) {
       console.error('Error fetching real-time prices:', error);
@@ -815,9 +815,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/market/live-opportunities', async (req, res) => {
+  app.get('/api/market/opportunities', async (req, res) => {
     try {
-      const opportunities = realMarketData.getTradingOpportunities();
+      const opportunities = authenticRealTimeMarketDataService.getTradingOpportunities();
       res.json({ success: true, opportunities });
     } catch (error) {
       console.error('Error fetching live opportunities:', error);
@@ -828,19 +828,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/market/price-history/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      const { timeframe = '1H' } = req.query;
-      const data = await realMarketData.getPriceHistory(address, timeframe as string);
-      res.json({ success: true, ...data });
+      const history = authenticRealTimeMarketDataService.getPriceHistory(address);
+      res.json({ success: true, history });
     } catch (error) {
       console.error('Error fetching price history:', error);
       res.status(500).json({ message: 'Failed to fetch price history' });
     }
   });
 
-  app.get('/api/market/token-stats/:address', async (req, res) => {
+  app.get('/api/market/token/:address', async (req, res) => {
     try {
       const { address } = req.params;
-      const stats = await realMarketData.getTokenStats(address);
+      const stats = await authenticRealTimeMarketDataService.getTokenStats(address);
       res.json({ success: true, stats });
     } catch (error) {
       console.error('Error fetching token stats:', error);

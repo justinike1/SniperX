@@ -1,4 +1,5 @@
 import { WebSocketMessage } from '../routes';
+import fetch from 'node-fetch';
 
 export interface RealTimePrice {
   symbol: string;
@@ -8,6 +9,13 @@ export interface RealTimePrice {
   volume24h: number;
   marketCap: number;
   timestamp: Date;
+  priceHistory: PricePoint[];
+}
+
+export interface PricePoint {
+  timestamp: number;
+  price: number;
+  volume: number;
 }
 
 export interface TradingOpportunity {
@@ -22,15 +30,41 @@ export interface TradingOpportunity {
   riskLevel: number;
 }
 
+export interface CoinGeckoResponse {
+  [key: string]: {
+    usd: number;
+    usd_24h_change: number;
+    usd_24h_vol: number;
+    usd_market_cap: number;
+  };
+}
+
 export class RealTimeMarketDataService {
   private websocketBroadcast: ((message: WebSocketMessage) => void) | null = null;
   private prices: Map<string, RealTimePrice> = new Map();
   private opportunities: TradingOpportunity[] = [];
+  private priceHistory: Map<string, PricePoint[]> = new Map();
+  private updateInterval: NodeJS.Timeout | null = null;
+  private fastUpdateInterval: NodeJS.Timeout | null = null;
+
+  // Major cryptocurrency IDs for real-time tracking
+  private readonly TRACKED_COINS = [
+    { id: 'solana', symbol: 'SOL', address: 'So11111111111111111111111111111111111111112' },
+    { id: 'bitcoin', symbol: 'BTC', address: 'bitcoin' },
+    { id: 'ethereum', symbol: 'ETH', address: 'ethereum' },
+    { id: 'binancecoin', symbol: 'BNB', address: 'binancecoin' },
+    { id: 'ripple', symbol: 'XRP', address: 'ripple' },
+    { id: 'cardano', symbol: 'ADA', address: 'cardano' },
+    { id: 'dogecoin', symbol: 'DOGE', address: 'dogecoin' },
+    { id: 'polygon', symbol: 'MATIC', address: 'polygon' },
+    { id: 'chainlink', symbol: 'LINK', address: 'chainlink' },
+    { id: 'avalanche-2', symbol: 'AVAX', address: 'avalanche-2' }
+  ];
 
   constructor() {
-    this.initializePrices();
-    this.startPriceUpdates();
-    this.generateOpportunities();
+    this.initializeRealTimeData();
+    this.startRealTimePriceUpdates();
+    this.startFastPriceUpdates();
   }
 
   setWebSocketBroadcast(broadcast: (message: WebSocketMessage) => void) {
