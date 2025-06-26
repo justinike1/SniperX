@@ -20,6 +20,8 @@ import ContinuousTradingBot from '@/components/ContinuousTradingBot';
 import { NotificationToast } from '@/components/NotificationToast';
 import { ProductionModeNotification } from '@/components/ProductionModeNotification';
 import { AutomatedLightTrading } from '@/components/AutomatedLightTrading';
+import { WalletFunding } from '@/components/WalletFunding';
+import { SupremeTradingBot } from '@/components/SupremeTradingBot';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 

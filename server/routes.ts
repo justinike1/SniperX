@@ -19,6 +19,9 @@ import { highWinRateStrategy } from "./services/highWinRateStrategy";
 import { performanceOptimizer } from "./services/performanceOptimizer";
 import { securityMonitor } from "./services/securityMonitor";
 import { automatedLightTrading } from "./services/automatedLightTrading";
+import { fiatGatewayService } from "./services/fiatGatewayService";
+import { supremeTradingBot } from "./services/supremeTradingBot";
+import { ultraFastMarketData } from "./services/ultraFastMarketData";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -101,6 +104,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     automatedLightTrading.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    fiatGatewayService.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    supremeTradingBot.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    ultraFastMarketData.setWebSocketBroadcast((message: WebSocketMessage) => {
       broadcastToUser(userId, message);
     });
     
@@ -1261,6 +1276,324 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating light trading config:', error);
       res.status(500).json({ message: 'Failed to update configuration' });
+    }
+  });
+
+  // Fiat Gateway endpoints for wallet funding
+  app.get('/api/wallet/payment-methods', async (req, res) => {
+    try {
+      const paymentMethods = await fiatGatewayService.getPaymentMethods();
+      res.json({ success: true, paymentMethods });
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      res.status(500).json({ message: 'Failed to fetch payment methods' });
+    }
+  });
+
+  app.get('/api/wallet/sol-price', async (req, res) => {
+    try {
+      const price = await fiatGatewayService.getCurrentSolPrice();
+      res.json({ success: true, price, currency: 'USD' });
+    } catch (error) {
+      console.error('Error fetching SOL price:', error);
+      res.status(500).json({ message: 'Failed to fetch SOL price' });
+    }
+  });
+
+  app.post('/api/wallet/calculate-purchase', async (req, res) => {
+    try {
+      const { fiatAmount, paymentMethodId } = req.body;
+      
+      if (!fiatAmount || !paymentMethodId) {
+        return res.status(400).json({ message: 'Fiat amount and payment method required' });
+      }
+
+      const calculation = await fiatGatewayService.calculatePurchase(fiatAmount, paymentMethodId);
+      res.json({ success: true, ...calculation });
+    } catch (error) {
+      console.error('Error calculating purchase:', error);
+      res.status(500).json({ message: error instanceof Error ? error.message : 'Calculation failed' });
+    }
+  });
+
+  app.post('/api/wallet/purchase-sol', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const { fiatAmount, paymentMethodId, solanaAmount } = req.body;
+      
+      if (!fiatAmount || !paymentMethodId || !solanaAmount) {
+        return res.status(400).json({ message: 'Missing required purchase data' });
+      }
+
+      const user = await storage.getUser(verification.user.id);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: 'User wallet not found' });
+      }
+
+      const purchaseRequest = {
+        userId: verification.user.id,
+        paymentMethodId,
+        fiatAmount,
+        fiatCurrency: 'USD',
+        solanaAmount,
+        walletAddress: user.walletAddress
+      };
+
+      const result = await fiatGatewayService.processPurchase(purchaseRequest);
+      res.json(result);
+    } catch (error) {
+      console.error('Error processing purchase:', error);
+      res.status(500).json({ message: 'Purchase processing failed' });
+    }
+  });
+
+  // Apple Pay specific endpoints
+  app.post('/api/wallet/apple-pay/validate-session', async (req, res) => {
+    try {
+      const { validationURL } = req.body;
+      
+      if (!validationURL) {
+        return res.status(400).json({ message: 'Validation URL required' });
+      }
+
+      const session = await fiatGatewayService.validateApplePaySession(validationURL);
+      res.json(session);
+    } catch (error) {
+      console.error('Error validating Apple Pay session:', error);
+      res.status(500).json({ message: 'Apple Pay validation failed' });
+    }
+  });
+
+  app.post('/api/wallet/apple-pay/process-payment', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const { paymentData, fiatAmount, solanaAmount } = req.body;
+      
+      if (!paymentData || !fiatAmount || !solanaAmount) {
+        return res.status(400).json({ message: 'Missing payment data' });
+      }
+
+      const user = await storage.getUser(verification.user.id);
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({ message: 'User wallet not found' });
+      }
+
+      const purchaseRequest = {
+        userId: verification.user.id,
+        paymentMethodId: 'apple_pay',
+        fiatAmount,
+        fiatCurrency: 'USD',
+        solanaAmount,
+        walletAddress: user.walletAddress
+      };
+
+      const result = await fiatGatewayService.processApplePayPayment(paymentData, purchaseRequest);
+      res.json(result);
+    } catch (error) {
+      console.error('Error processing Apple Pay payment:', error);
+      res.status(500).json({ message: 'Apple Pay payment failed' });
+    }
+  });
+
+  app.get('/api/wallet/balance/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const balance = await fiatGatewayService.getWalletBalance(userId);
+      res.json({ success: true, balance });
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+      res.status(500).json({ message: 'Failed to fetch wallet balance' });
+    }
+  });
+
+  app.get('/api/wallet/transactions/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const limit = parseInt(req.query.limit as string) || 20;
+      const transactions = await fiatGatewayService.getTransactionHistory(userId, limit);
+      res.json({ success: true, transactions });
+    } catch (error) {
+      console.error('Error fetching transaction history:', error);
+      res.status(500).json({ message: 'Failed to fetch transaction history' });
+    }
+  });
+
+  // Supreme Trading Bot endpoints - THE KING OF ALL BOTS
+  app.post('/api/trading/supreme-bot/start', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const result = await supremeTradingBot.startSupremeTrading(verification.user.id);
+      res.json(result);
+    } catch (error) {
+      console.error('Error starting Supreme Bot:', error);
+      res.status(500).json({ message: 'Failed to start Supreme Bot' });
+    }
+  });
+
+  app.post('/api/trading/supreme-bot/stop', async (req, res) => {
+    try {
+      const result = await supremeTradingBot.stopSupremeBot();
+      res.json(result);
+    } catch (error) {
+      console.error('Error stopping Supreme Bot:', error);
+      res.status(500).json({ message: 'Failed to stop Supreme Bot' });
+    }
+  });
+
+  app.get('/api/trading/supreme-bot/stats', (req, res) => {
+    try {
+      const stats = supremeTradingBot.getSupremeStats();
+      res.json({ 
+        success: true, 
+        stats,
+        message: 'Supreme Bot - The King of All Trading Bots'
+      });
+    } catch (error) {
+      console.error('Error getting Supreme Bot stats:', error);
+      res.status(500).json({ message: 'Failed to get Supreme Bot stats' });
+    }
+  });
+
+  app.get('/api/trading/supreme-bot/dominance', (req, res) => {
+    try {
+      const stats = supremeTradingBot.getSupremeStats();
+      res.json({
+        success: true,
+        dominanceScore: stats.dominanceScore,
+        title: 'SniperX - Supreme Market Domination',
+        status: stats.dominanceScore > 95 ? 'ABSOLUTE_DOMINANCE' : 'RISING_POWER',
+        competitorsDefeated: stats.competitorsAnalyzed,
+        marketPosition: 'THE KING OF ALL BOTS'
+      });
+    } catch (error) {
+      console.error('Error getting dominance stats:', error);
+      res.status(500).json({ message: 'Failed to get dominance stats' });
+    }
+  });
+
+  // Ultra-Fast Market Data endpoints
+  app.get('/api/market/ultra-fast/prices', (req, res) => {
+    try {
+      const prices = ultraFastMarketData.getAllPrices();
+      const pricesArray = Array.from(prices.entries()).map(([symbol, data]) => ({
+        symbol,
+        price: data.price,
+        change: data.priceChange24h,
+        volume: data.volume24h,
+        exchange: data.exchange,
+        timestamp: data.timestamp,
+        liquidity: data.liquidity,
+        spread: data.spread
+      }));
+      
+      res.json({
+        success: true,
+        prices: pricesArray,
+        totalSymbols: pricesArray.length,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error getting ultra-fast prices:', error);
+      res.status(500).json({ message: 'Failed to get ultra-fast prices' });
+    }
+  });
+
+  app.get('/api/market/ultra-fast/price/:symbol', (req, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      const price = ultraFastMarketData.getCurrentPrice(symbol);
+      
+      if (price === null) {
+        return res.status(404).json({ message: 'Symbol not found or stale data' });
+      }
+      
+      res.json({
+        success: true,
+        symbol,
+        price,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error getting symbol price:', error);
+      res.status(500).json({ message: 'Failed to get symbol price' });
+    }
+  });
+
+  app.get('/api/market/ultra-fast/orderbook/:symbol', (req, res) => {
+    try {
+      const symbol = req.params.symbol.toUpperCase();
+      const orderBook = ultraFastMarketData.getOrderBook(symbol);
+      
+      if (!orderBook) {
+        return res.status(404).json({ message: 'Order book not available for symbol' });
+      }
+      
+      res.json({
+        success: true,
+        orderBook,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error getting order book:', error);
+      res.status(500).json({ message: 'Failed to get order book' });
+    }
+  });
+
+  app.get('/api/market/ultra-fast/performance', (req, res) => {
+    try {
+      const performance = ultraFastMarketData.getPerformanceStats();
+      
+      res.json({
+        success: true,
+        performance: {
+          averageLatency: performance.averageLatency,
+          minLatency: performance.minLatency,
+          maxLatency: performance.maxLatency,
+          dataPointsPerSecond: performance.dataPointsPerSecond,
+          activeSymbols: performance.activeSymbols,
+          activeExchanges: performance.activeExchanges,
+          efficiency: performance.efficiency,
+          totalUpdates: performance.totalUpdates
+        },
+        status: performance.efficiency > 90 ? 'OPTIMAL' : performance.efficiency > 70 ? 'GOOD' : 'NEEDS_OPTIMIZATION',
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error getting performance stats:', error);
+      res.status(500).json({ message: 'Failed to get performance stats' });
     }
   });
 
