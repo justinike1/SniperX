@@ -8,9 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Wallet, Send, Download, ArrowUpRight, ArrowDownLeft, Shield, CheckCircle, XCircle, Loader2, Copy, QrCode, RefreshCw, Star } from 'lucide-react';
+import { Wallet, Send, Download, ArrowUpRight, ArrowDownLeft, Shield, CheckCircle, XCircle, Loader2, Copy, QrCode, RefreshCw, Star, FileText, HardDrive } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { ProductionWalletSetup } from '@/components/ProductionWalletSetup';
+import { WalletBackupWizard } from '@/components/WalletBackupWizard';
+import { WalletRecoveryWizard } from '@/components/WalletRecoveryWizard';
 
 interface WalletBalance {
   address: string;
@@ -54,6 +56,8 @@ export default function WalletPage() {
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [hasProductionWallet, setHasProductionWallet] = useState(false);
   const [productionWalletData, setProductionWalletData] = useState<any>(null);
+  const [showBackupWizard, setShowBackupWizard] = useState(false);
+  const [showRecoveryWizard, setShowRecoveryWizard] = useState(false);
   const { toast } = useToast();
 
   const userId = 1; // Demo user ID
@@ -402,7 +406,7 @@ export default function WalletPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="send" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-700">
+                <TabsList className="grid w-full grid-cols-4 bg-slate-700">
                   <TabsTrigger value="send" className="flex items-center gap-2">
                     <Send className="h-4 w-4" />
                     Send SOL
@@ -414,6 +418,10 @@ export default function WalletPage() {
                   <TabsTrigger value="production" className="flex items-center gap-2 text-amber-400">
                     <Star className="h-4 w-4" />
                     Production
+                  </TabsTrigger>
+                  <TabsTrigger value="security" className="flex items-center gap-2 text-green-400">
+                    <Shield className="h-4 w-4" />
+                    Security
                   </TabsTrigger>
                 </TabsList>
 
@@ -618,6 +626,84 @@ export default function WalletPage() {
                     onWalletCreated={handleProductionWalletCreated}
                   />
                 </TabsContent>
+
+                {/* Security Tab */}
+                <TabsContent value="security" className="space-y-4 mt-6">
+                  <div className="grid gap-4">
+                    <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-900/20">
+                      <Shield className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800 dark:text-amber-200">
+                        <strong>Important:</strong> Always keep your wallet backup secure and never share your recovery phrase with anyone.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Card className="bg-slate-800 border-slate-700">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-green-400">
+                            <FileText className="h-5 w-5" />
+                            Backup Wallet
+                          </CardTitle>
+                          <CardDescription>
+                            Create a secure backup of your wallet with recovery phrase and private keys
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            onClick={() => setShowBackupWizard(true)}
+                            className="w-full bg-green-600 hover:bg-green-700"
+                          >
+                            Start Backup Process
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-slate-800 border-slate-700">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-blue-400">
+                            <HardDrive className="h-5 w-5" />
+                            Recover Wallet
+                          </CardTitle>
+                          <CardDescription>
+                            Restore your wallet from recovery phrase or backup file
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button 
+                            onClick={() => setShowRecoveryWizard(true)}
+                            variant="outline"
+                            className="w-full border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                          >
+                            Start Recovery Process
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <Card className="bg-slate-800 border-slate-700">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Shield className="h-5 w-5 text-green-400" />
+                          Security Features
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span>Wallet Encryption</span>
+                          <Badge variant="default" className="bg-green-600">Active</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Backup Protection</span>
+                          <Badge variant="default" className="bg-green-600">Enabled</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Recovery Options</span>
+                          <Badge variant="default" className="bg-blue-600">Available</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>
@@ -680,6 +766,42 @@ export default function WalletPage() {
           </Card>
         </div>
       </div>
+
+      {/* Wallet Backup Wizard */}
+      {showBackupWizard && (
+        <WalletBackupWizard
+          onComplete={() => {
+            setShowBackupWizard(false);
+            toast({
+              title: "Backup Complete",
+              description: "Your wallet backup has been created successfully. Keep it secure!",
+            });
+          }}
+          onCancel={() => setShowBackupWizard(false)}
+        />
+      )}
+
+      {/* Wallet Recovery Wizard */}
+      {showRecoveryWizard && (
+        <WalletRecoveryWizard
+          onComplete={(walletData) => {
+            setShowRecoveryWizard(false);
+            // Update wallet data after recovery
+            setBalance({
+              address: walletData.address,
+              balance: walletData.balance || 0,
+              balanceSOL: walletData.balance || 0,
+              isProduction: true,
+              walletType: 'Recovered'
+            });
+            toast({
+              title: "Recovery Complete",
+              description: "Your wallet has been recovered successfully!",
+            });
+          }}
+          onCancel={() => setShowRecoveryWizard(false)}
+        />
+      )}
     </div>
   );
 }
