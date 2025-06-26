@@ -9,7 +9,7 @@ export const users = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   walletAddress: text("wallet_address").notNull().unique(),
-  encryptedPrivateKey: text("encrypted_private_key").notNull(),
+  encryptedPrivateKey: text("encrypted_private_key"),
   phoneNumber: text("phone_number"),
   isActive: boolean("is_active").default(true),
   emailVerified: boolean("email_verified").default(false),

@@ -417,7 +417,6 @@ export class DatabaseStorage implements IStorage {
       .insert(users)
       .values({
         ...insertUser,
-        encryptedPrivateKey: null,
         isActive: true,
         createdAt: new Date()
       })
