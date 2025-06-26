@@ -16,6 +16,11 @@ interface WalletBalance {
   address: string;
   balance: number;
   balanceSOL: number;
+  profitLoss?: number;
+  profitPercentage?: number;
+  totalValue?: number;
+  isProduction?: boolean;
+  walletType?: string;
 }
 
 interface Transaction {
@@ -64,14 +69,15 @@ export default function WalletPage() {
       const response = await apiRequest('GET', `/api/wallet/balance/${userId}`);
       const data = await response.json();
       
-      // API returns balance data directly, not wrapped in success/balance
+      // Production mode - handle real wallet data
       setBalance({
         address: data.address,
         balanceSOL: parseFloat(data.balance),
-        balanceUSD: parseFloat(data.balanceUSD),
         profitLoss: data.profitLoss,
         profitPercentage: data.profitPercentage,
-        totalValue: data.totalValue
+        totalValue: data.totalValue,
+        isProduction: data.isProduction,
+        walletType: data.walletType
       });
     } catch (error) {
       console.error('Error fetching balance:', error);

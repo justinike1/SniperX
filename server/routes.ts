@@ -1447,41 +1447,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get wallet balance with profit tracking
+  // Get wallet balance with real production data
   app.get('/api/wallet/balance/:userId', async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const user = await storage.getUser(userId);
       
-      if (!user) {
-        return res.status(400).json({ message: 'User not found' });
+      if (!user?.walletAddress) {
+        return res.status(404).json({ message: 'Production wallet not found - Create wallet first' });
       }
 
-      // Generate a proper Solana wallet address if user doesn't have one
-      let walletAddress = user.walletAddress;
-      if (!walletAddress) {
-        // Generate a valid Solana address format for Robinhood transfers
-        walletAddress = 'AqYQzxzPsyjaKHFstvJdYSud73JESd1qqPd9HZTRaqbk';
-        await storage.updateUser(userId, { walletAddress });
+      // Check if this is a production wallet (has encrypted private key)
+      const isProductionWallet = !!user.encryptedPrivateKey;
+      
+      if (isProductionWallet) {
+        // Production wallet - get real SOL balance from blockchain
+        const balance = await productionWalletService.getRealSOLBalance(user.walletAddress);
+        const solPrice = await solanaWalletService.getCurrentSOLPrice();
+        const balanceUSD = (balance * solPrice);
+        
+        // Get real trading profits from database
+        const userTrades = await storage.getTradesByUser(userId);
+        const realProfits = userTrades.reduce((total, trade) => {
+          return total + (parseFloat(trade.profitLoss || '0'));
+        }, 0);
+        
+        const profitPercentage = balance > 0 ? ((realProfits / (balance * solPrice)) * 100) : 0;
+        
+        res.json({
+          address: user.walletAddress,
+          balance: balance.toFixed(6),
+          balanceUSD: balanceUSD.toFixed(2),
+          profitLoss: realProfits.toFixed(2),
+          profitPercentage: `${profitPercentage >= 0 ? '+' : ''}${profitPercentage.toFixed(2)}%`,
+          totalValue: (balanceUSD + realProfits).toFixed(2),
+          isProduction: true,
+          walletType: "Production Wallet - Real SOL"
+        });
+      } else {
+        // Demo wallet - show zero balance and prompt for production wallet
+        res.json({
+          address: user.walletAddress,
+          balance: "0.000000",
+          balanceUSD: "0.00",
+          profitLoss: "0.00",
+          profitPercentage: "0.00%",
+          totalValue: "0.00",
+          isProduction: false,
+          walletType: "Create Production Wallet for Real Trading",
+          message: "Click 'Production' tab to create secure wallet for real transfers"
+        });
       }
-
-      // Current SOL balance and market price
-      const balance = 5.2435;
-      const solPrice = 200;
-      const balanceUSD = balance * solPrice;
-
-      // AI trading profit from live trading
-      const netProfit = 25687.50;
-      const profitPercentage = 2435.54;
-
-      res.json({
-        address: walletAddress,
-        balance: balance.toFixed(6),
-        balanceUSD: balanceUSD.toFixed(2),
-        profitLoss: netProfit.toFixed(2),
-        profitPercentage: `+${profitPercentage.toFixed(2)}%`,
-        totalValue: (balanceUSD + netProfit).toFixed(2)
-      });
     } catch (error) {
       console.error('Error fetching wallet balance:', error);
       res.status(500).json({ message: 'Failed to fetch wallet balance' });

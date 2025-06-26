@@ -18,6 +18,7 @@ import LiveActionCharts from '@/components/LiveActionCharts';
 import HighWinRateStrategy from '@/components/HighWinRateStrategy';
 import ContinuousTradingBot from '@/components/ContinuousTradingBot';
 import { NotificationToast } from '@/components/NotificationToast';
+import { ProductionModeNotification } from '@/components/ProductionModeNotification';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -175,6 +176,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-20">
+      <ProductionModeNotification />
+      
       <InstantMarketAccess />
       
       <RealTimeMarketDashboard />
