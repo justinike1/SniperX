@@ -22,7 +22,11 @@ export class ProductionWalletService {
 
   constructor() {
     // Use Helius RPC for production reliability
-    this.connection = new Connection('https://mainnet.helius-rpc.com/?api-key=80be18ff-e15f-4821-a172-c1f85217ec16', 'confirmed');
+    const heliusApiKey = process.env.HELIUS_API_KEY;
+    if (!heliusApiKey) {
+      throw new Error('HELIUS_API_KEY environment variable is required for production wallet service');
+    }
+    this.connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`, 'confirmed');
     this.encryptionKey = process.env.WALLET_ENCRYPTION_KEY || 'production-wallet-encryption-key-2025';
   }
 
