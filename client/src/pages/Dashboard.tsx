@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { InstantMarketAccess } from '@/components/InstantMarketAccess';
 import { WalletOverview } from '@/components/WalletOverview';
-import { LightspeedWalletAccess } from '@/components/LightspeedWalletAccess';
+import { InstantWalletAccess } from '@/components/InstantWalletAccess';
 import { BotStatus } from '@/components/BotStatus';
 import { RecentTrades } from '@/components/RecentTrades';
 import { LiveScanner } from '@/components/LiveScanner';
@@ -191,7 +191,7 @@ export default function Dashboard() {
       
       <RealTimeMarketDashboard />
       
-      <LightspeedWalletAccess />
+      <InstantWalletAccess />
       
       <ErrorBoundary>
         <ProfitTracker />
