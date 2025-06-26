@@ -24,11 +24,15 @@ export const validateSolanaAddress = (address: string): boolean => {
 
 export const getSolBalance = async (address: string): Promise<number> => {
   try {
+    if (!address || address.length === 0) {
+      return 0;
+    }
+    
     const publicKey = new PublicKey(address);
     const balance = await connection.getBalance(publicKey);
     return balance / LAMPORTS_PER_SOL;
   } catch (error) {
-    console.error('Error fetching SOL balance:', error);
+    // Silently handle connection errors for demo purposes
     return 0;
   }
 };

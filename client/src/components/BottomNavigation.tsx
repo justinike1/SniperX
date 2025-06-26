@@ -1,4 +1,4 @@
-import { BarChart3, ArrowLeftRight, Search, Settings } from 'lucide-react';
+import { BarChart3, ArrowLeftRight, Search, Settings, Wallet } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 interface BottomNavigationProps {
@@ -45,6 +45,16 @@ export const BottomNavigation = ({ onNavigate, currentPage }: BottomNavigationPr
         >
           <Search className="w-5 h-5 mb-1" />
           <span className="text-xs">Scanner</span>
+        </button>
+        
+        <button 
+          className={`flex flex-col items-center p-2 transition-colors ${
+            currentPage === 'wallet' ? 'text-accent-purple' : 'text-gray-400 hover:text-white'
+          }`}
+          onClick={() => handleNavigation('wallet', '/wallet')}
+        >
+          <Wallet className="w-5 h-5 mb-1" />
+          <span className="text-xs">Wallet</span>
         </button>
         
         <button 

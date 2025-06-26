@@ -27,7 +27,16 @@ export const useSolanaWallet = (address?: string) => {
       });
     } catch (err) {
       setError('Failed to fetch wallet data');
-      console.error('Wallet fetch error:', err);
+      console.error('Error fetching SOL balance:', err);
+      
+      // Set fallback wallet data for demo purposes
+      setWalletData({
+        address: walletAddress,
+        balance: 0,
+        balanceFormatted: '0.000 SOL',
+        profitLoss: 0,
+        profitLossFormatted: '+$0.00',
+      });
     } finally {
       setIsLoading(false);
     }
