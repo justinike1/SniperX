@@ -9,6 +9,8 @@ import { QuickSettings } from '@/components/QuickSettings';
 import { AITradingEngine } from '@/components/AITradingEngine';
 import { MarketIntelligence } from '@/components/MarketIntelligence';
 import { ProfitTracker } from '@/components/ProfitTracker';
+import { FinanceGeniusAI } from '@/components/FinanceGeniusAI';
+import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { WalletConnector } from '@/components/WalletConnector';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -176,6 +178,10 @@ export default function Dashboard() {
       />
       
       <ProfitTracker />
+      
+      <FinanceGeniusAI />
+      
+      <SocialIntelligence />
       
       <AITradingEngine 
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}

@@ -9,6 +9,10 @@ import { notificationService } from "./services/notificationService";
 import { RealMarketDataService } from "./services/realMarketData";
 import { AdvancedTradingEngine } from "./services/advancedTradingEngine";
 import { ProfitMaximizer } from "./services/profitMaximizer";
+import { socialIntelligenceService } from "./services/socialIntelligenceService";
+import { scamDetectionService } from "./services/scamDetectionService";
+import { rapidExitEngine } from "./services/rapidExitEngine";
+import { financeGeniusAI } from "./services/financeGeniusAI";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -65,6 +69,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     profitMaximizer.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    // Initialize Social Intelligence and Scam Detection
+    socialIntelligenceService.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    scamDetectionService.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    // Initialize Rapid Exit Engine and Finance Genius AI
+    rapidExitEngine.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    financeGeniusAI.setWebSocketBroadcast((message: WebSocketMessage) => {
       broadcastToUser(userId, message);
     });
     
@@ -493,6 +515,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error executing smart trade:', error);
       res.status(500).json({ message: 'Failed to execute smart trade' });
+    }
+  });
+
+  // Social Intelligence API Endpoints
+  app.get('/api/intelligence/trending', async (req, res) => {
+    try {
+      const trendingTokens = socialIntelligenceService.getTrendingTokens();
+      res.json({ success: true, tokens: trendingTokens });
+    } catch (error) {
+      console.error('Error fetching trending tokens:', error);
+      res.status(500).json({ message: 'Failed to fetch trending tokens' });
+    }
+  });
+
+  app.get('/api/intelligence/social-signals', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const signals = socialIntelligenceService.getRecentSocialSignals(limit);
+      res.json({ success: true, signals });
+    } catch (error) {
+      console.error('Error fetching social signals:', error);
+      res.status(500).json({ message: 'Failed to fetch social signals' });
+    }
+  });
+
+  app.get('/api/intelligence/insider-activity', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const insiderActivity = socialIntelligenceService.getInsiderActivity(limit);
+      res.json({ success: true, activity: insiderActivity });
+    } catch (error) {
+      console.error('Error fetching insider activity:', error);
+      res.status(500).json({ message: 'Failed to fetch insider activity' });
+    }
+  });
+
+  // Scam Detection API Endpoints
+  app.post('/api/security/analyze-token', async (req, res) => {
+    try {
+      const { tokenAddress, tokenSymbol, metadata } = req.body;
+      
+      if (!tokenAddress || !tokenSymbol) {
+        return res.status(400).json({ message: 'Token address and symbol are required' });
+      }
+
+      const assessment = await scamDetectionService.analyzeTokenLegitimacy(
+        tokenAddress, 
+        tokenSymbol, 
+        metadata || {}
+      );
+      
+      res.json({ success: true, assessment });
+    } catch (error) {
+      console.error('Error analyzing token:', error);
+      res.status(500).json({ message: 'Failed to analyze token security' });
+    }
+  });
+
+  app.get('/api/security/safety-score/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const safetyScore = await scamDetectionService.getTokenSafetyScore(address);
+      const isBlacklisted = scamDetectionService.isTokenBlacklisted(address);
+      
+      res.json({ 
+        success: true, 
+        address,
+        safetyScore,
+        isBlacklisted,
+        recommendation: safetyScore > 0.7 ? 'SAFE_TO_TRADE' : 
+                      safetyScore > 0.4 ? 'PROCEED_WITH_CAUTION' : 'HIGH_RISK'
+      });
+    } catch (error) {
+      console.error('Error fetching safety score:', error);
+      res.status(500).json({ message: 'Failed to fetch token safety score' });
+    }
+  });
+
+  app.get('/api/security/recommended-tokens', async (req, res) => {
+    try {
+      const recommendedTokens = scamDetectionService.getRecommendedTokens();
+      res.json({ success: true, tokens: recommendedTokens });
+    } catch (error) {
+      console.error('Error fetching recommended tokens:', error);
+      res.status(500).json({ message: 'Failed to fetch recommended tokens' });
+    }
+  });
+
+  // Finance Genius AI API Endpoints
+  app.get('/api/ai/predictions', async (req, res) => {
+    try {
+      const signals = financeGeniusAI.getActiveSignals();
+      const metrics = financeGeniusAI.getAIMetrics();
+      res.json({ success: true, signals, metrics });
+    } catch (error) {
+      console.error('Error fetching AI predictions:', error);
+      res.status(500).json({ message: 'Failed to fetch AI predictions' });
+    }
+  });
+
+  app.get('/api/ai/intelligence', async (req, res) => {
+    try {
+      const intelligence = financeGeniusAI.getMarketIntelligence();
+      res.json({ success: true, intelligence });
+    } catch (error) {
+      console.error('Error fetching market intelligence:', error);
+      res.status(500).json({ message: 'Failed to fetch market intelligence' });
+    }
+  });
+
+  app.post('/api/ai/analyze', async (req, res) => {
+    try {
+      const { tokenAddress } = req.body;
+      
+      if (!tokenAddress) {
+        return res.status(400).json({ message: 'Token address is required' });
+      }
+
+      const prediction = financeGeniusAI.forceAnalysis(tokenAddress);
+      res.json({ success: true, prediction });
+    } catch (error) {
+      console.error('Error performing AI analysis:', error);
+      res.status(500).json({ message: 'Failed to perform AI analysis' });
+    }
+  });
+
+  // Rapid Exit Engine API Endpoints
+  app.get('/api/exit/monitored-tokens', async (req, res) => {
+    try {
+      const monitoredTokens = rapidExitEngine.getMonitoredTokens();
+      res.json({ success: true, tokens: monitoredTokens });
+    } catch (error) {
+      console.error('Error fetching monitored tokens:', error);
+      res.status(500).json({ message: 'Failed to fetch monitored tokens' });
+    }
+  });
+
+  app.get('/api/exit/active-exits', async (req, res) => {
+    try {
+      const activeExits = rapidExitEngine.getActiveExits();
+      res.json({ success: true, exits: activeExits });
+    } catch (error) {
+      console.error('Error fetching active exits:', error);
+      res.status(500).json({ message: 'Failed to fetch active exits' });
+    }
+  });
+
+  app.post('/api/exit/add-monitor', async (req, res) => {
+    try {
+      const { tokenAddress, currentPrice } = req.body;
+      
+      if (!tokenAddress || !currentPrice) {
+        return res.status(400).json({ message: 'Token address and current price are required' });
+      }
+
+      rapidExitEngine.addTokenToMonitor(tokenAddress, parseFloat(currentPrice));
+      res.json({ success: true, message: `Now monitoring ${tokenAddress} for rapid exit signals` });
+    } catch (error) {
+      console.error('Error adding token to monitor:', error);
+      res.status(500).json({ message: 'Failed to add token to monitoring' });
+    }
+  });
+
+  app.post('/api/exit/force-exit', async (req, res) => {
+    try {
+      const { tokenAddress, amount } = req.body;
+      
+      if (!tokenAddress || !amount) {
+        return res.status(400).json({ message: 'Token address and amount are required' });
+      }
+
+      const exitTransaction = await rapidExitEngine.forceExit(tokenAddress, amount);
+      res.json({ success: true, transaction: exitTransaction });
+    } catch (error) {
+      console.error('Error executing force exit:', error);
+      res.status(500).json({ message: 'Failed to execute emergency exit' });
+    }
+  });
+
+  app.post('/api/exit/update-config', async (req, res) => {
+    try {
+      const config = req.body;
+      rapidExitEngine.updateConfig(config);
+      res.json({ success: true, message: 'Rapid exit configuration updated' });
+    } catch (error) {
+      console.error('Error updating exit config:', error);
+      res.status(500).json({ message: 'Failed to update exit configuration' });
     }
   });
 

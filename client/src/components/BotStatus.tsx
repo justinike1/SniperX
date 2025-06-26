@@ -9,6 +9,12 @@ interface BotStatusProps {
 }
 
 export const BotStatus = ({ botStatus, onPauseBot, onOpenSettings }: BotStatusProps) => {
+  // Provide default values to prevent undefined errors
+  const status = botStatus?.status || 'LOADING';
+  const isActive = botStatus?.isActive ?? false;
+  const tokensScanned = botStatus?.tokensScanned ?? 0;
+  const snipesToday = botStatus?.snipesToday ?? 0;
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -28,9 +34,9 @@ export const BotStatus = ({ botStatus, onPauseBot, onOpenSettings }: BotStatusPr
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Bot Status</h2>
           <div className="flex items-center space-x-2">
-            <div className={`w-3 h-3 rounded-full ${botStatus.isActive ? 'bg-profit-green animate-pulse' : 'bg-warning-orange'}`}></div>
-            <span className={`text-sm font-medium ${getStatusColor(botStatus.status)}`}>
-              {botStatus.status}
+            <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-profit-green animate-pulse' : 'bg-warning-orange'}`}></div>
+            <span className={`text-sm font-medium ${getStatusColor(status)}`}>
+              {status}
             </span>
           </div>
         </div>
@@ -38,11 +44,11 @@ export const BotStatus = ({ botStatus, onPauseBot, onOpenSettings }: BotStatusPr
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="bg-dark-bg rounded-lg p-3">
             <p className="text-sm text-gray-400">Tokens Scanned</p>
-            <p className="text-xl font-bold font-mono">{botStatus.tokensScanned.toLocaleString()}</p>
+            <p className="text-xl font-bold font-mono">{tokensScanned.toLocaleString()}</p>
           </div>
           <div className="bg-dark-bg rounded-lg p-3">
             <p className="text-sm text-gray-400">Snipes Today</p>
-            <p className="text-xl font-bold font-mono">{botStatus.snipesToday}</p>
+            <p className="text-xl font-bold font-mono">{snipesToday}</p>
           </div>
         </div>
         
@@ -52,7 +58,7 @@ export const BotStatus = ({ botStatus, onPauseBot, onOpenSettings }: BotStatusPr
             onClick={onPauseBot}
           >
             <Pause className="w-4 h-4 mr-2" />
-            {botStatus.isActive ? 'Pause Bot' : 'Resume Bot'}
+            {isActive ? 'Pause Bot' : 'Resume Bot'}
           </Button>
           <Button 
             variant="outline"

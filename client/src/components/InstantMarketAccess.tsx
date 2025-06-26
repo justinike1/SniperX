@@ -54,7 +54,7 @@ export const InstantMarketAccess = () => {
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Globe className="w-8 h-8 text-accent-purple animate-spin" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-purple via-profit-green to-accent-blue bg-clip-text text-transparent animate-pulse">
-              SniperX Global Markets
+              SniperX
             </h1>
             <Zap className="w-8 h-8 text-profit-green animate-bounce" />
           </div>
