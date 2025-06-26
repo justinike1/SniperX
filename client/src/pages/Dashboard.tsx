@@ -19,6 +19,7 @@ import { InstitutionalPortfolioManager } from '@/components/InstitutionalPortfol
 import { DeploymentOptimizer } from '@/components/DeploymentOptimizer';
 import { GlobalTradingIntelligence } from '@/components/GlobalTradingIntelligence';
 import { AdvancedSentimentAnalysis } from '@/components/AdvancedSentimentAnalysis';
+import { SniperXBotStatus } from '@/components/SniperXBotStatus';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -178,6 +179,8 @@ export default function Dashboard() {
   return (
     <div>
       <BeginnerGuide />
+      
+      <SniperXBotStatus />
       
       <WalletOverview 
         walletData={walletData} 
