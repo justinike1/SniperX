@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Wallet, Send, ArrowUpRight, ArrowDownLeft, Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Wallet, Send, Download, ArrowUpRight, ArrowDownLeft, Shield, CheckCircle, XCircle, Loader2, Copy, QrCode, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
 interface WalletBalance {
@@ -40,8 +41,10 @@ export default function WalletPage() {
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [addressValidation, setAddressValidation] = useState<AddressValidation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
   const { toast } = useToast();
 
   const userId = 1; // Demo user ID
@@ -215,6 +218,41 @@ export default function WalletPage() {
     }
   };
 
+  const copyAddressToClipboard = async () => {
+    if (!balance?.address) return;
+    
+    try {
+      await navigator.clipboard.writeText(balance.address);
+      setCopiedAddress(true);
+      toast({
+        title: "Address Copied",
+        description: "Your wallet address has been copied to clipboard",
+      });
+      
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch (error) {
+      toast({
+        title: "Copy Failed",
+        description: "Failed to copy address to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const refreshWallet = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      fetchWalletBalance(),
+      fetchTransactionHistory()
+    ]);
+    setIsRefreshing(false);
+    
+    toast({
+      title: "Wallet Refreshed",
+      description: "Balance and transactions updated",
+    });
+  };
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (recipientAddress) {
@@ -244,165 +282,265 @@ export default function WalletPage() {
           </p>
         </div>
 
-        {/* Wallet Balance Card */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5" />
-              Wallet Balance
-            </CardTitle>
-            <CardDescription>Your current Solana wallet balance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Loading balance...</span>
-              </div>
-            ) : balance ? (
-              <div className="space-y-4">
-                <div className="text-3xl font-bold text-blue-400">
-                  {balance.balanceSOL.toFixed(6)} SOL
-                </div>
-                <div className="text-sm text-gray-400">
-                  Address: {balance.address}
-                </div>
-              </div>
-            ) : (
-              <div className="text-gray-400">Failed to load balance</div>
-            )}
-          </CardContent>
-        </Card>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Send SOL Card */}
+          {/* Wallet Balance Card */}
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Send className="h-5 w-5" />
-                Send SOL
+                <Wallet className="h-5 w-5" />
+                Wallet Balance
+              </CardTitle>
+              <CardDescription>Your current Solana wallet balance</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading balance...</span>
+                </div>
+              ) : balance ? (
+                <div className="space-y-4">
+                  <div className="text-3xl font-bold text-blue-400">
+                    {balance.balanceSOL.toFixed(6)} SOL
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    Address: {balance.address}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-400">Failed to load balance</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Send & Receive Tabs */}
+          <Card className="bg-slate-800/50 border-slate-700 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Wallet Operations
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshWallet}
+                  disabled={isRefreshing}
+                  className="bg-slate-700 border-slate-600 hover:bg-slate-600"
+                >
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                </Button>
               </CardTitle>
               <CardDescription>
-                Transfer SOL to another wallet with secure validation
+                Send and receive SOL with enterprise-grade security
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="recipient">Recipient Address</Label>
-                <div className="relative">
-                  <Input
-                    id="recipient"
-                    placeholder="Enter Solana wallet address"
-                    value={recipientAddress}
-                    onChange={(e) => setRecipientAddress(e.target.value)}
-                    className="bg-slate-700 border-slate-600 pr-10"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {isValidating ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-                    ) : addressValidation ? (
-                      addressValidation.isValid && addressValidation.exists ? (
-                        <CheckCircle className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-400" />
-                      )
-                    ) : null}
-                  </div>
-                </div>
-                {addressValidation && (
-                  <div className="space-y-1">
-                    <Badge 
-                      variant={addressValidation.isValid ? "default" : "destructive"}
-                      className="text-xs"
-                    >
-                      {addressValidation.isValid ? "Valid Address Format" : "Invalid Address Format"}
-                    </Badge>
-                    {addressValidation.isValid && (
-                      <Badge 
-                        variant={addressValidation.exists ? "default" : "destructive"}
-                        className="text-xs ml-2"
-                      >
-                        {addressValidation.exists ? "Address Exists" : "Address Not Found"}
-                      </Badge>
+            <CardContent>
+              <Tabs defaultValue="send" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-700">
+                  <TabsTrigger value="send" className="flex items-center gap-2">
+                    <Send className="h-4 w-4" />
+                    Send SOL
+                  </TabsTrigger>
+                  <TabsTrigger value="receive" className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Receive SOL
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Send Tab */}
+                <TabsContent value="send" className="space-y-4 mt-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="recipient">Recipient Address</Label>
+                    <div className="relative">
+                      <Input
+                        id="recipient"
+                        placeholder="Enter Solana wallet address"
+                        value={recipientAddress}
+                        onChange={(e) => setRecipientAddress(e.target.value)}
+                        className="bg-slate-700 border-slate-600 pr-10"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {isValidating ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                        ) : addressValidation ? (
+                          addressValidation.isValid && addressValidation.exists ? (
+                            <CheckCircle className="h-4 w-4 text-green-400" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-400" />
+                          )
+                        ) : null}
+                      </div>
+                    </div>
+                    {addressValidation && (
+                      <div className="space-y-1">
+                        <Badge 
+                          variant={addressValidation.isValid ? "default" : "destructive"}
+                          className="text-xs"
+                        >
+                          {addressValidation.isValid ? "Valid Address Format" : "Invalid Address Format"}
+                        </Badge>
+                        {addressValidation.isValid && (
+                          <Badge 
+                            variant={addressValidation.exists ? "default" : "destructive"}
+                            className="text-xs ml-2"
+                          >
+                            {addressValidation.exists ? "Address Exists" : "Address Not Found"}
+                          </Badge>
+                        )}
+                        {addressValidation.error && (
+                          <p className="text-red-400 text-sm">{addressValidation.error}</p>
+                        )}
+                      </div>
                     )}
-                    {addressValidation.error && (
-                      <p className="text-red-400 text-sm">{addressValidation.error}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount (SOL)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="0.000000"
+                      step="0.000001"
+                      value={sendAmount}
+                      onChange={(e) => setSendAmount(e.target.value)}
+                      className="bg-slate-700 border-slate-600"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={userPassword}
+                      onChange={(e) => setUserPassword(e.target.value)}
+                      className="bg-slate-700 border-slate-600"
+                    />
+                  </div>
+
+                  {estimatedFee !== null && (
+                    <div className="bg-slate-700/50 p-3 rounded-lg space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Amount:</span>
+                        <span>{sendAmount} SOL</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Network Fee:</span>
+                        <span>{estimatedFee.toFixed(6)} SOL</span>
+                      </div>
+                      <Separator className="bg-slate-600" />
+                      <div className="flex justify-between font-medium">
+                        <span>Total:</span>
+                        <span>{(parseFloat(sendAmount) + estimatedFee).toFixed(6)} SOL</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleSendSOL}
+                    disabled={
+                      isSending || 
+                      !addressValidation?.isValid || 
+                      !addressValidation?.exists ||
+                      !sendAmount || 
+                      !userPassword
+                    }
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isSending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Send SOL Securely
+                      </>
+                    )}
+                  </Button>
+                </TabsContent>
+
+                {/* Receive Tab */}
+                <TabsContent value="receive" className="space-y-4 mt-6">
+                  <div className="text-center space-y-4">
+                    <div className="text-lg font-medium">Your Wallet Address</div>
+                    <p className="text-sm text-gray-400">
+                      Share this address to receive SOL from others
+                    </p>
+                    
+                    {balance ? (
+                      <div className="space-y-4">
+                        <div className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+                          <div className="font-mono text-sm break-all bg-slate-800 p-3 rounded border">
+                            {balance.address}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={copyAddressToClipboard}
+                            variant="outline"
+                            className="flex-1 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                          >
+                            {copiedAddress ? (
+                              <>
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copy Address
+                              </>
+                            )}
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            className="flex-1 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                          >
+                            <QrCode className="mr-2 h-4 w-4" />
+                            Show QR Code
+                          </Button>
+                        </div>
+                        
+                        <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Shield className="h-5 w-5 text-blue-400 mt-0.5" />
+                            <div className="text-sm">
+                              <div className="font-medium text-blue-400 mb-1">Security Notice</div>
+                              <div className="text-gray-400">
+                                Only share this address with trusted parties. All transactions are permanent and cannot be reversed.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-center">
+                          <div className="text-sm text-gray-400 mb-2">Current Balance</div>
+                          <div className="text-2xl font-bold text-blue-400">
+                            {balance.balanceSOL.toFixed(6)} SOL
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400">Loading wallet information...</div>
                     )}
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount (SOL)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="0.000000"
-                  step="0.000001"
-                  value={sendAmount}
-                  onChange={(e) => setSendAmount(e.target.value)}
-                  className="bg-slate-700 border-slate-600"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="bg-slate-700 border-slate-600"
-                />
-              </div>
-
-              {estimatedFee !== null && (
-                <div className="bg-slate-700/50 p-3 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Amount:</span>
-                    <span>{sendAmount} SOL</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Network Fee:</span>
-                    <span>{estimatedFee.toFixed(6)} SOL</span>
-                  </div>
-                  <Separator className="bg-slate-600" />
-                  <div className="flex justify-between font-medium">
-                    <span>Total:</span>
-                    <span>{(parseFloat(sendAmount) + estimatedFee).toFixed(6)} SOL</span>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={handleSendSOL}
-                disabled={
-                  isSending || 
-                  !addressValidation?.isValid || 
-                  !addressValidation?.exists ||
-                  !sendAmount || 
-                  !userPassword
-                }
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Send SOL Securely
-                  </>
-                )}
-              </Button>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
           {/* Transaction History Card */}
-          <Card className="bg-slate-800/50 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 lg:col-span-2">
             <CardHeader>
               <CardTitle>Recent Transactions</CardTitle>
               <CardDescription>Your transaction history</CardDescription>
