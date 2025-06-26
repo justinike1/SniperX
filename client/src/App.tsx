@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileNavigation } from "@/components/MobileNavigation";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { WalletHeader } from "@/components/WalletHeader";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import Dashboard from "@/pages/Dashboard";
 import Trades from "@/pages/Trades";
@@ -90,6 +91,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-dark-bg text-white">
       <MobileNavigation isConnected={isConnected} />
+      {isAuthenticated && <WalletHeader />}
       
       <main className="pt-16 pb-20">
         {renderCurrentPage()}

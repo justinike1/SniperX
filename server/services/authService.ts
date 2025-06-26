@@ -225,7 +225,7 @@ export class AuthService {
   async verifyToken(token: string): Promise<{ valid: boolean; user?: any }> {
     try {
       const decoded = jwt.verify(token, this.jwtSecret) as any;
-      const user = await storage.getUserById(decoded.userId);
+      const user = await storage.getUser(decoded.userId);
       
       if (!user || !user.isActive) {
         return { valid: false };
@@ -309,7 +309,7 @@ export class AuthService {
 
   async verifyTwoFactor(userId: number, token: string): Promise<boolean> {
     try {
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       if (!user || !user.twoFactorSecret) {
         return false;
       }
