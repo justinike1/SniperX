@@ -1,5 +1,6 @@
 import { 
   users, 
+  sessions,
   trades, 
   botSettings, 
   tokenData,
@@ -26,9 +27,14 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByResetToken(token: string): Promise<User | undefined>;
+  getUserByEmailVerificationToken(token: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+
+  // Session methods
+  createSession(session: { id: string; userId: number; token: string; expiresAt: Date }): Promise<void>;
+  deleteSessionByToken(token: string): Promise<void>;
 
   // Trade methods
   getTrade(id: number): Promise<Trade | undefined>;
@@ -412,6 +418,11 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByEmailVerificationToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.emailVerificationToken, token));
+    return user || undefined;
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -629,6 +640,15 @@ export class DatabaseStorage implements IStorage {
           lastUpdated: new Date()
         }
       });
+  }
+
+  // Session methods
+  async createSession(session: { id: string; userId: number; token: string; expiresAt: Date }): Promise<void> {
+    await db.insert(sessions).values(session);
+  }
+
+  async deleteSessionByToken(token: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.token, token));
   }
 }
 

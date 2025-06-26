@@ -14,6 +14,7 @@ import Scanner from "@/pages/Scanner";
 import Settings from "@/pages/Settings";
 import WalletTransfer from "@/pages/WalletTransfer";
 import Wallet from "@/pages/Wallet";
+import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
           <Route path="/wallet" component={Wallet} />
           <Route path="/wallet-transfer" component={WalletTransfer} />
           <Route path="/settings" component={Settings} />
+          <Route path="/auth" component={AuthPage} />
           <Route component={NotFound} />
         </Switch>
       </main>

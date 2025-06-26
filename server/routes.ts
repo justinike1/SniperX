@@ -25,6 +25,7 @@ import { walletTransferService } from "./services/walletTransferService";
 import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
 import { solanaWalletService } from "./services/solanaWalletService";
 import { productionWalletService } from "./services/productionWalletService";
+import { authenticationService } from "./services/authenticationService";
 
 export interface WebSocketMessage {
   type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT';
@@ -1660,6 +1661,248 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: 'Failed to validate address' 
+      });
+    }
+  });
+
+  // ===== AUTHENTICATION ROUTES =====
+  
+  // Register new user
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { email, password, firstName, lastName, phoneNumber } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
+      }
+
+      const result = await authenticationService.registerUser({
+        email,
+        password,
+        firstName,
+        lastName,
+        phoneNumber
+      });
+
+      res.status(result.success ? 201 : 400).json(result);
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Registration failed. Please try again.'
+      });
+    }
+  });
+
+  // Login user
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password, twoFactorCode } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
+      }
+
+      const result = await authenticationService.loginUser({
+        email,
+        password,
+        twoFactorCode
+      });
+
+      if (result.success && result.token) {
+        // Set secure HTTP-only cookie for session
+        res.cookie('auth-token', result.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+      }
+
+      res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Login failed. Please try again.'
+      });
+    }
+  });
+
+  // Verify email
+  app.get('/api/auth/verify-email', async (req, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification token is required'
+        });
+      }
+
+      const result = await authenticationService.verifyEmail(token as string);
+      res.status(result.success ? 200 : 400).json(result);
+    } catch (error) {
+      console.error('Email verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Email verification failed. Please try again.'
+      });
+    }
+  });
+
+  // Resend verification email
+  app.post('/api/auth/resend-verification', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required'
+        });
+      }
+
+      const result = await authenticationService.resendVerificationEmail(email);
+      res.json(result);
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resend verification email. Please try again.'
+      });
+    }
+  });
+
+  // Setup 2FA
+  app.post('/api/auth/setup-2fa', async (req, res) => {
+    try {
+      const authToken = req.cookies['auth-token'] || req.headers.authorization?.replace('Bearer ', '');
+      
+      if (!authToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      const { valid, user } = await authenticationService.verifyToken(authToken);
+      if (!valid || !user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+
+      const result = await authenticationService.setup2FA(user.id);
+      res.json(result);
+    } catch (error) {
+      console.error('2FA setup error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to setup two-factor authentication. Please try again.'
+      });
+    }
+  });
+
+  // Verify and enable 2FA
+  app.post('/api/auth/verify-2fa', async (req, res) => {
+    try {
+      const authToken = req.cookies['auth-token'] || req.headers.authorization?.replace('Bearer ', '');
+      const { token } = req.body;
+      
+      if (!authToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: 'Authentication code is required'
+        });
+      }
+
+      const { valid, user } = await authenticationService.verifyToken(authToken);
+      if (!valid || !user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+
+      const result = await authenticationService.verify2FA(user.id, token);
+      res.json(result);
+    } catch (error) {
+      console.error('2FA verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to verify two-factor authentication. Please try again.'
+      });
+    }
+  });
+
+  // Get current user
+  app.get('/api/auth/user', async (req, res) => {
+    try {
+      const authToken = req.cookies['auth-token'] || req.headers.authorization?.replace('Bearer ', '');
+      
+      if (!authToken) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      const { valid, user } = await authenticationService.verifyToken(authToken);
+      if (!valid || !user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+
+      res.json({
+        success: true,
+        user
+      });
+    } catch (error) {
+      console.error('Get user error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get user information'
+      });
+    }
+  });
+
+  // Logout
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      const authToken = req.cookies['auth-token'] || req.headers.authorization?.replace('Bearer ', '');
+      
+      if (authToken) {
+        await authenticationService.logout(authToken);
+      }
+
+      res.clearCookie('auth-token');
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Logout failed'
       });
     }
   });

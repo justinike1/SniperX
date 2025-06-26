@@ -8,11 +8,13 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   firstName: text("first_name"),
   lastName: text("last_name"),
-  walletAddress: text("wallet_address").notNull().unique(),
+  walletAddress: text("wallet_address").unique(),
   encryptedPrivateKey: text("encrypted_private_key"),
   phoneNumber: text("phone_number"),
   isActive: boolean("is_active").default(true),
   emailVerified: boolean("email_verified").default(false),
+  emailVerificationToken: text("email_verification_token"),
+  emailVerificationExpiry: timestamp("email_verification_expiry"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   twoFactorSecret: text("two_factor_secret"),
   passwordResetToken: text("password_reset_token"),
@@ -20,6 +22,14 @@ export const users = pgTable("users", {
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const trades = pgTable("trades", {
