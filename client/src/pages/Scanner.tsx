@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TokenScanData } from '@/lib/types';
+import { TokenTimeline } from '@/components/TokenTimeline';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Search, Filter, TrendingUp } from 'lucide-react';
+import { Search, Filter, TrendingUp, LayoutGrid, List } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
+type ViewMode = 'list' | 'timeline';
+
 export default function Scanner() {
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [filters, setFilters] = useState({
     honeypotFilter: true,
     lpLockFilter: true,
@@ -64,9 +68,30 @@ export default function Scanner() {
       <div className="bg-dark-surface rounded-xl p-6 border border-dark-border">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold">Token Scanner</h1>
-          <div className="flex items-center space-x-2 text-sm">
-            <div className="w-2 h-2 bg-profit-green rounded-full animate-pulse"></div>
-            <span className="text-profit-green">Live Scanning</span>
+          <div className="flex items-center space-x-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
+              <Button
+                size="sm"
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('list')}
+                className="h-8 px-2 text-xs"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'timeline' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('timeline')}
+                className="h-8 px-2 text-xs"
+              >
+                <TrendingUp className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2 text-sm">
+              <div className="w-2 h-2 bg-profit-green rounded-full animate-pulse"></div>
+              <span className="text-profit-green">Live Scanning</span>
+            </div>
           </div>
         </div>
         
@@ -155,95 +180,133 @@ export default function Scanner() {
         </div>
       </div>
 
-      {/* Token List */}
-      <div className="bg-dark-surface rounded-xl border border-dark-border">
-        <div className="p-6 border-b border-dark-border">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Live Tokens</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="bg-dark-bg border-dark-border"
-            >
-              <Search className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+      {/* Token Display */}
+      {viewMode === 'list' ? (
+        <div className="bg-dark-surface rounded-xl border border-dark-border">
+          <div className="p-6 border-b border-dark-border">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Live Tokens</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="bg-dark-bg border-dark-border"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+          </div>
+          
+          <div className="max-h-96 overflow-y-auto">
+            {isLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin w-8 h-8 border-2 border-accent-purple border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-400">Scanning for tokens...</p>
+              </div>
+            ) : filteredTokens.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No tokens match your filters</p>
+                <p className="text-sm mt-2">Try adjusting your filter settings</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-dark-border">
+                {filteredTokens.map((token) => (
+                  <div key={token.address} className="p-4 hover:bg-dark-bg transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="font-mono text-sm font-medium">{token.symbol}</span>
+                          {token.name && (
+                            <span className="text-xs text-gray-400 truncate max-w-32">{token.name}</span>
+                          )}
+                          <Badge className="bg-warning-orange text-dark-bg text-xs font-bold">
+                            NEW
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3 text-xs text-gray-400">
+                          <span>Vol: {formatVolume(token.volume24h)}</span>
+                          <span>Liq: {formatVolume(token.liquidityUsd)}</span>
+                          {token.riskScore > 0 && (
+                            <span className={`${
+                              token.riskScore >= 7 ? 'text-loss-red' : 
+                              token.riskScore >= 4 ? 'text-warning-orange' : 'text-profit-green'
+                            }`}>
+                              Risk: {token.riskScore}/10
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 mt-1">
+                          {token.isLpLocked && (
+                            <Badge className="bg-profit-green text-dark-bg text-xs">LP Locked</Badge>
+                          )}
+                          {token.isRenounced && (
+                            <Badge className="bg-profit-green text-dark-bg text-xs">Renounced</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="text-right mr-4">
+                        <p className="font-mono text-sm">${token.priceUsd.toFixed(8)}</p>
+                        <div className="flex items-center space-x-1 text-xs text-profit-green">
+                          <TrendingUp className="w-3 h-3" />
+                          <span>Fresh</span>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        className="bg-accent-purple hover:bg-indigo-600 text-white text-xs font-medium px-4 py-2"
+                        onClick={() => handleSnipeToken(token.address)}
+                      >
+                        SNIPE
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-        
-        <div className="max-h-96 overflow-y-auto">
+      ) : (
+        /* Timeline View */
+        <div className="space-y-6">
           {isLoading ? (
             <div className="p-8 text-center">
               <div className="animate-spin w-8 h-8 border-2 border-accent-purple border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-400">Scanning for tokens...</p>
+              <p className="text-gray-400">Loading token charts...</p>
             </div>
           ) : filteredTokens.length === 0 ? (
             <div className="p-8 text-center text-gray-400">
-              <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No tokens match your filters</p>
               <p className="text-sm mt-2">Try adjusting your filter settings</p>
             </div>
           ) : (
-            <div className="divide-y divide-dark-border">
-              {filteredTokens.map((token) => (
-                <div key={token.address} className="p-4 hover:bg-dark-bg transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="font-mono text-sm font-medium">{token.symbol}</span>
-                        {token.name && (
-                          <span className="text-xs text-gray-400 truncate max-w-32">{token.name}</span>
-                        )}
-                        <Badge className="bg-warning-orange text-dark-bg text-xs font-bold">
-                          NEW
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 text-xs text-gray-400">
-                        <span>Vol: {formatVolume(token.volume24h)}</span>
-                        <span>Liq: {formatVolume(token.liquidityUsd)}</span>
-                        {token.riskScore > 0 && (
-                          <span className={`${
-                            token.riskScore >= 7 ? 'text-loss-red' : 
-                            token.riskScore >= 4 ? 'text-warning-orange' : 'text-profit-green'
-                          }`}>
-                            Risk: {token.riskScore}/10
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center space-x-2 mt-1">
-                        {token.isLpLocked && (
-                          <Badge className="bg-profit-green text-dark-bg text-xs">LP Locked</Badge>
-                        )}
-                        {token.isRenounced && (
-                          <Badge className="bg-profit-green text-dark-bg text-xs">Renounced</Badge>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="text-right mr-4">
-                      <p className="font-mono text-sm">${token.priceUsd.toFixed(8)}</p>
-                      <div className="flex items-center space-x-1 text-xs text-profit-green">
-                        <TrendingUp className="w-3 h-3" />
-                        <span>Fresh</span>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      className="bg-accent-purple hover:bg-indigo-600 text-white text-xs font-medium px-4 py-2"
-                      onClick={() => handleSnipeToken(token.address)}
-                    >
-                      SNIPE
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            filteredTokens.map((token) => (
+              <TokenTimeline
+                key={token.address}
+                token={{
+                  address: token.address,
+                  symbol: token.symbol,
+                  name: token.name,
+                  priceUsd: token.priceUsd,
+                  volume24h: token.volume24h,
+                  liquidityUsd: token.liquidityUsd,
+                  isHoneypot: token.isHoneypot,
+                  isLpLocked: token.isLpLocked,
+                  isRenounced: token.isRenounced,
+                  riskScore: token.riskScore,
+                  firstDetected: token.firstDetected,
+                }}
+                onSnipeToken={handleSnipeToken}
+              />
+            ))
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
