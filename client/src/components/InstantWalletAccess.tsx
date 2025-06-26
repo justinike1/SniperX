@@ -9,6 +9,7 @@ import { Wallet, Copy, Send, RefreshCw, Zap, CheckCircle, ArrowUpRight, ArrowDow
 import { formatAddress } from '@/lib/solana';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
+import ExchangeCompatibilityDisplay from './ExchangeCompatibilityDisplay';
 
 interface UserWallet {
   address: string;
@@ -245,6 +246,9 @@ export const InstantWalletAccess = () => {
             </Button>
           </div>
         </div>
+
+        {/* Exchange Compatibility Display */}
+        <ExchangeCompatibilityDisplay address={wallet.address} />
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-2">
