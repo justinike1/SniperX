@@ -7,10 +7,14 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiRequest } from '@/lib/queryClient';
-import { Save, Smartphone, Shield, Zap, DollarSign } from 'lucide-react';
+import { Save, Smartphone, Shield, Zap, DollarSign, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export default function Settings() {
+interface SettingsProps {
+  onLogout: () => void;
+}
+
+export default function Settings({ onLogout }: SettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -49,6 +53,28 @@ export default function Settings() {
   const handleSaveSettings = () => {
     if (localSettings) {
       updateSettingsMutation.mutate(localSettings);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been securely logged out of SniperX.",
+      });
+      
+      onLogout();
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -320,6 +346,29 @@ export default function Settings() {
               onCheckedChange={(checked) => handleUpdateLocal({ notificationsEnabled: checked })}
             />
           </div>
+        </div>
+      </div>
+
+      {/* Account Actions */}
+      <div className="bg-dark-surface rounded-xl p-6 border border-dark-border">
+        <div className="flex items-center space-x-2 mb-4">
+          <Shield className="w-5 h-5 text-accent-purple" />
+          <h2 className="text-lg font-semibold">Account</h2>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="font-medium">Sign out of SniperX</p>
+            <p className="text-sm text-gray-400">Securely logout of your account</p>
+          </div>
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
       </div>
 

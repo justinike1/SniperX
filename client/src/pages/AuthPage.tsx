@@ -8,7 +8,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Mail, Lock, User, Phone, Shield, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export default function AuthPage() {
+interface AuthPageProps {
+  onAuthSuccess: () => void;
+}
+
+export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +57,7 @@ export default function AuthPage() {
           title: "Login Successful",
           description: "Welcome back to SniperX!",
         });
-        // Redirect to dashboard
-        window.location.href = '/';
+        onAuthSuccess();
       } else if (result.requires2FA) {
         setRequires2FA(true);
         toast({
