@@ -21,9 +21,11 @@ import {
 import { z } from "zod";
 import { authService } from "./services/authService";
 import { walletTransferService } from "./services/walletTransferService";
+import { realTimeMarketDataService } from "./services/realTimeMarketData";
+import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
 
 export interface WebSocketMessage {
-  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION';
+  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT';
   data: any;
 }
 
@@ -797,6 +799,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: 'Failed to fetch transfer status' 
       });
+    }
+  });
+
+  // === LIGHTNING TRADING API ENDPOINTS ===
+  
+  // Real-time market data endpoints
+  app.get('/api/market/prices', async (req, res) => {
+    try {
+      const prices = realTimeMarketDataService.getAllPrices();
+      res.json({ success: true, prices });
+    } catch (error) {
+      console.error('Error fetching market prices:', error);
+      res.status(500).json({ message: 'Failed to fetch market prices' });
+    }
+  });
+
+  app.get('/api/market/opportunities', async (req, res) => {
+    try {
+      const opportunities = realTimeMarketDataService.getOpportunities();
+      res.json({ success: true, opportunities });
+    } catch (error) {
+      console.error('Error fetching trading opportunities:', error);
+      res.status(500).json({ message: 'Failed to fetch trading opportunities' });
+    }
+  });
+
+  app.get('/api/market/price-history/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const { timeframe = '1H' } = req.query;
+      const history = realTimeMarketDataService.getPriceHistory(address, timeframe as string);
+      res.json({ success: true, history });
+    } catch (error) {
+      console.error('Error fetching price history:', error);
+      res.status(500).json({ message: 'Failed to fetch price history' });
+    }
+  });
+
+  // Lightning trade execution endpoints
+  app.post('/api/trading/execute', async (req, res) => {
+    try {
+      const { tokenAddress, symbol, action, amount, maxSlippage = 1 } = req.body;
+      const userId = 1; // Demo user ID
+
+      if (!tokenAddress || !symbol || !action || !amount) {
+        return res.status(400).json({ message: 'Missing required trade parameters' });
+      }
+
+      const trade = await lightningTradeExecutor.executeTrade(
+        userId,
+        tokenAddress,
+        symbol,
+        action.toUpperCase(),
+        parseFloat(amount),
+        parseFloat(maxSlippage)
+      );
+
+      res.json({ success: true, trade });
+    } catch (error) {
+      console.error('Error executing trade:', error);
+      res.status(500).json({ message: 'Failed to execute trade' });
+    }
+  });
+
+  app.get('/api/trading/history/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const history = await lightningTradeExecutor.getTradeHistory(parseInt(userId));
+      res.json({ success: true, trades: history });
+    } catch (error) {
+      console.error('Error fetching trade history:', error);
+      res.status(500).json({ message: 'Failed to fetch trade history' });
+    }
+  });
+
+  // User wallet management endpoints
+  app.get('/api/wallet/user/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      let wallet = lightningTradeExecutor.getUserWallet(parseInt(userId));
+      
+      if (!wallet) {
+        wallet = await lightningTradeExecutor.createUserWallet(parseInt(userId));
+      }
+
+      res.json({
+        success: true,
+        wallet: {
+          address: wallet.address,
+          balance: wallet.balance,
+          isActive: wallet.isActive
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching user wallet:', error);
+      res.status(500).json({ message: 'Failed to fetch user wallet' });
+    }
+  });
+
+  app.post('/api/wallet/create/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const wallet = await lightningTradeExecutor.createUserWallet(parseInt(userId));
+      
+      res.json({
+        success: true,
+        wallet: {
+          address: wallet.address,
+          balance: wallet.balance,
+          isActive: wallet.isActive
+        },
+        message: 'New trading wallet created successfully'
+      });
+    } catch (error) {
+      console.error('Error creating user wallet:', error);
+      res.status(500).json({ message: 'Failed to create user wallet' });
+    }
+  });
+
+  // Stop loss and rapid exit endpoints
+  app.post('/api/trading/stop-loss', async (req, res) => {
+    try {
+      const { tokenAddress, stopPrice } = req.body;
+      const userId = 1; // Demo user ID
+
+      if (!tokenAddress || !stopPrice) {
+        return res.status(400).json({ message: 'Token address and stop price are required' });
+      }
+
+      const stopLossTrade = await lightningTradeExecutor.executeStopLoss(
+        userId,
+        tokenAddress,
+        parseFloat(stopPrice)
+      );
+
+      if (stopLossTrade) {
+        res.json({ success: true, trade: stopLossTrade, message: 'Stop loss executed' });
+      } else {
+        res.json({ success: false, message: 'Stop loss conditions not met' });
+      }
+    } catch (error) {
+      console.error('Error executing stop loss:', error);
+      res.status(500).json({ message: 'Failed to execute stop loss' });
+    }
+  });
+
+  // Real-time trading stats endpoint
+  app.get('/api/trading/stats/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const trades = await lightningTradeExecutor.getTradeHistory(parseInt(userId));
+      
+      const totalTrades = trades.length;
+      const successfulTrades = trades.filter(t => t.status === 'CONFIRMED').length;
+      const totalProfit = trades.reduce((sum, t) => sum + (t.profit || 0), 0);
+      const averageExecutionTime = trades.reduce((sum, t) => sum + t.executionTime, 0) / totalTrades || 0;
+      const winRate = totalTrades > 0 ? (successfulTrades / totalTrades) * 100 : 0;
+
+      res.json({
+        success: true,
+        stats: {
+          totalTrades,
+          successfulTrades,
+          totalProfit: totalProfit.toFixed(2),
+          averageExecutionTime: Math.round(averageExecutionTime),
+          winRate: winRate.toFixed(1),
+          profitPercentage: totalProfit > 0 ? '+' + totalProfit.toFixed(2) + '%' : totalProfit.toFixed(2) + '%'
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching trading stats:', error);
+      res.status(500).json({ message: 'Failed to fetch trading stats' });
     }
   });
 

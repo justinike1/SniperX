@@ -9,9 +9,11 @@ import { QuickSettings } from '@/components/QuickSettings';
 import { AITradingEngine } from '@/components/AITradingEngine';
 import { MarketIntelligence } from '@/components/MarketIntelligence';
 import { ProfitTracker } from '@/components/ProfitTracker';
-import { FinanceGeniusAI } from '@/components/FinanceGeniusAI';
+import FinanceGeniusAI from '@/components/FinanceGeniusAI';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { WalletConnector } from '@/components/WalletConnector';
+import InteractiveCryptoChart from '@/components/InteractiveCryptoChart';
+import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -171,6 +173,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-20">
       <InstantMarketAccess />
+      
+      <RealTimeMarketDashboard />
       
       <WalletOverview 
         walletData={walletData} 
