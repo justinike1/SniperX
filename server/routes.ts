@@ -13,6 +13,7 @@ import { socialIntelligenceService } from "./services/socialIntelligenceService"
 import { scamDetectionService } from "./services/scamDetectionService";
 import { rapidExitEngine } from "./services/rapidExitEngine";
 import { financeGeniusAI } from "./services/financeGeniusAI";
+import { megaCryptoWallet } from "./services/megaCryptoWallet";
 import { highWinRateStrategy } from "./services/highWinRateStrategy";
 import { 
   insertUserSchema, 
@@ -1485,16 +1486,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           walletType: "Production Wallet - Real SOL"
         });
       } else {
-        // Demo wallet - show zero balance and prompt for production wallet
+        // Use mega crypto wallet for unified balance
+        const unifiedBalances = await megaCryptoWallet.getUnifiedBalance(userId);
+        const totalValue = unifiedBalances.reduce((sum, platform) => sum + platform.totalUsdValue, 0);
+        
         res.json({
           address: user.walletAddress,
           balance: "0.000000",
-          balanceUSD: "0.00",
+          balanceUSD: totalValue.toFixed(2),
           profitLoss: "0.00",
           profitPercentage: "0.00%",
-          totalValue: "0.00",
+          totalValue: totalValue.toFixed(2),
           isProduction: false,
-          walletType: "Create Production Wallet for Real Trading",
+          walletType: "Multi-Platform Wallet",
+          platforms: unifiedBalances,
           message: "Click 'Production' tab to create secure wallet for real transfers"
         });
       }
@@ -1983,6 +1988,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: 'Logout failed'
       });
+    }
+  });
+
+  // === MEGA CRYPTO WALLET API ENDPOINTS ===
+  
+  // Get unified balance across all platforms
+  app.get('/api/mega-wallet/balance/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const balances = await megaCryptoWallet.getUnifiedBalance(userId);
+      res.json({ success: true, balances });
+    } catch (error) {
+      console.error('Error fetching unified balance:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch unified balance' });
+    }
+  });
+
+  // Get supported platforms
+  app.get('/api/mega-wallet/platforms', async (req, res) => {
+    try {
+      const platforms = megaCryptoWallet.getSupportedPlatforms();
+      res.json({ success: true, platforms });
+    } catch (error) {
+      console.error('Error fetching platforms:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch platforms' });
+    }
+  });
+
+  // Execute mega transfer between platforms
+  app.post('/api/mega-wallet/transfer', async (req, res) => {
+    try {
+      const userId = parseInt(req.body.userId) || 1;
+      const { fromPlatform, toPlatform, amount, tokenSymbol, recipientAddress } = req.body;
+
+      if (!fromPlatform || !toPlatform || !amount || !tokenSymbol) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: fromPlatform, toPlatform, amount, tokenSymbol'
+        });
+      }
+
+      const transferRequest = {
+        fromPlatform,
+        toPlatform,
+        amount: parseFloat(amount),
+        tokenSymbol,
+        recipientAddress
+      };
+
+      const result = await megaCryptoWallet.executeMegaTransfer(userId, transferRequest);
+      res.json(result);
+    } catch (error) {
+      console.error('Error executing mega transfer:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Transfer failed'
+      });
+    }
+  });
+
+  // Estimate transfer fees
+  app.post('/api/mega-wallet/estimate-fees', async (req, res) => {
+    try {
+      const { fromPlatform, toPlatform, amount, tokenSymbol } = req.body;
+
+      if (!fromPlatform || !amount || !tokenSymbol) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: fromPlatform, amount, tokenSymbol'
+        });
+      }
+
+      const transferRequest = {
+        fromPlatform,
+        toPlatform: toPlatform || 'sniperx',
+        amount: parseFloat(amount),
+        tokenSymbol
+      };
+
+      const fees = await megaCryptoWallet.estimateTransferFees(transferRequest);
+      res.json({ success: true, fees });
+    } catch (error) {
+      console.error('Error estimating fees:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to estimate fees'
+      });
+    }
+  });
+
+  // Generate receiving address
+  app.post('/api/mega-wallet/receiving-address', async (req, res) => {
+    try {
+      const userId = parseInt(req.body.userId) || 1;
+      const { tokenSymbol } = req.body;
+
+      if (!tokenSymbol) {
+        return res.status(400).json({
+          success: false,
+          error: 'Token symbol required'
+        });
+      }
+
+      const address = await megaCryptoWallet.generateReceivingAddress(userId, tokenSymbol);
+      res.json({ success: true, address, tokenSymbol });
+    } catch (error) {
+      console.error('Error generating receiving address:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate address'
+      });
+    }
+  });
+
+  // Quick transfer presets for common platforms
+  app.get('/api/mega-wallet/quick-transfers/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      const quickTransfers = [
+        {
+          name: 'Robinhood → SniperX',
+          fromPlatform: 'robinhood',
+          toPlatform: 'sniperx',
+          icon: '🏦',
+          description: 'Transfer SOL from Robinhood to SniperX for AI trading',
+          estimatedTime: '2-5 minutes',
+          supportedTokens: ['SOL', 'BTC', 'ETH']
+        },
+        {
+          name: 'Coinbase → SniperX',
+          fromPlatform: 'coinbase',
+          toPlatform: 'sniperx',
+          icon: '💙',
+          description: 'Transfer crypto from Coinbase to SniperX wallet',
+          estimatedTime: '3-10 minutes',
+          supportedTokens: ['SOL', 'BTC', 'ETH', 'USDC']
+        },
+        {
+          name: 'Phantom → SniperX',
+          fromPlatform: 'phantom',
+          toPlatform: 'sniperx',
+          icon: '👻',
+          description: 'Connect Phantom wallet for instant SOL transfers',
+          estimatedTime: 'Instant',
+          supportedTokens: ['SOL', 'SPL Tokens']
+        },
+        {
+          name: 'SniperX → Jupiter DEX',
+          fromPlatform: 'sniperx',
+          toPlatform: 'jupiter',
+          icon: '🪐',
+          description: 'Trade on Jupiter DEX with SniperX balance',
+          estimatedTime: '30 seconds',
+          supportedTokens: ['SOL', 'All SPL Tokens']
+        }
+      ];
+
+      res.json({ success: true, quickTransfers, userAddress: user.walletAddress });
+    } catch (error) {
+      console.error('Error fetching quick transfers:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch quick transfers' });
     }
   });
 
