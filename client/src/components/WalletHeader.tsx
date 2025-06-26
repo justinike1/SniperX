@@ -42,7 +42,7 @@ export function WalletHeader() {
 
   // Get wallet balance
   const { data: walletData } = useQuery<WalletData>({
-    queryKey: ['/api/wallet/balance', user?.id],
+    queryKey: [`/api/wallet/balance/${user?.id}`],
     enabled: !!user?.id,
     refetchInterval: 2000, // Update every 2 seconds
   });
