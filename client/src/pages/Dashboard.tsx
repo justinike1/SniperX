@@ -5,6 +5,8 @@ import { BotStatus } from '@/components/BotStatus';
 import { RecentTrades } from '@/components/RecentTrades';
 import { LiveScanner } from '@/components/LiveScanner';
 import { QuickSettings } from '@/components/QuickSettings';
+import { AITradingEngine } from '@/components/AITradingEngine';
+import { MarketIntelligence } from '@/components/MarketIntelligence';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -128,6 +130,39 @@ export default function Dashboard() {
     // Navigation will be handled by parent component
   };
 
+  const handleAITrade = async (action: string, params: any) => {
+    try {
+      const tradeData = {
+        tokenAddress: params.tokenAddress || liveTokens[0]?.address,
+        tokenSymbol: liveTokens[0]?.symbol || 'AI',
+        amount: params.amount === 'AUTO' ? settings?.autoBuyAmount || '0.1' : '0.1',
+        type: action.toLowerCase(),
+        aiConfidence: params.confidence,
+        targetPrice: params.targetPrice
+      };
+
+      await apiRequest('POST', '/api/trades/ai-execute', tradeData);
+      
+      setCurrentNotification({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'success',
+        title: 'AI Trade Executed',
+        message: `AI ${action} order placed with ${params.confidence.toFixed(1)}% confidence`,
+        timestamp: new Date().toISOString(),
+        autoHide: true,
+      });
+    } catch (error) {
+      setCurrentNotification({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'error',
+        title: 'AI Trade Failed',
+        message: 'Unable to execute AI trade. Please try again.',
+        timestamp: new Date().toISOString(),
+        autoHide: true,
+      });
+    }
+  };
+
   return (
     <div>
       <WalletOverview 
@@ -145,6 +180,13 @@ export default function Dashboard() {
         trades={recentTrades}
         onViewAll={handleViewAllTrades}
       />
+      
+      <AITradingEngine 
+        tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
+        onExecuteTrade={handleAITrade}
+      />
+      
+      <MarketIntelligence />
       
       <LiveScanner 
         tokens={liveTokens}

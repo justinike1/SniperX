@@ -108,4 +108,5 @@ Changelog:
 
 ```
 Preferred communication style: Simple, everyday language.
+Vision: Create the best invention of all time - an amazing product for the entire universe that changes humanity through revolutionary cryptocurrency trading technology.
 ```

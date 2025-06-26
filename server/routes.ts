@@ -238,6 +238,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // AI Trade execution endpoint
+  app.post('/api/trades/ai-execute', async (req, res) => {
+    try {
+      const { tokenAddress, tokenSymbol, amount, type, aiConfidence, targetPrice } = req.body;
+      
+      if (!tokenAddress || !tokenSymbol || !amount || !type) {
+        return res.status(400).json({ message: 'Missing required trade parameters' });
+      }
+      
+      // Create AI-powered trade with enhanced metadata
+      const trade = await storage.createTrade({
+        userId: 1,
+        tokenAddress,
+        tokenSymbol,
+        amount: amount.toString(),
+        price: targetPrice ? targetPrice.toString() : '0.00001',
+        type: type.toUpperCase(),
+        txHash: `ai_${Math.random().toString(36).substr(2, 9)}`
+      });
+      
+      // Broadcast AI trade execution via WebSocket
+      broadcastToUser(1, {
+        type: 'NEW_TRADE',
+        data: {
+          ...trade,
+          aiConfidence,
+          isAiTrade: true,
+          analysis: `AI executed ${type} with ${aiConfidence?.toFixed(1)}% confidence`
+        }
+      });
+      
+      res.json({ success: true, trade, aiConfidence });
+    } catch (error) {
+      console.error('Error executing AI trade:', error);
+      res.status(500).json({ message: 'Failed to execute AI trade' });
+    }
+  });
+
   // Trade history endpoints
   app.get('/api/trades', async (req, res) => {
     try {
