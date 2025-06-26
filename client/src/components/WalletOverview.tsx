@@ -73,7 +73,7 @@ export const WalletOverview = ({ walletData, isLoading }: WalletOverviewProps) =
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-400">Wallet Address:</span>
             <span className="font-mono text-xs bg-dark-bg px-2 py-1 rounded">
-              {formatAddress(walletData.address)}
+              {walletData.address ? formatAddress(walletData.address) : 'Not Connected'}
             </span>
           </div>
         </div>

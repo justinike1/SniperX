@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { InstantMarketAccess } from '@/components/InstantMarketAccess';
 import { WalletOverview } from '@/components/WalletOverview';
 import { BotStatus } from '@/components/BotStatus';
 import { RecentTrades } from '@/components/RecentTrades';
@@ -7,22 +8,9 @@ import { LiveScanner } from '@/components/LiveScanner';
 import { QuickSettings } from '@/components/QuickSettings';
 import { AITradingEngine } from '@/components/AITradingEngine';
 import { MarketIntelligence } from '@/components/MarketIntelligence';
-import { QuantumTradeEngine } from '@/components/QuantumTradeEngine';
-import { CosmicProphecy } from '@/components/CosmicProphecy';
-import { DimensionalMarketFlow } from '@/components/DimensionalMarketFlow';
-import { InfiniteConsciousnessMatrix } from '@/components/InfiniteConsciousnessMatrix';
-import { BeginnerGuide } from '@/components/BeginnerGuide';
-import { QuickStartTutorial } from '@/components/QuickStartTutorial';
-import { WallStreetDisruptor } from '@/components/WallStreetDisruptor';
-import { MarketManipulationDetector } from '@/components/MarketManipulationDetector';
-import { InstitutionalPortfolioManager } from '@/components/InstitutionalPortfolioManager';
-import { DeploymentOptimizer } from '@/components/DeploymentOptimizer';
-import { GlobalTradingIntelligence } from '@/components/GlobalTradingIntelligence';
-import { AdvancedSentimentAnalysis } from '@/components/AdvancedSentimentAnalysis';
-import { SniperXBotStatus } from '@/components/SniperXBotStatus';
-import { NotificationToast } from '@/components/NotificationToast';
 import { ProfitTracker } from '@/components/ProfitTracker';
 import { WalletConnector } from '@/components/WalletConnector';
+import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -179,18 +167,24 @@ export default function Dashboard() {
   };
 
   return (
-    <div>
-      <BeginnerGuide />
-      
-      <SniperXBotStatus />
-      
-      <ProfitTracker />
-      
-      <WalletConnector />
+    <div className="space-y-6 pb-20">
+      <InstantMarketAccess />
       
       <WalletOverview 
         walletData={walletData} 
         isLoading={walletLoading} 
+      />
+      
+      <ProfitTracker />
+      
+      <AITradingEngine 
+        tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
+        onExecuteTrade={handleAITrade}
+      />
+      
+      <LiveScanner 
+        tokens={liveTokens}
+        onSnipeToken={handleSnipeToken}
       />
       
       <BotStatus 
@@ -203,52 +197,13 @@ export default function Dashboard() {
         trades={recentTrades}
         onViewAll={handleViewAllTrades}
       />
-      
-      <InfiniteConsciousnessMatrix />
-      
-      <QuantumTradeEngine />
-      
-      <CosmicProphecy />
-      
-      <DimensionalMarketFlow />
-      
-      <AITradingEngine 
-        tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
-        onExecuteTrade={handleAITrade}
-      />
-      
-      <WallStreetDisruptor />
-      
-      <MarketManipulationDetector />
-      
-      <InstitutionalPortfolioManager />
-      
-      <DeploymentOptimizer />
-      
-      <GlobalTradingIntelligence />
-      
-      <AdvancedSentimentAnalysis />
-      
-      <MarketIntelligence />
-      
-      <LiveScanner 
-        tokens={liveTokens}
-        onSnipeToken={handleSnipeToken}
-      />
-      
-      {settings && (
-        <QuickSettings 
-          settings={settings}
-          onUpdateSettings={handleUpdateSettings}
+
+      {currentNotification && (
+        <NotificationToast 
+          notification={currentNotification}
+          onClose={() => setCurrentNotification(null)}
         />
       )}
-
-      <NotificationToast 
-        notification={currentNotification}
-        onClose={() => setCurrentNotification(null)}
-      />
-      
-      <QuickStartTutorial />
     </div>
   );
 }
