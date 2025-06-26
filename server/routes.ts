@@ -24,6 +24,7 @@ import { authService } from "./services/authService";
 import { walletTransferService } from "./services/walletTransferService";
 import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
 import { solanaWalletService } from "./services/solanaWalletService";
+import { productionWalletService } from "./services/productionWalletService";
 
 export interface WebSocketMessage {
   type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT';
@@ -1498,6 +1499,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         error: 'Failed to monitor transactions' 
+      });
+    }
+  });
+
+  // Production wallet creation for real transfers
+  app.post('/api/wallet/create-production', async (req, res) => {
+    try {
+      const { userId, password } = req.body;
+      if (!userId || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'User ID and password required for secure wallet creation' 
+        });
+      }
+
+      const wallet = await productionWalletService.createProductionWallet(userId, password);
+      res.json({ 
+        success: true, 
+        wallet: {
+          address: wallet.address,
+          balance: wallet.balance,
+          isProduction: wallet.isProduction
+        },
+        message: 'Production wallet created successfully - ready for real transfers'
+      });
+    } catch (error) {
+      console.error('Error creating production wallet:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to create production wallet' 
+      });
+    }
+  });
+
+  // Secure transfer for real money from Robinhood/Coinbase/etc
+  app.post('/api/wallet/production-transfer', async (req, res) => {
+    try {
+      const { userId, recipientAddress, amount, password } = req.body;
+      
+      if (!userId || !recipientAddress || !amount || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'All fields required: userId, recipientAddress, amount, password' 
+        });
+      }
+
+      // Validate recipient address first
+      const validation = await productionWalletService.validateAddress(recipientAddress);
+      if (!validation.isValid) {
+        return res.status(400).json({ 
+          success: false, 
+          message: validation.error || 'Invalid recipient address' 
+        });
+      }
+
+      // Get user wallet for fee estimation
+      const user = await storage.getUser(userId);
+      if (!user?.walletAddress) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User wallet not found - create production wallet first' 
+        });
+      }
+
+      // Estimate transaction fee
+      const estimatedFee = await productionWalletService.estimateTransferFee(
+        user.walletAddress, 
+        recipientAddress, 
+        amount
+      );
+
+      // Execute secure transfer
+      const result = await productionWalletService.transferSOL(
+        userId, 
+        recipientAddress, 
+        amount, 
+        password
+      );
+
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          txHash: result.txHash,
+          actualFee: result.fee,
+          estimatedFee: estimatedFee,
+          message: 'Transfer completed successfully'
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.error || 'Transfer failed' 
+        });
+      }
+    } catch (error) {
+      console.error('Production transfer error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Transfer failed' 
+      });
+    }
+  });
+
+  // Get real-time balance from blockchain
+  app.get('/api/wallet/production-balance/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const user = await storage.getUser(userId);
+      
+      if (!user?.walletAddress) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User wallet not found' 
+        });
+      }
+
+      const balance = await productionWalletService.getRealSOLBalance(user.walletAddress);
+      
+      // Update database with real balance
+      await storage.updateWalletBalance(userId, 'SOL', null, balance.toString());
+
+      res.json({ 
+        success: true, 
+        balance: balance,
+        address: user.walletAddress,
+        isProduction: true
+      });
+    } catch (error) {
+      console.error('Error fetching production balance:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to fetch real balance' 
+      });
+    }
+  });
+
+  // Validate wallet address for transfers
+  app.post('/api/wallet/validate-address', async (req, res) => {
+    try {
+      const { address } = req.body;
+      
+      if (!address) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Wallet address required' 
+        });
+      }
+
+      const validation = await productionWalletService.validateAddress(address);
+      res.json({ 
+        success: true, 
+        validation: {
+          isValid: validation.isValid,
+          exists: validation.exists,
+          error: validation.error
+        }
+      });
+    } catch (error) {
+      console.error('Address validation error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to validate address' 
       });
     }
   });
