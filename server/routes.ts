@@ -14,7 +14,10 @@ import { scamDetectionService } from "./services/scamDetectionService";
 import { rapidExitEngine } from "./services/rapidExitEngine";
 import { financeGeniusAI } from "./services/financeGeniusAI";
 import { megaCryptoWallet } from "./services/megaCryptoWallet";
+import { realMarketData } from "./services/realMarketDataService";
 import { highWinRateStrategy } from "./services/highWinRateStrategy";
+import { performanceOptimizer } from "./services/performanceOptimizer";
+import { securityMonitor } from "./services/securityMonitor";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -29,7 +32,7 @@ import { productionWalletService } from "./services/productionWalletService";
 import { authenticationService } from "./services/authenticationService";
 
 export interface WebSocketMessage {
-  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT';
+  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT' | 'PERFORMANCE_UPDATE' | 'SECURITY_UPDATE' | 'SECURITY_ALERT';
   data: any;
 }
 
@@ -1106,19 +1109,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Health check endpoint
+  // Health check endpoint with advanced performance metrics
   app.get('/api/health', (req, res) => {
+    const healthCheck = performanceOptimizer.performHealthCheck();
+    const metrics = performanceOptimizer.getPerformanceMetrics();
+    
     res.json({
-      status: 'healthy',
+      status: healthCheck.status.toLowerCase(),
       timestamp: new Date().toISOString(),
+      performance: metrics,
+      recommendations: healthCheck.details.recommendations,
       services: {
         tokenScanner: tokenScanner.isActive(),
         tradingBot: tradingBots.has(1) ? tradingBots.get(1)!.getStatus().isActive : false,
         websocket: wss.clients.size,
-        realMarketData: realMarketData.isConfigured(),
-        profitMaximizer: true
+        realMarketData: realMarketData.isConfigured,
+        profitMaximizer: true,
+        performanceOptimizer: true
       }
     });
+  });
+
+  // Performance optimization endpoints
+  app.get('/api/performance/metrics', (req, res) => {
+    try {
+      const metrics = performanceOptimizer.getPerformanceMetrics();
+      const settings = performanceOptimizer.getOptimizationSettings();
+      res.json({ metrics, settings, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Error fetching performance metrics:', error);
+      res.status(500).json({ message: 'Failed to fetch performance metrics' });
+    }
+  });
+
+  app.post('/api/performance/optimize', (req, res) => {
+    try {
+      performanceOptimizer.optimizeSystem();
+      res.json({ success: true, message: 'System optimization initiated' });
+    } catch (error) {
+      console.error('Error optimizing system:', error);
+      res.status(500).json({ message: 'Failed to optimize system' });
+    }
+  });
+
+  app.post('/api/performance/emergency-boost', (req, res) => {
+    try {
+      performanceOptimizer.emergencyOptimization();
+      res.json({ success: true, message: 'Emergency optimization activated' });
+    } catch (error) {
+      console.error('Error activating emergency optimization:', error);
+      res.status(500).json({ message: 'Failed to activate emergency optimization' });
+    }
+  });
+
+  // Security monitoring endpoints
+  app.get('/api/security/status', (req, res) => {
+    try {
+      const securityReport = securityMonitor.getSecurityReport();
+      const metrics = securityMonitor.getSecurityMetrics();
+      res.json({ security: securityReport, metrics, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Error fetching security status:', error);
+      res.status(500).json({ message: 'Failed to fetch security status' });
+    }
+  });
+
+  app.get('/api/security/threats', (req, res) => {
+    try {
+      const activeThreats = securityMonitor.getActiveThreats();
+      const allThreats = securityMonitor.getAllThreats();
+      res.json({ active: activeThreats, total: allThreats, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Error fetching security threats:', error);
+      res.status(500).json({ message: 'Failed to fetch security threats' });
+    }
+  });
+
+  app.post('/api/security/emergency-lockdown', (req, res) => {
+    try {
+      securityMonitor.performEmergencyLockdown();
+      res.json({ success: true, message: 'Emergency security lockdown activated' });
+    } catch (error) {
+      console.error('Error activating emergency lockdown:', error);
+      res.status(500).json({ message: 'Failed to activate emergency lockdown' });
+    }
   });
 
   // === HIGH WIN RATE STRATEGY API ENDPOINTS ===

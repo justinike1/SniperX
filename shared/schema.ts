@@ -93,6 +93,7 @@ export const walletTransactions = pgTable("wallet_transactions", {
   tokenSymbol: text("token_symbol").default('SOL'),
   tokenAddress: text("token_address"),
   status: text("status").default('PENDING'), // 'PENDING' | 'CONFIRMED' | 'FAILED'
+  fromPlatform: text("from_platform"), // 'robinhood' | 'coinbase' | 'phantom' | 'solflare'
   blockNumber: integer("block_number"),
   gasUsed: decimal("gas_used", { precision: 18, scale: 9 }),
   createdAt: timestamp("created_at").defaultNow(),
@@ -128,6 +129,11 @@ export const insertTradeSchema = createInsertSchema(trades).pick({
   type: true,
   amount: true,
   price: true,
+}).extend({
+  txHash: z.string().optional(),
+  status: z.string().optional(),
+  profitLoss: z.string().optional(),
+  profitPercentage: z.string().optional(),
 });
 
 export const insertBotSettingsSchema = createInsertSchema(botSettings).pick({
@@ -167,6 +173,8 @@ export const insertWalletTransactionSchema = createInsertSchema(walletTransactio
   tokenSymbol: true,
   tokenAddress: true,
   status: true,
+}).extend({
+  fromPlatform: z.string().optional(),
 });
 
 export const insertWalletBalanceSchema = createInsertSchema(walletBalances).pick({

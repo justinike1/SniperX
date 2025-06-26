@@ -154,8 +154,7 @@ export class SolanaWalletService {
       const [iv, tag, encrypted] = parts;
       const key = crypto.pbkdf2Sync(userPassword + this.encryptionKey, 'salt', 100000, 32, 'sha256');
       
-      const decipher = crypto.createDecipherGCM(algorithm, key);
-      decipher.setIV(Buffer.from(iv, 'hex'));
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'hex'));
       decipher.setAuthTag(Buffer.from(tag, 'hex'));
 
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');

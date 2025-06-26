@@ -12,10 +12,10 @@ interface PlatformConnection {
 }
 
 interface TransferRequest {
-  fromPlatform: string;
-  toPlatform: string;
+  fromPlatform?: string;
+  toPlatform?: string;
   amount: number;
-  tokenSymbol: string;
+  tokenSymbol?: string;
   recipientAddress?: string;
   userCredentials?: any;
 }
@@ -58,6 +58,8 @@ export class MegaCryptoWallet {
     this.connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${heliusApiKey}`, 'confirmed');
     this.encryptionKey = process.env.WALLET_ENCRYPTION_KEY || 'mega-wallet-encryption-2025';
     
+    // Initialize supported platforms
+    this.supportedPlatforms = new Map();
     this.initializePlatformConnections();
   }
 
@@ -197,8 +199,10 @@ export class MegaCryptoWallet {
       }
 
       // Validate platforms
-      const fromPlatform = this.supportedPlatforms.get(request.fromPlatform.toLowerCase());
-      const toPlatform = this.supportedPlatforms.get(request.toPlatform.toLowerCase());
+      const fromPlatformKey = request.fromPlatform?.toLowerCase() || 'unknown';
+      const toPlatformKey = request.toPlatform?.toLowerCase() || 'unknown';
+      const fromPlatform = this.supportedPlatforms.get(fromPlatformKey);
+      const toPlatform = this.supportedPlatforms.get(toPlatformKey);
 
       if (!fromPlatform || !toPlatform) {
         return {
@@ -387,14 +391,14 @@ export class MegaCryptoWallet {
       await storage.createWalletTransaction({
         userId: 1, // Will be updated with actual user ID
         type: 'TRANSFER',
+        fromAddress: request.fromPlatform || 'Unknown',
+        toAddress: request.recipientAddress || 'Unknown',
         amount: request.amount.toString(),
-        tokenSymbol: request.tokenSymbol,
-        tokenAddress: request.recipientAddress || '',
+        tokenSymbol: request.tokenSymbol || 'SOL',
+        tokenAddress: request.recipientAddress || undefined,
         txHash: result.txHash || '',
         status: result.success ? 'COMPLETED' : 'FAILED',
-        fromPlatform: request.fromPlatform,
-        toPlatform: request.toPlatform,
-        fees: result.fees?.totalFee?.toString() || '0'
+        fromPlatform: request.fromPlatform || undefined
       });
     } catch (error) {
       console.error('Error creating transfer record:', error);
@@ -441,7 +445,8 @@ export class MegaCryptoWallet {
   // Estimate transfer fees
   async estimateTransferFees(request: TransferRequest): Promise<TransferResult['fees']> {
     try {
-      const fromPlatform = this.supportedPlatforms.get(request.fromPlatform.toLowerCase());
+      const fromPlatformKey = request.fromPlatform?.toLowerCase() || 'unknown';
+      const fromPlatform = this.supportedPlatforms.get(fromPlatformKey);
       
       if (!fromPlatform) {
         throw new Error('Platform not supported');
