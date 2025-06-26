@@ -88,15 +88,17 @@ export const ProfitTracker = () => {
   };
 
   // Get real-time SOL price from market data
-  const { data: marketPrices = [] } = useQuery({
+  const { data: marketPrices } = useQuery({
     queryKey: ['/api/market/prices'],
     refetchInterval: 5000,
   });
 
-  const solPrice = marketPrices.find((p: any) => p.symbol === 'SOL')?.price || 98.50;
+  const solPrice = Array.isArray(marketPrices) 
+    ? marketPrices.find((p: any) => p.symbol === 'SOL')?.price || 98.50
+    : 98.50;
   
   // Calculate actual portfolio value from authenticated wallet
-  const actualBalance = walletBalance?.balance || 0;
+  const actualBalance = (walletBalance as any)?.balance || 0;
   const portfolioValueUSD = actualBalance * solPrice;
 
   const performanceData: PerformanceMetrics = (performance as any)?.performance || {

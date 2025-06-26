@@ -9,6 +9,7 @@ import { QuickSettings } from '@/components/QuickSettings';
 import { AITradingEngine } from '@/components/AITradingEngine';
 import { MarketIntelligence } from '@/components/MarketIntelligence';
 import { ProfitTracker } from '@/components/ProfitTracker';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import FinanceGeniusAI from '@/components/FinanceGeniusAI';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { WalletConnector } from '@/components/WalletConnector';
@@ -190,7 +191,9 @@ export default function Dashboard() {
         isLoading={walletLoading} 
       />
       
-      <ProfitTracker />
+      <ErrorBoundary>
+        <ProfitTracker />
+      </ErrorBoundary>
       
       <ContinuousTradingBot />
       
