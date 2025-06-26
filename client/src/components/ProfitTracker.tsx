@@ -51,16 +51,11 @@ export const ProfitTracker = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  useEffect(() => {
-    // Simulate real-time profit updates
-    const interval = setInterval(() => {
-      const profitChange = (Math.random() - 0.5) * 50; // Random profit change
-      setRealTimeProfit(prev => Math.max(0, prev + profitChange));
-      setTodaysGains(prev => prev + profitChange);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Get actual wallet balance instead of simulated data
+  const { data: walletBalance = {} } = useQuery({
+    queryKey: ['/api/wallet/balance'],
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
 
   const executeSmartTrade = async (opportunity: TradingOpportunity) => {
     try {
@@ -92,10 +87,22 @@ export const ProfitTracker = () => {
     }
   };
 
+  // Get real-time SOL price from market data
+  const { data: marketPrices = [] } = useQuery({
+    queryKey: ['/api/market/prices'],
+    refetchInterval: 5000,
+  });
+
+  const solPrice = marketPrices.find((p: any) => p.symbol === 'SOL')?.price || 98.50;
+  
+  // Calculate actual portfolio value from authenticated wallet
+  const actualBalance = walletBalance?.balance || 0;
+  const portfolioValueUSD = actualBalance * solPrice;
+
   const performanceData: PerformanceMetrics = (performance as any)?.performance || {
     totalTrades: 0,
     winRate: 0,
-    portfolioValue: 1000,
+    portfolioValue: portfolioValueUSD,
     totalReturn: 0,
     averageReturn: 0,
     profitableTrades: 0

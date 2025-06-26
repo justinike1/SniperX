@@ -523,12 +523,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Wallet balance by address endpoint
+  // Official authenticated wallet balance endpoint
+  app.get('/api/wallet/balance', async (req, res) => {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.authToken;
+      
+      if (!token) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const verified = await authService.verifyToken(token);
+      if (!verified.valid || !verified.user) {
+        return res.status(401).json({ message: 'Invalid authentication' });
+      }
+
+      const user = verified.user;
+      const walletAddress = user.walletAddress;
+      
+      if (!walletAddress) {
+        return res.json({
+          balance: 0,
+          balanceFormatted: '$0.00',
+          address: null,
+          tokenAccounts: 0,
+          authenticated: true,
+          needsWalletSetup: true
+        });
+      }
+      
+      const balance = await SolanaService.getBalance(walletAddress);
+      const tokenAccounts = await SolanaService.getTokenAccountsByOwner(walletAddress);
+      const solPrice = 98.50; // Get from real market data
+      const balanceUSD = balance * solPrice;
+      
+      res.json({
+        balance,
+        balanceFormatted: `$${balanceUSD.toFixed(2)}`,
+        address: walletAddress,
+        tokenAccounts: tokenAccounts.length,
+        authenticated: true,
+        needsWalletSetup: false
+      });
+    } catch (error) {
+      console.error('Error fetching authenticated wallet balance:', error);
+      res.status(500).json({ message: 'Failed to fetch wallet balance' });
+    }
+  });
+
+  // Wallet balance by address endpoint for public queries
   app.get('/api/wallet/balance/address/:address', async (req, res) => {
     try {
       const { address } = req.params;
       
-      // Skip validation for Robinhood compatibility
       if (!address) {
         return res.status(400).json({ message: 'Address required' });
       }
@@ -572,11 +618,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/trading/performance', async (req, res) => {
     try {
-      const performance = profitMaximizer.getPerformanceMetrics();
+      const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.authToken;
+      
+      if (!token) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const verified = await authService.verifyToken(token);
+      if (!verified.valid || !verified.user) {
+        return res.status(401).json({ message: 'Invalid authentication' });
+      }
+
+      const user = verified.user;
+      
+      // Get actual trading history from database
+      const trades = await storage.getRecentTrades(user.id, 100);
+      
+      // Calculate real performance metrics
+      const totalTrades = trades.length;
+      const profitableTrades = trades.filter(t => 
+        parseFloat(t.profitLoss || '0') > 0
+      ).length;
+      const winRate = totalTrades > 0 ? (profitableTrades / totalTrades) * 100 : 0;
+      
+      const totalProfitLoss = trades.reduce((sum, trade) => 
+        sum + parseFloat(trade.profitLoss || '0'), 0
+      );
+      
+      const averageReturn = totalTrades > 0 ? totalProfitLoss / totalTrades : 0;
+      
+      // Get current wallet balance for portfolio value
+      const walletAddress = user.walletAddress;
+      let portfolioValue = 0;
+      
+      if (walletAddress) {
+        const balance = await SolanaService.getBalance(walletAddress);
+        const solPrice = 98.50; // Get from real market data
+        portfolioValue = balance * solPrice;
+      }
+      
+      const performance = {
+        totalTrades,
+        winRate: parseFloat(winRate.toFixed(2)),
+        portfolioValue: parseFloat(portfolioValue.toFixed(2)),
+        totalReturn: parseFloat(totalProfitLoss.toFixed(2)),
+        averageReturn: parseFloat(averageReturn.toFixed(2)),
+        profitableTrades,
+        authenticated: true
+      };
+      
       const marketStatus = realMarketData.getConnectionStatus();
       res.json({ success: true, performance, marketStatus });
     } catch (error) {
-      console.error('Error fetching performance:', error);
+      console.error('Error fetching authenticated performance:', error);
       res.status(500).json({ message: 'Failed to fetch performance data' });
     }
   });
