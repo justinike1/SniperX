@@ -64,9 +64,15 @@ export default function WalletPage() {
       const response = await apiRequest('GET', `/api/wallet/balance/${userId}`);
       const data = await response.json();
       
-      if (data.success) {
-        setBalance(data.balance);
-      }
+      // API returns balance data directly, not wrapped in success/balance
+      setBalance({
+        address: data.address,
+        balanceSOL: parseFloat(data.balance),
+        balanceUSD: parseFloat(data.balanceUSD),
+        profitLoss: data.profitLoss,
+        profitPercentage: data.profitPercentage,
+        totalValue: data.totalValue
+      });
     } catch (error) {
       console.error('Error fetching balance:', error);
       toast({
