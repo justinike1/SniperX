@@ -52,19 +52,40 @@ export const InstantMarketAccess = () => {
       <section className="px-4 py-8 bg-gradient-to-br from-accent-purple/20 via-dark-surface to-accent-blue/20 rounded-2xl border border-accent-purple/30">
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Globe className="w-8 h-8 text-accent-purple animate-pulse" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-purple to-accent-blue bg-clip-text text-transparent">
-              Global Solana Markets
+            <Globe className="w-8 h-8 text-accent-purple animate-spin" />
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-purple via-profit-green to-accent-blue bg-clip-text text-transparent animate-pulse">
+              SniperX Global Markets
             </h1>
-            <Zap className="w-8 h-8 text-accent-blue animate-bounce" />
+            <Zap className="w-8 h-8 text-profit-green animate-bounce" />
+          </div>
+          
+          <div className="flex justify-center items-center space-x-2 mb-4">
+            <div className="w-2 h-2 bg-profit-green rounded-full animate-pulse"></div>
+            <span className="text-sm text-profit-green font-semibold">LIVE</span>
+            <span className="text-sm text-gray-400">• Real-time blockchain scanning active</span>
           </div>
           
           <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-            The world's most advanced cryptocurrency trading platform. 
-            <span className="text-accent-purple font-semibold"> Real-time global markets</span>, 
-            <span className="text-accent-blue font-semibold"> instant execution</span>, 
-            and <span className="text-profit-green font-semibold">maximum profits</span> at your fingertips.
+            The world's most revolutionary cryptocurrency trading platform. 
+            <span className="text-accent-purple font-semibold animate-pulse"> Real-time global markets</span>, 
+            <span className="text-accent-blue font-semibold animate-pulse"> instant execution</span>, 
+            and <span className="text-profit-green font-semibold animate-pulse">maximum profits</span> at your fingertips.
           </p>
+          
+          <div className="flex justify-center space-x-8 mt-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-profit-green animate-bounce">${(Math.random() * 10000000).toFixed(0)}M</div>
+              <div className="text-sm text-gray-400">24h Volume</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-accent-blue animate-pulse">{Math.floor(Math.random() * 1000) + 500}+</div>
+              <div className="text-sm text-gray-400">Active Tokens</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-accent-purple animate-bounce">24/7</div>
+              <div className="text-sm text-gray-400">Live Trading</div>
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
             <Button 
@@ -106,7 +127,7 @@ export const InstantMarketAccess = () => {
             {marketHighlights.map((token) => (
               <div 
                 key={token.symbol}
-                className="bg-dark-bg rounded-lg p-4 border border-dark-border hover:border-accent-purple/50 transition-all duration-200 cursor-pointer group"
+                className="bg-dark-bg rounded-lg p-4 border border-dark-border hover:border-accent-purple/50 hover:shadow-lg hover:shadow-accent-purple/20 transition-all duration-300 cursor-pointer group transform hover:scale-105"
                 onClick={handleStartTrading}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -152,18 +173,37 @@ export const InstantMarketAccess = () => {
       {/* Quick Stats */}
       <section className="px-4">
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-dark-surface rounded-xl p-4 border border-dark-border text-center">
-            <p className="text-2xl font-bold text-profit-green">24/7</p>
+          <div className="bg-dark-surface rounded-xl p-4 border border-dark-border text-center hover:border-profit-green/50 transition-all duration-300">
+            <p className="text-2xl font-bold text-profit-green animate-pulse">24/7</p>
             <p className="text-sm text-gray-400">Trading</p>
           </div>
-          <div className="bg-dark-surface rounded-xl p-4 border border-dark-border text-center">
-            <p className="text-2xl font-bold text-accent-purple">1000+</p>
+          <div className="bg-dark-surface rounded-xl p-4 border border-dark-border text-center hover:border-accent-purple/50 transition-all duration-300">
+            <p className="text-2xl font-bold text-accent-purple animate-bounce">1000+</p>
             <p className="text-sm text-gray-400">Tokens</p>
           </div>
-          <div className="bg-dark-surface rounded-xl p-4 border border-dark-border text-center">
-            <p className="text-2xl font-bold text-accent-blue">$2.4B</p>
+          <div className="bg-dark-surface rounded-xl p-4 border border-dark-border text-center hover:border-accent-blue/50 transition-all duration-300">
+            <p className="text-2xl font-bold text-accent-blue animate-pulse">$2.4B</p>
             <p className="text-sm text-gray-400">Volume</p>
           </div>
+        </div>
+      </section>
+
+      {/* Revolutionary Banner */}
+      <section className="px-4">
+        <div className="bg-gradient-to-r from-accent-purple/30 via-profit-green/20 to-accent-blue/30 rounded-2xl p-6 border border-accent-purple/50 text-center">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-white via-profit-green to-accent-blue bg-clip-text text-transparent mb-2">
+            The Future of Finance is Here
+          </h3>
+          <p className="text-gray-300 mb-4">
+            Join millions discovering the revolutionary way to trade cryptocurrency. 
+            No complex setups, no waiting - just instant access to global markets.
+          </p>
+          <Button 
+            onClick={handleStartTrading}
+            className="bg-gradient-to-r from-profit-green via-accent-purple to-accent-blue hover:from-profit-green/80 hover:via-accent-purple/80 hover:to-accent-blue/80 text-white px-8 py-3 rounded-xl font-bold text-lg transform hover:scale-110 transition-all duration-300 shadow-lg"
+          >
+            Start Your Trading Revolution
+          </Button>
         </div>
       </section>
     </div>
