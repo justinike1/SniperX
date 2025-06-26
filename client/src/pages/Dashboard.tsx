@@ -19,6 +19,7 @@ import HighWinRateStrategy from '@/components/HighWinRateStrategy';
 import ContinuousTradingBot from '@/components/ContinuousTradingBot';
 import { NotificationToast } from '@/components/NotificationToast';
 import { ProductionModeNotification } from '@/components/ProductionModeNotification';
+import { AutomatedLightTrading } from '@/components/AutomatedLightTrading';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -196,6 +197,8 @@ export default function Dashboard() {
       <FinanceGeniusAI />
       
       <SocialIntelligence />
+      
+      <AutomatedLightTrading />
       
       <AITradingEngine 
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}

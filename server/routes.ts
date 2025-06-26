@@ -18,6 +18,7 @@ import { realMarketData } from "./services/realMarketDataService";
 import { highWinRateStrategy } from "./services/highWinRateStrategy";
 import { performanceOptimizer } from "./services/performanceOptimizer";
 import { securityMonitor } from "./services/securityMonitor";
+import { automatedLightTrading } from "./services/automatedLightTrading";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -96,6 +97,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     financeGeniusAI.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    automatedLightTrading.setWebSocketBroadcast((message: WebSocketMessage) => {
       broadcastToUser(userId, message);
     });
     
@@ -1192,6 +1197,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error activating emergency lockdown:', error);
       res.status(500).json({ message: 'Failed to activate emergency lockdown' });
+    }
+  });
+
+  // Automated Light Trading endpoints
+  app.post('/api/trading/light-trading/start', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const result = await automatedLightTrading.startLightTrading(verification.user.id);
+      res.json(result);
+    } catch (error) {
+      console.error('Error starting light trading:', error);
+      res.status(500).json({ message: 'Failed to start light trading' });
+    }
+  });
+
+  app.post('/api/trading/light-trading/stop', async (req, res) => {
+    try {
+      const result = await automatedLightTrading.stopLightTrading();
+      res.json(result);
+    } catch (error) {
+      console.error('Error stopping light trading:', error);
+      res.status(500).json({ message: 'Failed to stop light trading' });
+    }
+  });
+
+  app.get('/api/trading/light-trading/status', (req, res) => {
+    try {
+      const stats = automatedLightTrading.getStats();
+      const activeTrades = automatedLightTrading.getActiveTrades();
+      res.json({ 
+        success: true, 
+        stats, 
+        activeTrades,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error getting light trading status:', error);
+      res.status(500).json({ message: 'Failed to get light trading status' });
+    }
+  });
+
+  app.put('/api/trading/light-trading/config', (req, res) => {
+    try {
+      const config = req.body;
+      automatedLightTrading.updateConfig(config);
+      res.json({ 
+        success: true, 
+        message: 'Configuration updated',
+        config: automatedLightTrading.getStats().config
+      });
+    } catch (error) {
+      console.error('Error updating light trading config:', error);
+      res.status(500).json({ message: 'Failed to update configuration' });
     }
   });
 
