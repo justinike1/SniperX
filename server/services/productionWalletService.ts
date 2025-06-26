@@ -29,7 +29,24 @@ export class ProductionWalletService {
   // Create production-ready wallet for real transfers
   async createProductionWallet(userId: number, password: string): Promise<SecureWallet> {
     try {
-      // Generate secure Solana keypair
+      // Check if user already has a production wallet
+      const existingUser = await storage.getUser(userId);
+      if (existingUser && existingUser.walletAddress && existingUser.encryptedPrivateKey) {
+        // Get current balance and return existing wallet
+        const balance = await this.getRealSOLBalance(existingUser.walletAddress);
+        
+        // Update balance tracking
+        await storage.updateWalletBalance(userId, 'SOL', null, balance.toString());
+        
+        return {
+          address: existingUser.walletAddress,
+          publicKey: existingUser.walletAddress,
+          balance: balance,
+          isProduction: true
+        };
+      }
+
+      // Generate secure Solana keypair for new wallet
       const keypair = Keypair.generate();
       const publicKey = keypair.publicKey.toString();
       const privateKeyBytes = keypair.secretKey;
