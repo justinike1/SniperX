@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { InstantMarketAccess } from '@/components/InstantMarketAccess';
 import { WalletOverview } from '@/components/WalletOverview';
+import { LightspeedWalletAccess } from '@/components/LightspeedWalletAccess';
 import { BotStatus } from '@/components/BotStatus';
 import { RecentTrades } from '@/components/RecentTrades';
 import { LiveScanner } from '@/components/LiveScanner';
@@ -46,12 +47,16 @@ export default function Dashboard() {
     status: 'PAUSED'
   });
 
-  // Fetch wallet data
-  const { data: userWallet } = useQuery({
+  // Fetch wallet data with instant access
+  const { data: userWallet, isLoading: lightspeedWalletLoading, error: walletError } = useQuery({
     queryKey: ['/api/user/wallet'],
+    retry: 3,
+    retryDelay: 1000,
   });
 
-  const { walletData: solanaWallet, isLoading: walletLoading } = useSolanaWallet((userWallet as any)?.address);
+  const { walletData: solanaWallet, isLoading: solanaWalletLoading } = useSolanaWallet((userWallet as any)?.wallet?.address);
+  
+  const isWalletLoading = lightspeedWalletLoading || solanaWalletLoading;
 
   // Fetch recent trades
   const { data: recentTrades = [] } = useQuery<TradeData[]>({
@@ -186,10 +191,7 @@ export default function Dashboard() {
       
       <RealTimeMarketDashboard />
       
-      <WalletOverview 
-        walletData={walletData} 
-        isLoading={walletLoading} 
-      />
+      <LightspeedWalletAccess />
       
       <ErrorBoundary>
         <ProfitTracker />

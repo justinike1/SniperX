@@ -36,6 +36,7 @@ import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
 import { solanaWalletService } from "./services/solanaWalletService";
 import { productionWalletService } from "./services/productionWalletService";
 import { authenticationService } from "./services/authenticationService";
+import { lightspeedWalletService } from "./services/lightspeedWalletService";
 
 export interface WebSocketMessage {
   type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT' | 'PERFORMANCE_UPDATE' | 'SECURITY_UPDATE' | 'SECURITY_ALERT';
@@ -971,6 +972,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         message: 'Failed to fetch transfer status' 
       });
+    }
+  });
+
+  // === LIGHTSPEED WALLET ACCESS ===
+  
+  // Instant wallet access for authenticated users
+  app.get('/api/user/wallet', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const userId = verification.user.id;
+      const walletResult = await lightspeedWalletService.getOrCreateUserWallet(userId);
+      
+      if (!walletResult.success) {
+        return res.status(500).json({ message: walletResult.message });
+      }
+
+      res.json({
+        success: true,
+        wallet: walletResult.wallet,
+        message: 'Wallet ready for trading'
+      });
+    } catch (error) {
+      console.error('Error accessing wallet:', error);
+      res.status(500).json({ message: 'Wallet service unavailable' });
+    }
+  });
+
+  // Quick wallet balance refresh
+  app.get('/api/user/wallet/balance', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const userId = verification.user.id;
+      const balance = await lightspeedWalletService.refreshWalletBalance(userId);
+      
+      res.json({
+        success: true,
+        balance,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error refreshing balance:', error);
+      res.json({ success: true, balance: 0 }); // Graceful fallback
+    }
+  });
+
+  // Wallet transactions
+  app.get('/api/user/wallet/transactions', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const verification = await authService.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      const userId = verification.user.id;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const transactions = await lightspeedWalletService.getWalletTransactions(userId, limit);
+      
+      res.json({
+        success: true,
+        transactions
+      });
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      res.json({ success: true, transactions: [] }); // Graceful fallback
     }
   });
 
