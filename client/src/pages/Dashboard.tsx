@@ -11,6 +11,8 @@ import { QuantumTradeEngine } from '@/components/QuantumTradeEngine';
 import { CosmicProphecy } from '@/components/CosmicProphecy';
 import { DimensionalMarketFlow } from '@/components/DimensionalMarketFlow';
 import { InfiniteConsciousnessMatrix } from '@/components/InfiniteConsciousnessMatrix';
+import { BeginnerGuide } from '@/components/BeginnerGuide';
+import { QuickStartTutorial } from '@/components/QuickStartTutorial';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -169,6 +171,8 @@ export default function Dashboard() {
 
   return (
     <div>
+      <BeginnerGuide />
+      
       <WalletOverview 
         walletData={walletData} 
         isLoading={walletLoading} 
@@ -216,6 +220,8 @@ export default function Dashboard() {
         notification={currentNotification}
         onClose={() => setCurrentNotification(null)}
       />
+      
+      <QuickStartTutorial />
     </div>
   );
 }
