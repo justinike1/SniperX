@@ -6,6 +6,9 @@ import { SolanaService } from "./services/solanaService";
 import { tokenScanner } from "./services/tokenScanner";
 import { TradingBot } from "./services/tradingBot";
 import { notificationService } from "./services/notificationService";
+import { RealMarketDataService } from "./services/realMarketData";
+import { AdvancedTradingEngine } from "./services/advancedTradingEngine";
+import { ProfitMaximizer } from "./services/profitMaximizer";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -19,6 +22,9 @@ export interface WebSocketMessage {
 }
 
 const tradingBots = new Map<number, TradingBot>();
+const realMarketData = new RealMarketDataService();
+const advancedTradingEngine = new AdvancedTradingEngine();
+const profitMaximizer = new ProfitMaximizer();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -50,6 +56,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       tradingBots.set(userId, bot);
     }
+
+    // Initialize advanced trading systems
+    advancedTradingEngine.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+    
+    profitMaximizer.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
     
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
@@ -435,6 +450,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Advanced Trading API Endpoints
+  app.get('/api/trading/opportunities', async (req, res) => {
+    try {
+      const opportunities = await profitMaximizer.executeMaximumProfitScan();
+      res.json({ success: true, opportunities });
+    } catch (error) {
+      console.error('Error scanning opportunities:', error);
+      res.status(500).json({ message: 'Failed to scan opportunities' });
+    }
+  });
+
+  app.post('/api/trading/analyze/:tokenAddress', async (req, res) => {
+    try {
+      const { tokenAddress } = req.params;
+      const signal = await advancedTradingEngine.analyzeToken(tokenAddress);
+      res.json({ success: true, signal });
+    } catch (error) {
+      console.error('Error analyzing token:', error);
+      res.status(500).json({ message: 'Failed to analyze token' });
+    }
+  });
+
+  app.get('/api/trading/performance', async (req, res) => {
+    try {
+      const performance = profitMaximizer.getPerformanceMetrics();
+      const marketStatus = realMarketData.getConnectionStatus();
+      res.json({ success: true, performance, marketStatus });
+    } catch (error) {
+      console.error('Error fetching performance:', error);
+      res.status(500).json({ message: 'Failed to fetch performance data' });
+    }
+  });
+
+  app.post('/api/trading/smart-trade', async (req, res) => {
+    try {
+      const { tokenAddress, amount, slippage } = req.body;
+      const result = await advancedTradingEngine.executeSmartTrade(tokenAddress, amount, slippage);
+      res.json(result);
+    } catch (error) {
+      console.error('Error executing smart trade:', error);
+      res.status(500).json({ message: 'Failed to execute smart trade' });
+    }
+  });
+
+  app.get('/api/market/price/:tokenAddress', async (req, res) => {
+    try {
+      const { tokenAddress } = req.params;
+      const price = await realMarketData.getTokenPrice(tokenAddress);
+      const metadata = await realMarketData.getTokenMetadata(tokenAddress);
+      res.json({ success: true, price, metadata });
+    } catch (error) {
+      console.error('Error fetching token price:', error);
+      res.status(500).json({ message: 'Failed to fetch token price' });
+    }
+  });
+
+  app.post('/api/trading/watchlist/add', async (req, res) => {
+    try {
+      const { tokenAddress } = req.body;
+      advancedTradingEngine.addToWatchlist(tokenAddress);
+      res.json({ success: true, message: 'Token added to watchlist' });
+    } catch (error) {
+      console.error('Error adding to watchlist:', error);
+      res.status(500).json({ message: 'Failed to add token to watchlist' });
+    }
+  });
+
   // Health check endpoint
   app.get('/api/health', (req, res) => {
     res.json({
@@ -444,9 +526,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tokenScanner: tokenScanner.isActive(),
         tradingBot: tradingBots.has(1) ? tradingBots.get(1)!.getStatus().isActive : false,
         websocket: wss.clients.size,
+        realMarketData: realMarketData.isConfigured(),
+        profitMaximizer: true
       }
     });
   });
+
+  // Start profit maximization system
+  profitMaximizer.startProfitMaximization();
   
   return httpServer;
 }

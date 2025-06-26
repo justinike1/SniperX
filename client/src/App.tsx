@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MobileNavigation } from "@/components/MobileNavigation";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import Dashboard from "@/pages/Dashboard";
 import Trades from "@/pages/Trades";
@@ -35,6 +36,8 @@ function Router() {
         currentPage={currentPage} 
         onNavigate={setCurrentPage} 
       />
+      
+      <InstallPrompt />
     </div>
   );
 }

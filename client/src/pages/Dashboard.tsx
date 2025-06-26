@@ -21,6 +21,7 @@ import { GlobalTradingIntelligence } from '@/components/GlobalTradingIntelligenc
 import { AdvancedSentimentAnalysis } from '@/components/AdvancedSentimentAnalysis';
 import { SniperXBotStatus } from '@/components/SniperXBotStatus';
 import { NotificationToast } from '@/components/NotificationToast';
+import { ProfitTracker } from '@/components/ProfitTracker';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -49,7 +50,7 @@ export default function Dashboard() {
     queryKey: ['/api/user/wallet'],
   });
 
-  const { walletData: solanaWallet, isLoading: walletLoading } = useSolanaWallet(userWallet?.address);
+  const { walletData: solanaWallet, isLoading: walletLoading } = useSolanaWallet((userWallet as any)?.address);
 
   // Fetch recent trades
   const { data: recentTrades = [] } = useQuery<TradeData[]>({
@@ -181,6 +182,8 @@ export default function Dashboard() {
       <BeginnerGuide />
       
       <SniperXBotStatus />
+      
+      <ProfitTracker />
       
       <WalletOverview 
         walletData={walletData} 
