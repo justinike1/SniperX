@@ -95,12 +95,24 @@ export class MemStorage implements IStorage {
     const demoUser: User = {
       id: 1,
       username: 'demo',
+      email: 'demo@sniper.app',
       password: 'demo123',
+      firstName: null,
+      lastName: null,
       walletAddress: '7xKsDVfbqKnqm9PqW3nV8vR2b5B8tLf9mPqX4CyZ3Abc',
       encryptedPrivateKey: null,
       phoneNumber: null,
       isActive: true,
+      emailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationExpiry: null,
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      passwordResetToken: null,
+      passwordResetExpiry: null,
+      lastLoginAt: null,
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.users.set(1, demoUser);
 

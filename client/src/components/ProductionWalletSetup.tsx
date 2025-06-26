@@ -39,14 +39,16 @@ export function ProductionWalletSetup({ userId, onWalletCreated }: ProductionWal
         password
       });
 
-      if (response.success) {
+      const data = await response.json();
+      
+      if (data.success) {
         toast({
           title: "Production Wallet Created",
           description: "Your secure wallet is ready for real transfers from Robinhood and other platforms",
         });
-        onWalletCreated(response.wallet);
+        onWalletCreated(data.wallet);
       } else {
-        setError(response.message || 'Failed to create production wallet');
+        setError(data.message || 'Failed to create production wallet');
       }
     } catch (error) {
       console.error('Production wallet creation error:', error);
