@@ -110,7 +110,7 @@ export class AuthService {
         encryptedPrivateKey: encryptedPrivateKey,
         phoneNumber: null,
         isActive: true,
-        emailVerified: false,
+        emailVerified: true,
         twoFactorEnabled: false
       });
 
