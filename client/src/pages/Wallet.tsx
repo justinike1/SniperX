@@ -14,6 +14,7 @@ import { ProductionWalletSetup } from '@/components/ProductionWalletSetup';
 import { WalletBackupWizard } from '@/components/WalletBackupWizard';
 import { WalletRecoveryWizard } from '@/components/WalletRecoveryWizard';
 import { FreshWalletAccess } from '@/components/FreshWalletAccess';
+import { RobinhoodTransferTracker } from '@/components/RobinhoodTransferTracker';
 
 interface WalletBalance {
   address: string;
@@ -407,7 +408,7 @@ export default function WalletPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="send" className="w-full">
-                <TabsList className="grid w-full grid-cols-5 bg-slate-700">
+                <TabsList className="grid w-full grid-cols-6 bg-slate-700">
                   <TabsTrigger value="send" className="flex items-center gap-2">
                     <Send className="h-4 w-4" />
                     Send SOL
@@ -415,6 +416,10 @@ export default function WalletPage() {
                   <TabsTrigger value="receive" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Receive SOL
+                  </TabsTrigger>
+                  <TabsTrigger value="transfers" className="flex items-center gap-2 text-red-400">
+                    <ArrowUpRight className="h-4 w-4" />
+                    Transfer Tracker
                   </TabsTrigger>
                   <TabsTrigger value="fresh" className="flex items-center gap-2 text-blue-400">
                     <RefreshCw className="h-4 w-4" />
@@ -612,6 +617,11 @@ export default function WalletPage() {
                       <div className="text-gray-400">Loading wallet information...</div>
                     )}
                   </div>
+                </TabsContent>
+
+                {/* Transfer Tracking Tab */}
+                <TabsContent value="transfers" className="space-y-4 mt-6">
+                  <RobinhoodTransferTracker />
                 </TabsContent>
 
                 {/* Fresh Address Tab */}

@@ -38,6 +38,7 @@ import { solanaWalletService } from "./services/solanaWalletService";
 import { productionWalletService } from "./services/productionWalletService";
 import { authenticationService } from "./services/authenticationService";
 import { lightspeedWalletService } from "./services/lightspeedWalletService";
+import { transactionTracker } from "./services/transactionTracker";
 import { Keypair } from "@solana/web3.js";
 
 export interface WebSocketMessage {
@@ -131,6 +132,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Initialize Strategic Memecoin Bot for advanced memecoin trading
     strategicMemecoinBot.setWebSocketBroadcast((message: WebSocketMessage) => {
+      broadcastToUser(userId, message);
+    });
+
+    // Initialize Transaction Tracker for monitoring transfers
+    transactionTracker.setWebSocketBroadcast((message: WebSocketMessage) => {
       broadcastToUser(userId, message);
     });
     
@@ -1838,6 +1844,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error processing purchase:', error);
       res.status(500).json({ message: 'Purchase processing failed' });
+    }
+  });
+
+  // Transaction Tracking endpoints for monitoring Robinhood transfers
+  app.post('/api/transfers/track-robinhood', async (req, res) => {
+    try {
+      const { amount, destinationAddress, transactionId, timestamp } = req.body;
+      
+      if (!amount || !destinationAddress || !transactionId) {
+        return res.status(400).json({ message: 'Missing required transfer data' });
+      }
+
+      const userId = 1; // Default user for tracking
+      const transfer = await transactionTracker.trackRobinhoodTransfer(userId, {
+        amount: parseFloat(amount),
+        destinationAddress,
+        transactionId,
+        timestamp: timestamp || new Date().toISOString()
+      });
+
+      res.json({ success: true, transfer });
+    } catch (error) {
+      console.error('Error tracking Robinhood transfer:', error);
+      res.status(500).json({ message: 'Failed to track transfer' });
+    }
+  });
+
+  app.get('/api/transfers/pending', async (req, res) => {
+    try {
+      const userId = 1; // Default user
+      const transfers = await transactionTracker.getPendingTransfers(userId);
+      res.json({ success: true, transfers });
+    } catch (error) {
+      console.error('Error fetching pending transfers:', error);
+      res.status(500).json({ message: 'Failed to fetch pending transfers' });
+    }
+  });
+
+  app.get('/api/transfers/check-address/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      const result = await transactionTracker.checkAddressBalance(address);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('Error checking address:', error);
+      res.status(500).json({ message: 'Failed to check address' });
     }
   });
 
