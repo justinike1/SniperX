@@ -7,6 +7,10 @@ import { LiveScanner } from '@/components/LiveScanner';
 import { QuickSettings } from '@/components/QuickSettings';
 import { AITradingEngine } from '@/components/AITradingEngine';
 import { MarketIntelligence } from '@/components/MarketIntelligence';
+import { QuantumTradeEngine } from '@/components/QuantumTradeEngine';
+import { CosmicProphecy } from '@/components/CosmicProphecy';
+import { DimensionalMarketFlow } from '@/components/DimensionalMarketFlow';
+import { InfiniteConsciousnessMatrix } from '@/components/InfiniteConsciousnessMatrix';
 import { NotificationToast } from '@/components/NotificationToast';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
@@ -180,6 +184,14 @@ export default function Dashboard() {
         trades={recentTrades}
         onViewAll={handleViewAllTrades}
       />
+      
+      <InfiniteConsciousnessMatrix />
+      
+      <QuantumTradeEngine />
+      
+      <CosmicProphecy />
+      
+      <DimensionalMarketFlow />
       
       <AITradingEngine 
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
