@@ -1591,15 +1591,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Production wallet creation for real transfers
   app.post('/api/wallet/create-production', async (req, res) => {
     try {
-      const { userId, password } = req.body;
-      if (!userId || !password) {
-        return res.status(400).json({ 
+      const { password } = req.body;
+      
+      // Get token from authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
           success: false, 
-          message: 'User ID and password required for secure wallet creation' 
+          message: 'Authentication required to create production wallet' 
         });
       }
 
-      const wallet = await productionWalletService.createProductionWallet(userId, password);
+      const authToken = authHeader.replace('Bearer ', '');
+      
+      // Verify token and get user
+      const verified = await authService.verifyToken(authToken);
+      if (!verified.valid || !verified.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid authentication token'
+        });
+      }
+
+      if (!password || password.length < 8) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Password must be at least 8 characters long' 
+        });
+      }
+
+      const wallet = await productionWalletService.createProductionWallet(verified.user.id, password);
       res.json({ 
         success: true, 
         wallet: {
@@ -1763,13 +1784,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await authenticationService.registerUser({
+      // Use the simpler authService instead for instant access
+      const result = await authService.registerUser({
         email,
         password,
         firstName,
-        lastName,
-        phoneNumber
+        lastName
       });
+
+      if (result.success && result.token) {
+        // Set secure session cookie
+        res.cookie('auth-token', result.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+      }
 
       res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
@@ -1793,10 +1824,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await authenticationService.loginUser({
+      // Use the simpler authService for consistent authentication
+      const result = await authService.loginUser({
         email,
-        password,
-        twoFactorCode
+        password
       });
 
       if (result.success && result.token) {
@@ -1947,8 +1978,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { valid, user } = await authenticationService.verifyToken(authToken);
-      if (!valid || !user) {
+      // Use consistent authService for token verification
+      const verified = await authService.verifyToken(authToken);
+      if (!verified.valid || !verified.user) {
         return res.status(401).json({
           success: false,
           message: 'Invalid or expired token'
@@ -1957,7 +1989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        user
+        user: verified.user
       });
     } catch (error) {
       console.error('Get user error:', error);

@@ -54,27 +54,40 @@ export class AuthenticationService {
       const emailVerificationToken = crypto.randomBytes(32).toString('hex');
       const emailVerificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-      // Create user account
+      // Generate username from email
+      const username = userData.email.split('@')[0] + '_' + Date.now();
+
+      // Create user account with instant access - NO EMAIL VERIFICATION
       const newUser = await storage.createUser({
+        username: username,
         email: userData.email,
         password: hashedPassword,
         firstName: userData.firstName || null,
         lastName: userData.lastName || null,
         phoneNumber: userData.phoneNumber || null,
-        emailVerified: false,
-        emailVerificationToken,
-        emailVerificationExpiry,
+        emailVerified: true, // INSTANTLY VERIFIED
         isActive: true,
-        twoFactorEnabled: false
+        twoFactorEnabled: false,
+        walletAddress: null,
+        encryptedPrivateKey: null
       });
 
-      // Send verification email
-      await this.sendVerificationEmail(userData.email, emailVerificationToken);
+      // Generate JWT token for immediate login
+      const token = this.generateJWT(newUser);
+      await this.createSession(newUser.id, token);
 
       return {
         success: true,
-        message: 'Account created successfully. Please check your email to verify your account.',
-        requiresEmailVerification: true
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          emailVerified: true,
+          twoFactorEnabled: false
+        },
+        token,
+        message: 'Account created successfully - you are now logged in!'
       };
     } catch (error) {
       console.error('Registration error:', error);
@@ -105,14 +118,7 @@ export class AuthenticationService {
         };
       }
 
-      // Check if email is verified
-      if (!user.emailVerified) {
-        return {
-          success: false,
-          message: 'Please verify your email address before logging in',
-          requiresEmailVerification: true
-        };
-      }
+      // REMOVED EMAIL VERIFICATION CHECK - INSTANT ACCESS
 
       // Check if account is active
       if (!user.isActive) {

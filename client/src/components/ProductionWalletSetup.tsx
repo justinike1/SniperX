@@ -35,7 +35,6 @@ export function ProductionWalletSetup({ userId, onWalletCreated }: ProductionWal
     setIsCreating(true);
     try {
       const response = await apiRequest('POST', '/api/wallet/create-production', {
-        userId,
         password
       });
 
