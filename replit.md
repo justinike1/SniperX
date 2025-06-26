@@ -23,10 +23,11 @@ SniperX is a full-stack Solana token trading bot application that automatically 
 - **Build**: esbuild for production bundling
 
 ### Database Schema
-- **Users**: Authentication and wallet management
-- **Trades**: Trading history and transaction records
-- **Bot Settings**: Configurable trading parameters per user
-- **Token Data**: Real-time token information and metadata
+- **Users**: Authentication and wallet management (PostgreSQL)
+- **Trades**: Trading history and transaction records (PostgreSQL)
+- **Bot Settings**: Configurable trading parameters per user (PostgreSQL)
+- **Token Data**: Real-time token information and metadata (PostgreSQL)
+- **Database**: Persistent storage with Drizzle ORM integration
 
 ## Key Components
 
@@ -98,6 +99,9 @@ SniperX is a full-stack Solana token trading bot application that automatically 
 ```
 Changelog:
 - June 26, 2025. Initial setup
+- June 26, 2025. Added PostgreSQL database integration with Drizzle ORM
+- June 26, 2025. Implemented charting and timeline features for token visualization
+- June 26, 2025. Replaced in-memory storage with persistent database storage
 ```
 
 ## User Preferences

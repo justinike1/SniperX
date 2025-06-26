@@ -12,6 +12,8 @@ import {
   type TokenData,
   type InsertTokenData
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -365,4 +367,159 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database Storage Implementation
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
+        encryptedPrivateKey: null,
+        isActive: true,
+        createdAt: new Date()
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async getTrade(id: number): Promise<Trade | undefined> {
+    const [trade] = await db.select().from(trades).where(eq(trades.id, id));
+    return trade || undefined;
+  }
+
+  async getTradesByUser(userId: number): Promise<Trade[]> {
+    return await db.select().from(trades).where(eq(trades.userId, userId));
+  }
+
+  async getRecentTrades(userId: number, limit = 10): Promise<Trade[]> {
+    return await db
+      .select()
+      .from(trades)
+      .where(eq(trades.userId, userId))
+      .orderBy(desc(trades.createdAt))
+      .limit(limit);
+  }
+
+  async createTrade(insertTrade: InsertTrade & { userId: number }): Promise<Trade> {
+    const [trade] = await db
+      .insert(trades)
+      .values({
+        ...insertTrade,
+        txHash: null,
+        profitLoss: null,
+        profitPercentage: null,
+        createdAt: new Date()
+      })
+      .returning();
+    return trade;
+  }
+
+  async updateTrade(id: number, updates: Partial<Trade>): Promise<Trade | undefined> {
+    const [trade] = await db
+      .update(trades)
+      .set(updates)
+      .where(eq(trades.id, id))
+      .returning();
+    return trade || undefined;
+  }
+
+  async getBotSettings(userId: number): Promise<BotSettings | undefined> {
+    const [settings] = await db.select().from(botSettings).where(eq(botSettings.userId, userId));
+    return settings || undefined;
+  }
+
+  async createBotSettings(insertSettings: InsertBotSettings & { userId: number }): Promise<BotSettings> {
+    const [settings] = await db
+      .insert(botSettings)
+      .values({
+        ...insertSettings,
+        updatedAt: new Date()
+      })
+      .returning();
+    return settings;
+  }
+
+  async updateBotSettings(userId: number, updates: Partial<BotSettings>): Promise<BotSettings | undefined> {
+    const [settings] = await db
+      .update(botSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(botSettings.userId, userId))
+      .returning();
+    return settings || undefined;
+  }
+
+  async getTokenData(address: string): Promise<TokenData | undefined> {
+    const [token] = await db.select().from(tokenData).where(eq(tokenData.address, address));
+    return token || undefined;
+  }
+
+  async getAllTokens(limit = 100): Promise<TokenData[]> {
+    return await db
+      .select()
+      .from(tokenData)
+      .orderBy(desc(tokenData.firstDetected))
+      .limit(limit);
+  }
+
+  async getFilteredTokens(filters: any, limit = 50): Promise<TokenData[]> {
+    let query = db.select().from(tokenData);
+    
+    // Apply filters based on the filters object
+    if (filters.honeypotFilter) {
+      query = query.where(eq(tokenData.isHoneypot, false));
+    }
+    if (filters.lpLockFilter) {
+      query = query.where(eq(tokenData.isLpLocked, true));
+    }
+    if (filters.renounceFilter) {
+      query = query.where(eq(tokenData.isRenounced, true));
+    }
+    
+    return await query
+      .orderBy(desc(tokenData.firstDetected))
+      .limit(limit);
+  }
+
+  async createTokenData(insertToken: InsertTokenData): Promise<TokenData> {
+    const [token] = await db
+      .insert(tokenData)
+      .values({
+        ...insertToken,
+        name: insertToken.name || null,
+        firstDetected: new Date(),
+        lastUpdated: new Date()
+      })
+      .returning();
+    return token;
+  }
+
+  async updateTokenData(address: string, updates: Partial<TokenData>): Promise<TokenData | undefined> {
+    const [token] = await db
+      .update(tokenData)
+      .set({ ...updates, lastUpdated: new Date() })
+      .where(eq(tokenData.address, address))
+      .returning();
+    return token || undefined;
+  }
+}
+
+export const storage = new DatabaseStorage();
