@@ -71,6 +71,32 @@ export const tokenData = pgTable("token_data", {
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  txHash: text("tx_hash").notNull().unique(),
+  type: text("type").notNull(), // 'SEND' | 'RECEIVE' | 'TRADE'
+  fromAddress: text("from_address").notNull(),
+  toAddress: text("to_address").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 9 }).notNull(),
+  tokenSymbol: text("token_symbol").default('SOL'),
+  tokenAddress: text("token_address"),
+  status: text("status").default('PENDING'), // 'PENDING' | 'CONFIRMED' | 'FAILED'
+  blockNumber: integer("block_number"),
+  gasUsed: decimal("gas_used", { precision: 18, scale: 9 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  confirmedAt: timestamp("confirmed_at"),
+});
+
+export const walletBalances = pgTable("wallet_balances", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  tokenSymbol: text("token_symbol").notNull().default('SOL'),
+  tokenAddress: text("token_address"),
+  balance: decimal("balance", { precision: 18, scale: 9 }).notNull().default('0'),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   password: true,
@@ -120,6 +146,23 @@ export const insertTokenDataSchema = createInsertSchema(tokenData).pick({
   riskScore: true,
 });
 
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).pick({
+  txHash: true,
+  type: true,
+  fromAddress: true,
+  toAddress: true,
+  amount: true,
+  tokenSymbol: true,
+  tokenAddress: true,
+  status: true,
+});
+
+export const insertWalletBalanceSchema = createInsertSchema(walletBalances).pick({
+  tokenSymbol: true,
+  tokenAddress: true,
+  balance: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
@@ -128,3 +171,7 @@ export type InsertBotSettings = z.infer<typeof insertBotSettingsSchema>;
 export type BotSettings = typeof botSettings.$inferSelect;
 export type InsertTokenData = z.infer<typeof insertTokenDataSchema>;
 export type TokenData = typeof tokenData.$inferSelect;
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletBalance = z.infer<typeof insertWalletBalanceSchema>;
+export type WalletBalance = typeof walletBalances.$inferSelect;

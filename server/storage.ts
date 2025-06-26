@@ -3,6 +3,8 @@ import {
   trades, 
   botSettings, 
   tokenData,
+  walletTransactions,
+  walletBalances,
   type User, 
   type InsertUser,
   type Trade,
@@ -10,7 +12,11 @@ import {
   type BotSettings,
   type InsertBotSettings,
   type TokenData,
-  type InsertTokenData
+  type InsertTokenData,
+  type WalletTransaction,
+  type InsertWalletTransaction,
+  type WalletBalance,
+  type InsertWalletBalance
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -42,6 +48,16 @@ export interface IStorage {
   getFilteredTokens(filters: any, limit?: number): Promise<TokenData[]>;
   createTokenData(token: InsertTokenData): Promise<TokenData>;
   updateTokenData(address: string, updates: Partial<TokenData>): Promise<TokenData | undefined>;
+
+  // Wallet transaction methods
+  createWalletTransaction(transaction: InsertWalletTransaction & { userId: number }): Promise<WalletTransaction>;
+  getWalletTransactionsByUser(userId: number, limit?: number): Promise<WalletTransaction[]>;
+  getWalletTransactionByHash(txHash: string): Promise<WalletTransaction | undefined>;
+  updateWalletTransactionStatus(txHash: string, status: string): Promise<void>;
+
+  // Wallet balance methods
+  getWalletBalance(userId: number, tokenSymbol: string): Promise<WalletBalance | undefined>;
+  updateWalletBalance(userId: number, tokenSymbol: string, tokenAddress: string | null, balance: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -540,6 +556,80 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tokenData.address, address))
       .returning();
     return token || undefined;
+  }
+
+  // Wallet transaction methods for DatabaseStorage
+  async createWalletTransaction(insertTransaction: InsertWalletTransaction & { userId: number }): Promise<WalletTransaction> {
+    const [transaction] = await db
+      .insert(walletTransactions)
+      .values({
+        ...insertTransaction,
+        status: insertTransaction.status || 'PENDING',
+        tokenSymbol: insertTransaction.tokenSymbol || 'SOL',
+        createdAt: new Date()
+      })
+      .returning();
+    return transaction;
+  }
+
+  async getWalletTransactionsByUser(userId: number, limit = 50): Promise<WalletTransaction[]> {
+    return await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.userId, userId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(limit);
+  }
+
+  async getWalletTransactionByHash(txHash: string): Promise<WalletTransaction | undefined> {
+    const [transaction] = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.txHash, txHash));
+    return transaction || undefined;
+  }
+
+  async updateWalletTransactionStatus(txHash: string, status: string): Promise<void> {
+    await db
+      .update(walletTransactions)
+      .set({ 
+        status, 
+        confirmedAt: status === 'CONFIRMED' ? new Date() : undefined 
+      })
+      .where(eq(walletTransactions.txHash, txHash));
+  }
+
+  // Wallet balance methods for DatabaseStorage
+  async getWalletBalance(userId: number, tokenSymbol: string): Promise<WalletBalance | undefined> {
+    const [balance] = await db
+      .select()
+      .from(walletBalances)
+      .where(
+        and(
+          eq(walletBalances.userId, userId),
+          eq(walletBalances.tokenSymbol, tokenSymbol)
+        )
+      );
+    return balance || undefined;
+  }
+
+  async updateWalletBalance(userId: number, tokenSymbol: string, tokenAddress: string | null, balance: string): Promise<void> {
+    await db
+      .insert(walletBalances)
+      .values({
+        userId,
+        tokenSymbol,
+        tokenAddress,
+        balance,
+        lastUpdated: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [walletBalances.userId, walletBalances.tokenSymbol],
+        set: {
+          balance,
+          lastUpdated: new Date()
+        }
+      });
   }
 }
 

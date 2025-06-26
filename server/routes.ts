@@ -23,6 +23,7 @@ import { z } from "zod";
 import { authService } from "./services/authService";
 import { walletTransferService } from "./services/walletTransferService";
 import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
+import { solanaWalletService } from "./services/solanaWalletService";
 
 export interface WebSocketMessage {
   type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT';
@@ -1337,6 +1338,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error enabling auto-sell:', error);
       res.status(500).json({ message: 'Failed to enable auto-sell' });
+    }
+  });
+
+  // Secure Solana Wallet API Endpoints
+  
+  // Get wallet balance with real-time data
+  app.get('/api/wallet/balance/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const balance = await solanaWalletService.getWalletBalance(userId);
+      res.json({ success: true, balance });
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch balance' 
+      });
+    }
+  });
+
+  // Validate wallet address before transfers
+  app.post('/api/wallet/validate', async (req, res) => {
+    try {
+      const { address } = req.body;
+      
+      if (!address) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Wallet address is required' 
+        });
+      }
+
+      const validation = await solanaWalletService.validateWalletAddress(address);
+      res.json({ success: true, validation });
+    } catch (error) {
+      console.error('Error validating wallet address:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to validate wallet address' 
+      });
+    }
+  });
+
+  // Send SOL with proper validation and fee estimation
+  app.post('/api/wallet/send', async (req, res) => {
+    try {
+      const { userId, toAddress, amount, userPassword } = req.body;
+
+      // Input validation
+      if (!userId || !toAddress || !amount || !userPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: userId, toAddress, amount, userPassword'
+        });
+      }
+
+      if (amount <= 0 || amount > 1000000) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid amount. Must be between 0 and 1,000,000 SOL'
+        });
+      }
+
+      // Validate destination address first
+      const addressValidation = await solanaWalletService.validateWalletAddress(toAddress);
+      if (!addressValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          error: addressValidation.error || 'Invalid destination wallet address'
+        });
+      }
+
+      if (!addressValidation.exists) {
+        return res.status(400).json({
+          success: false,
+          error: 'Destination wallet address does not exist on Solana blockchain. Please verify the address.'
+        });
+      }
+
+      // Execute transfer
+      const result = await solanaWalletService.sendSOL(userId, {
+        toAddress,
+        amount: parseFloat(amount),
+        userPassword
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error sending SOL:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Transfer failed'
+      });
+    }
+  });
+
+  // Get transaction history
+  app.get('/api/wallet/transactions/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const transactions = await solanaWalletService.getTransactionHistory(userId, limit);
+      res.json({ success: true, transactions });
+    } catch (error) {
+      console.error('Error fetching transaction history:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch transaction history' 
+      });
+    }
+  });
+
+  // Estimate transaction fee
+  app.post('/api/wallet/estimate-fee', async (req, res) => {
+    try {
+      const { fromAddress, toAddress, amount } = req.body;
+
+      if (!fromAddress || !toAddress || !amount) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: fromAddress, toAddress, amount'
+        });
+      }
+
+      const estimatedFee = await solanaWalletService.estimateTransactionFee(
+        fromAddress, 
+        toAddress, 
+        parseFloat(amount)
+      );
+
+      res.json({ 
+        success: true, 
+        estimatedFee,
+        estimatedFeeSOL: estimatedFee,
+        totalCost: parseFloat(amount) + estimatedFee
+      });
+    } catch (error) {
+      console.error('Error estimating fee:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to estimate transaction fee' 
+      });
+    }
+  });
+
+  // Monitor incoming transactions for a user
+  app.post('/api/wallet/monitor/:userId', async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      await solanaWalletService.monitorIncomingTransactions(userId);
+      res.json({ 
+        success: true, 
+        message: 'Monitoring incoming transactions' 
+      });
+    } catch (error) {
+      console.error('Error monitoring transactions:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to monitor transactions' 
+      });
     }
   });
 
