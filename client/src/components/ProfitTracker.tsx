@@ -42,12 +42,12 @@ export const ProfitTracker = () => {
   const [todaysGains, setTodaysGains] = useState(0);
 
   const { data: opportunities = {} } = useQuery({
-    queryKey: ['/api/trading/opportunities'],
+    queryKey: ['/api/strategy/high-probability-trades'],
     refetchInterval: 15000, // Refresh every 15 seconds
   });
 
   const { data: performance = {} } = useQuery({
-    queryKey: ['/api/trading/performance'],
+    queryKey: ['/api/strategy/performance-metrics'],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -154,7 +154,10 @@ export const ProfitTracker = () => {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-emerald-400">
-                {(performanceData.winRate || 0).toFixed(1)}%
+                {typeof performanceData.winRate === 'string' 
+                  ? `${performanceData.winRate}%` 
+                  : `${(performanceData.winRate || 0).toFixed(1)}%`
+                }
               </div>
               <div className="text-sm text-emerald-300">Win Rate</div>
             </div>

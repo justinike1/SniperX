@@ -176,25 +176,25 @@ export default function HighWinRateStrategy() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {metrics.currentWinRate.toFixed(1)}%
+                  {(metrics.currentWinRate || 0).toFixed(1)}%
                 </div>
                 <div className="text-sm text-gray-600">Win Rate</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {metrics.averageReturn.toFixed(1)}%
+                  {(metrics.averageReturn || 0).toFixed(1)}%
                 </div>
                 <div className="text-sm text-gray-600">Avg Return</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {metrics.sharpeRatio.toFixed(1)}
+                  {(metrics.sharpeRatio || 0).toFixed(1)}
                 </div>
                 <div className="text-sm text-gray-600">Sharpe Ratio</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
-                  {metrics.maxDrawdown.toFixed(1)}%
+                  {(metrics.maxDrawdown || 0).toFixed(1)}%
                 </div>
                 <div className="text-sm text-gray-600">Max Risk</div>
               </div>
@@ -227,7 +227,7 @@ export default function HighWinRateStrategy() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5" />
-            High Probability Trades ({trades.length})
+            High Probability Trades ({trades?.length || 0})
           </CardTitle>
           <CardDescription>
             Curated trades with 80%+ win rates and optimal risk/reward ratios
@@ -235,7 +235,7 @@ export default function HighWinRateStrategy() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {trades.map((trade) => {
+            {(trades || []).map((trade) => {
               const recommendation = getRecommendation(trade.winProbability);
               
               return (
