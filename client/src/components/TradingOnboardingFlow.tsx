@@ -95,6 +95,19 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
     refetchInterval: 2000,
   });
 
+  // Track completion state
+  const [stepCompletions, setStepCompletions] = useState<Record<string, boolean>>({});
+  const [isTestTradeComplete, setIsTestTradeComplete] = useState(false);
+  const [canGoLive, setCanGoLive] = useState(false);
+
+  // Mark step as completed
+  const completeStep = (stepId: string) => {
+    setStepCompletions(prev => ({ ...prev, [stepId]: true }));
+    setSteps(prev => prev.map(step => 
+      step.id === stepId ? { ...step, completed: true } : step
+    ));
+  };
+
   // Create personal trading wallet with exchange compatibility
   const createWalletMutation = useMutation({
     mutationFn: async () => {
@@ -105,12 +118,12 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
       if (data.success) {
         queryClient.invalidateQueries({ queryKey: ['/api/user/wallet'] });
         queryClient.invalidateQueries({ queryKey: ['/api/wallet/balance'] });
-        markStepCompleted('wallet-setup');
+        completeStep('wallet-setup');
       }
     },
     onError: (error) => {
       // Silent error handling - wallet already exists or will be created automatically
-      markStepCompleted('wallet-setup');
+      completeStep('wallet-setup');
     }
   });
 
@@ -121,12 +134,12 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
       return response;
     },
     onSuccess: (data) => {
-      markStepCompleted('bot-configuration');
+      completeStep('bot-settings');
       queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
     },
     onError: (error) => {
       // Mark as completed even on error to allow progression
-      markStepCompleted('bot-configuration');
+      completeStep('bot-settings');
       console.error('Bot configuration save failed:', error);
     }
   });
@@ -142,7 +155,8 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
     },
     onSuccess: (data) => {
       if (data.success) {
-        markStepCompleted('test-trade');
+        completeStep('test-trade');
+        setIsTestTradeComplete(true);
         queryClient.invalidateQueries({ queryKey: ['/api/trades/recent'] });
       }
     },
@@ -163,7 +177,7 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
-      markStepCompleted('bot-settings');
+      completeStep('bot-settings');
     }
   });
 
@@ -179,7 +193,9 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
     },
     onSuccess: (data) => {
       if (data.success) {
-        markStepCompleted('test-trade');
+        completeStep('test-trade');
+        setIsTestTradeComplete(true);
+        setCanGoLive(true);
       }
     },
     onError: (error) => {

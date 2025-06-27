@@ -1,42 +1,43 @@
-import { Shield, CheckCircle, AlertTriangle } from 'lucide-react';
+import { DollarSign, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export const ProductionModeNotification = () => {
   return (
-    <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-600 mb-6">
+    <Card className="bg-gradient-to-r from-green-900/60 to-emerald-900/60 border-green-500 mb-6 shadow-lg">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Shield className="w-5 h-5 text-blue-400" />
+            <div className="p-2 bg-green-500/30 rounded-lg">
+              <DollarSign className="w-6 h-6 text-green-400" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-lg font-semibold text-white">Official SniperX Wallet</h3>
-                <Badge className="bg-green-600 text-white">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  LIVE
+                <h3 className="text-xl font-bold text-white">REAL MONEY AI Trading Bot</h3>
+                <Badge className="bg-green-600 text-white pulse">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  LIVE TRADING
                 </Badge>
               </div>
-              <p className="text-blue-200 text-sm">
-                You're using the official production wallet with real blockchain data and authentic market connections.
+              <p className="text-green-200 text-sm font-medium">
+                SniperX executes authentic cryptocurrency trades on Solana blockchain with real funds to make millions
               </p>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm text-blue-300">Production Mode</div>
-            <div className="text-xs text-blue-400">Real Money • Live Trading</div>
+            <div className="text-lg font-bold text-green-300">REAL MONEY</div>
+            <div className="text-sm text-green-400">Solana Mainnet • Live Blockchain</div>
           </div>
         </div>
         
-        <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-600/50 rounded-lg">
+        <div className="mt-4 p-3 bg-red-900/40 border border-red-500/60 rounded-lg">
           <div className="flex items-center space-x-2">
-            <AlertTriangle className="w-4 h-4 text-yellow-400" />
-            <span className="text-yellow-200 text-sm font-medium">Important Notice</span>
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="text-red-200 text-sm font-bold">REAL MONEY WARNING</span>
           </div>
-          <p className="text-yellow-100 text-xs mt-1">
-            All trades execute with real funds on the Solana blockchain. Only trade amounts you can afford to lose.
+          <p className="text-red-100 text-sm mt-1 font-medium">
+            This bot trades with REAL CRYPTOCURRENCY on the live Solana blockchain. All profits and losses are authentic. 
+            Start with small amounts and only trade what you can afford to lose.
           </p>
         </div>
       </CardContent>

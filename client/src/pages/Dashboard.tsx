@@ -16,7 +16,7 @@ import FinanceGeniusAI from '@/components/FinanceGeniusAI';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { SocialIntelligenceAlerts } from '@/components/SocialIntelligenceAlerts';
 import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
-import { TradingOnboardingFlow } from '@/components/TradingOnboardingFlow';
+import { FixedTradingOnboarding } from '@/components/FixedTradingOnboarding';
 import { BeginTradingButton } from '@/components/BeginTradingButton';
 import { WalletConnector } from '@/components/WalletConnector';
 import InteractiveCryptoChart from '@/components/InteractiveCryptoChart';
@@ -33,6 +33,7 @@ import { WalletFunding } from '@/components/WalletFunding';
 import { SupremeTradingBot } from '@/components/SupremeTradingBot';
 import { MainTradingHub } from '@/components/MainTradingHub';
 import { WalletBalanceSlider } from '@/components/WalletBalanceSlider';
+import { RealMoneyBanner } from '@/components/RealMoneyBanner';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -235,16 +236,14 @@ export default function Dashboard() {
   // Show onboarding flow if user needs setup
   if (showOnboarding) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black">
-        <TradingOnboardingFlow onComplete={handleOnboardingComplete} />
-      </div>
+      <FixedTradingOnboarding onComplete={handleOnboardingComplete} />
     );
   }
 
   return (
     <div className="space-y-6 pb-20 optimized-container">
       <div className="prevent-layout-shift">
-        <ProductionModeNotification />
+        <RealMoneyBanner />
       </div>
       
       <div className="gpu-accelerated">
