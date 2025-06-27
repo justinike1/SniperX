@@ -35,9 +35,9 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
   const [currentStep, setCurrentStep] = useState(0);
   const [tradingConfig, setTradingConfig] = useState<TradingConfig>({
     riskLevel: 'Moderate',
-    maxPositionSize: 100,
-    stopLossPercentage: 5,
-    takeProfitPercentage: 15,
+    maxPositionSize: 500,
+    stopLossPercentage: 3,
+    takeProfitPercentage: 12,
     enableAutomatedTrading: false,
     enableSocialSignals: true,
     enableWhaleTracking: true,
@@ -93,6 +93,20 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
   const { data: walletData } = useQuery({
     queryKey: ['/api/user/wallet'],
     refetchInterval: 2000,
+  });
+
+  // Create personal trading wallet with exchange compatibility
+  const createWalletMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/wallet/create-onboarding', {});
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/wallet'] });
+      markStepCompleted('wallet');
+    },
+    onError: (error) => {
+      console.error('Personal wallet creation failed:', error);
+    }
   });
 
   // Check current bot settings
@@ -262,14 +276,31 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                     <div className="p-4 bg-green-900/20 border border-green-500 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="w-5 h-5 text-green-500" />
-                        <span className="font-semibold text-green-500">Wallet Connected</span>
+                        <span className="font-semibold text-green-500">Personal Trading Wallet Ready</span>
                       </div>
                       <p className="text-sm text-gray-300">Address: {String(walletData.address)}</p>
                       <p className="text-sm text-gray-300">Balance: {walletData && 'balance' in walletData ? String(walletData.balance) : '0.0'} SOL</p>
+                      <div className="mt-2 text-xs text-green-400">
+                        Compatible with Robinhood, Coinbase, Phantom, and all major exchanges
+                      </div>
                     </div>
                   ) : (
-                    <div className="p-4 bg-yellow-900/20 border border-yellow-500 rounded-lg">
-                      <p className="text-yellow-500">Setting up your wallet...</p>
+                    <div className="space-y-3">
+                      <div className="p-4 bg-blue-900/20 border border-blue-500 rounded-lg">
+                        <p className="text-blue-300 mb-3">Create your personal trading wallet that works with all major exchanges:</p>
+                        <ul className="text-sm text-gray-300 space-y-1 mb-4">
+                          <li>• Transfer funds from Robinhood, Coinbase, Phantom</li>
+                          <li>• Secure Solana address compatible with all exchanges</li>
+                          <li>• Instant trading capability once funded</li>
+                        </ul>
+                      </div>
+                      <Button 
+                        onClick={() => createWalletMutation.mutate()}
+                        disabled={createWalletMutation.isPending}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                      >
+                        {createWalletMutation.isPending ? 'Creating Personal Wallet...' : 'Create My Trading Wallet'}
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -287,19 +318,39 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                   </div>
 
                   <div className="grid gap-6">
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <Label htmlFor="risk-level">Risk Level</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(['Conservative', 'Moderate', 'Aggressive'] as const).map((level) => (
-                          <Button
-                            key={level}
-                            variant={tradingConfig.riskLevel === level ? 'default' : 'outline'}
-                            onClick={() => setTradingConfig(prev => ({ ...prev, riskLevel: level }))}
-                            className="w-full"
-                          >
-                            {level}
-                          </Button>
-                        ))}
+                      <div className="grid grid-cols-3 gap-3">
+                        {(['Conservative', 'Moderate', 'Aggressive'] as const).map((level) => {
+                          const profiles = {
+                            Conservative: { amount: 100, stop: 2, profit: 8, color: 'bg-green-600' },
+                            Moderate: { amount: 500, stop: 3, profit: 12, color: 'bg-blue-600' },
+                            Aggressive: { amount: 1000, stop: 5, profit: 20, color: 'bg-red-600' }
+                          };
+                          const profile = profiles[level];
+                          
+                          return (
+                            <div key={level} className="space-y-2">
+                              <Button
+                                variant={tradingConfig.riskLevel === level ? 'default' : 'outline'}
+                                onClick={() => setTradingConfig(prev => ({ 
+                                  ...prev, 
+                                  riskLevel: level,
+                                  maxPositionSize: profile.amount,
+                                  stopLossPercentage: profile.stop,
+                                  takeProfitPercentage: profile.profit
+                                }))}
+                                className={`w-full ${tradingConfig.riskLevel === level ? profile.color : ''}`}
+                              >
+                                {level}
+                              </Button>
+                              <div className="text-xs text-gray-400 text-center">
+                                <div>${profile.amount} max</div>
+                                <div>{profile.stop}% stop | {profile.profit}% profit</div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 

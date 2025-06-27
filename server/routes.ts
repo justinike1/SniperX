@@ -8,6 +8,7 @@ import { realTimeMarketData } from "./services/realTimeMarketData";
 import { humanLikeTraders } from "./services/humanLikeTraders";
 import { ultimateMarketIntelligence } from "./services/ultimateMarketIntelligence";
 import { unstoppableAITrader } from "./services/unstoppableAITrader";
+import { ultimateSuccessEngine } from "./services/ultimateSuccessEngine";
 
 // WebSocket message interface
 export interface WebSocketMessage {
@@ -380,28 +381,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Execute test trade
+  // Execute test trade with real-time market simulation
   app.post('/api/trading/test-trade', requireAuth, async (req: any, res) => {
     try {
-      const { amount, token } = req.body;
+      const { amount = 50, token = 'SOL' } = req.body;
+      
+      // Simulate real-time market conditions
+      const marketPrice = 98.45 + (Math.random() * 10 - 5);
+      const entryPrice = marketPrice;
+      const currentPrice = entryPrice + (Math.random() * 4 - 2);
+      const profitLoss = ((currentPrice - entryPrice) / entryPrice) * 100;
+      const profitAmount = (parseFloat(amount.toString()) * profitLoss) / 100;
+      
       const testTrade = await storage.createTrade({
         userId: req.user.id,
-        tokenSymbol: token || 'SOL',
-        tokenAddress: 'TEST_ADDRESS_' + Date.now(),
+        tokenSymbol: token,
+        tokenAddress: `TEST_${token}_${Date.now()}`,
         type: 'BUY',
-        amount: amount || '0.01',
-        price: '185.42',
+        amount: amount.toString(),
+        price: entryPrice.toFixed(2),
         status: 'COMPLETED',
-        profitLoss: '0',
-        profitPercentage: '0'
+        profitLoss: profitAmount.toFixed(2),
+        profitPercentage: profitLoss.toFixed(2)
       });
+
+      const tradeResult = {
+        success: true,
+        trade: {
+          ...testTrade,
+          entryPrice: parseFloat(entryPrice.toFixed(2)),
+          currentPrice: parseFloat(currentPrice.toFixed(2)),
+          profitLoss: parseFloat(profitLoss.toFixed(2)),
+          profitAmount: parseFloat(profitAmount.toFixed(2)),
+          duration: '30 seconds',
+          marketConditions: {
+            volume24h: Math.floor(Math.random() * 5000000),
+            priceChange24h: Math.random() * 10 - 5,
+            marketCap: Math.floor(Math.random() * 100000000000),
+            volatility: Math.random() * 0.3 + 0.1
+          }
+        },
+        message: `Test trade completed: $${amount} position in ${token} - ${profitLoss > 0 ? 'Profit' : 'Loss'}: ${profitLoss.toFixed(2)}%`
+      };
 
       broadcastToAll({
         type: 'NEW_TRADE',
-        data: testTrade
+        data: tradeResult.trade
       });
       
-      res.json({ success: true, trade: testTrade });
+      res.json(tradeResult);
     } catch (error) {
       console.error('Test trade error:', error);
       res.status(500).json({ success: false, error: 'Test trade failed' });
@@ -1169,6 +1197,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ULTIMATE SUCCESS ENGINE ROUTES =====
+
+  // Get ultimate success metrics
+  app.get('/api/success/metrics', requireAuth, async (req: any, res) => {
+    try {
+      const metrics = await ultimateSuccessEngine.generateSuccessMetrics();
+      res.json({
+        success: true,
+        ...metrics
+      });
+    } catch (error) {
+      console.error('Success metrics fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch success metrics'
+      });
+    }
+  });
+
+  // Get revolutionary features
+  app.get('/api/success/features', requireAuth, async (req: any, res) => {
+    try {
+      const features = await ultimateSuccessEngine.getRevolutionaryFeatures();
+      res.json({
+        success: true,
+        features
+      });
+    } catch (error) {
+      console.error('Features fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch features'
+      });
+    }
+  });
+
+  // Get market domination strategies
+  app.get('/api/success/strategies', requireAuth, async (req: any, res) => {
+    try {
+      const strategies = await ultimateSuccessEngine.getMarketDominationStrategies();
+      res.json({
+        success: true,
+        strategies
+      });
+    } catch (error) {
+      console.error('Strategies fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch strategies'
+      });
+    }
+  });
+
+  // Generate success stories
+  app.get('/api/success/stories', requireAuth, async (req: any, res) => {
+    try {
+      const stories = [];
+      for (let i = 0; i < 6; i++) {
+        const story = await ultimateSuccessEngine.generateSuccessStory(req.user.id);
+        stories.push(story);
+      }
+      res.json({
+        success: true,
+        stories
+      });
+    } catch (error) {
+      console.error('Success stories fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch success stories'
+      });
+    }
+  });
+
+  // Activate maximum profit mode
+  app.post('/api/success/activate-maximum-profit', requireAuth, async (req: any, res) => {
+    try {
+      const result = await ultimateSuccessEngine.activateMaximumProfitMode(req.user.id);
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error('Maximum profit activation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to activate maximum profit mode'
+      });
+    }
+  });
+
+  // Deploy revolutionary update
+  app.post('/api/success/deploy-update', requireAuth, async (req: any, res) => {
+    try {
+      const result = await ultimateSuccessEngine.deployRevolutionaryUpdate();
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error('Revolutionary update deployment error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to deploy revolutionary update'
+      });
+    }
+  });
+
   // ===== WEBSOCKET SETUP =====
   
   const httpServer = createServer(app);
@@ -1228,12 +1364,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
+  // Enhanced wallet creation for onboarding with exchange compatibility
+  app.post('/api/wallet/create-onboarding', requireAuth, async (req: any, res) => {
+    try {
+      const { exchangeWalletService } = await import('./services/exchangeWalletService');
+      const walletResult = await exchangeWalletService.createCompatibleWallet();
+      
+      // Store wallet data in user record
+      await storage.updateUser(req.user.id, {
+        walletAddress: walletResult.address,
+        encryptedPrivateKey: walletResult.encryptedPrivateKey
+      });
+      
+      res.json({
+        success: true,
+        wallet: {
+          address: walletResult.address,
+          balance: '0.0',
+          compatibility: walletResult.compatibility,
+          transferInstructions: walletResult.transferInstructions
+        },
+        message: `Personal trading wallet created! Compatible with ${walletResult.compatibility.compatibleExchanges.length} exchanges including Robinhood, Coinbase, and Phantom.`
+      });
+    } catch (error) {
+      console.error('Wallet creation error:', error);
+      res.status(500).json({ success: false, error: 'Failed to create trading wallet' });
+    }
+  });
+
   // Connect AI services to WebSocket broadcasting
   aiTradingEngine.setWebSocketBroadcast(broadcastToAll);
   realTimeMarketData.setWebSocketBroadcast(broadcastToAll);
   humanLikeTraders.setWebSocketBroadcast(broadcastToAll);
   ultimateMarketIntelligence.setWebSocketBroadcast(broadcastToAll);
   unstoppableAITrader.setWebSocketBroadcast(broadcastToAll);
+  ultimateSuccessEngine.setWebSocketBroadcast(broadcastToAll);
+  
+  // Start continuous optimization for ultimate success
+  ultimateSuccessEngine.runContinuousOptimization();
 
   return httpServer;
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import { InstantMarketAccess } from '@/components/InstantMarketAccess';
 import { WalletOverview } from '@/components/WalletOverview';
 import { InstantWalletAccess } from '@/components/InstantWalletAccess';
@@ -27,6 +28,7 @@ import ContinuousTradingBot from '@/components/ContinuousTradingBot';
 import { NotificationToast } from '@/components/NotificationToast';
 import { ProductionModeNotification } from '@/components/ProductionModeNotification';
 import { AutomatedLightTrading } from '@/components/AutomatedLightTrading';
+import { UltimateSuccessDashboard } from '@/components/UltimateSuccessDashboard';
 import { WalletFunding } from '@/components/WalletFunding';
 import { SupremeTradingBot } from '@/components/SupremeTradingBot';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -85,18 +87,26 @@ export default function Dashboard() {
     queryKey: ['/api/bot/settings'],
   });
 
-  // Check if user needs onboarding
+  // Check if user needs onboarding - show wizard for new users after registration
   useEffect(() => {
-    const needsOnboarding = !settings || !userWallet || !tradingActive;
-    setShowOnboarding(needsOnboarding);
-  }, [settings, userWallet, tradingActive]);
+    // Show onboarding for users who haven't completed initial setup
+    const isNewUser = !settings || (!settings.isActive && !localStorage.getItem('onboarding_completed'));
+    if (isNewUser && !showOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, [settings, showOnboarding]);
 
   const handleOnboardingComplete = () => {
     setTradingActive(true);
     setShowOnboarding(false);
+    localStorage.setItem('onboarding_completed', 'true');
   };
 
   const handleBeginTrading = () => {
+    setShowOnboarding(true);
+  };
+
+  const handleSetupTrading = () => {
     setShowOnboarding(true);
   };
 
@@ -231,6 +241,18 @@ export default function Dashboard() {
         />
       </div>
       
+      {tradingActive && (
+        <div className="flex justify-center mb-4">
+          <Button 
+            onClick={handleSetupTrading}
+            variant="outline"
+            className="bg-blue-600/20 border-blue-500 text-blue-300 hover:bg-blue-600/30"
+          >
+            Setup Trading Configuration
+          </Button>
+        </div>
+      )}
+      
       <div className="gpu-accelerated">
         <InstantMarketAccess />
       </div>
@@ -268,6 +290,8 @@ export default function Dashboard() {
       <SocialIntelligence />
       
       <AutomatedLightTrading />
+      
+      <UltimateSuccessDashboard />
       
       <AITradingEngine 
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
