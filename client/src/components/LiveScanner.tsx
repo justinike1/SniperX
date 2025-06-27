@@ -10,7 +10,8 @@ interface LiveScannerProps {
 export const LiveScanner = ({ tokens = [], onSnipeToken }: LiveScannerProps) => {
   // Ensure tokens is always an array
   const safeTokens = Array.isArray(tokens) ? tokens : [];
-  const formatVolume = (volume: number) => {
+  const formatVolume = (volume: number | null | undefined) => {
+    if (!volume || typeof volume !== 'number') return '$0';
     if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
     if (volume >= 1000) return `$${(volume / 1000).toFixed(1)}K`;
     return `$${volume.toFixed(0)}`;

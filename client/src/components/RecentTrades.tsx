@@ -64,7 +64,7 @@ export const RecentTrades = ({ trades = [], onViewAll }: RecentTradesProps) => {
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-sm">{trade.amount} SOL</p>
-                    {trade.profitPercentage !== undefined ? (
+                    {trade.profitPercentage !== undefined && trade.profitPercentage !== null && typeof trade.profitPercentage === 'number' ? (
                       <p className={`text-xs ${trade.profitPercentage >= 0 ? 'text-profit-green' : 'text-loss-red'}`}>
                         {trade.profitPercentage >= 0 ? '+' : ''}{trade.profitPercentage.toFixed(1)}%
                       </p>

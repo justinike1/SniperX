@@ -50,8 +50,8 @@ import { apiRequest } from '@/lib/queryClient';
 export default function Dashboard() {
   const [currentNotification, setCurrentNotification] = useState<NotificationData | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [tradingActive, setTradingActive] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false); // Only shown when user clicks Setup Trading Configuration
+  const [tradingActive, setTradingActive] = useState(true); // Trading hub active by default
   const [botStatus, setBotStatus] = useState<BotStatusData>({
     isActive: false,
     tokensScanned: 0,
@@ -90,14 +90,7 @@ export default function Dashboard() {
     queryKey: ['/api/bot/settings'],
   });
 
-  // Check if user needs onboarding - show wizard for new users after registration
-  useEffect(() => {
-    // Show onboarding for users who haven't completed initial setup
-    const isNewUser = !settings || (!settings.isActive && !localStorage.getItem('onboarding_completed'));
-    if (isNewUser && !showOnboarding) {
-      setShowOnboarding(true);
-    }
-  }, [settings, showOnboarding]);
+  // Onboarding is only shown when explicitly requested via "Setup Trading Configuration" button
 
   const handleOnboardingComplete = () => {
     setTradingActive(true);
@@ -233,7 +226,7 @@ export default function Dashboard() {
     }
   };
 
-  // Show onboarding flow if user needs setup
+  // Show onboarding flow only when explicitly requested via Setup Trading Configuration button
   if (showOnboarding) {
     return (
       <FixedTradingOnboarding onComplete={handleOnboardingComplete} />
