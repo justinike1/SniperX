@@ -7,7 +7,9 @@ interface LiveScannerProps {
   onSnipeToken: (tokenAddress: string) => void;
 }
 
-export const LiveScanner = ({ tokens, onSnipeToken }: LiveScannerProps) => {
+export const LiveScanner = ({ tokens = [], onSnipeToken }: LiveScannerProps) => {
+  // Ensure tokens is always an array
+  const safeTokens = Array.isArray(tokens) ? tokens : [];
   const formatVolume = (volume: number) => {
     if (volume >= 1000000) return `$${(volume / 1000000).toFixed(1)}M`;
     if (volume >= 1000) return `$${(volume / 1000).toFixed(1)}K`;
@@ -28,12 +30,12 @@ export const LiveScanner = ({ tokens, onSnipeToken }: LiveScannerProps) => {
         </div>
         
         <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-          {tokens.length === 0 ? (
+          {safeTokens.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               Scanning for new tokens...
             </div>
           ) : (
-            tokens.map((token) => (
+            safeTokens.map((token) => (
               <div 
                 key={token.address} 
                 className={`flex items-center justify-between p-3 bg-dark-bg rounded-lg ${

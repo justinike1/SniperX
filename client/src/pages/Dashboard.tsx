@@ -58,16 +58,20 @@ export default function Dashboard() {
   
   const isWalletLoading = lightspeedWalletLoading || solanaWalletLoading;
 
-  // Fetch recent trades
-  const { data: recentTrades = [] } = useQuery<TradeData[]>({
+  // Fetch recent trades with safe data handling
+  const { data: recentTradesData } = useQuery<any>({
     queryKey: ['/api/trades/recent'],
   });
+  
+  const recentTrades = Array.isArray(recentTradesData?.trades) ? recentTradesData.trades : [];
 
-  // Fetch live tokens
-  const { data: liveTokens = [] } = useQuery<TokenScanData[]>({
+  // Fetch live tokens with safe data handling
+  const { data: liveTokensData } = useQuery<any>({
     queryKey: ['/api/scanner/tokens'],
     refetchInterval: 5000, // Refetch every 5 seconds
   });
+  
+  const liveTokens = Array.isArray(liveTokensData?.tokens) ? liveTokensData.tokens : [];
 
   // Fetch bot settings
   const { data: settings } = useQuery<BotSettingsData>({

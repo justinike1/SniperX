@@ -7,7 +7,9 @@ interface RecentTradesProps {
   onViewAll: () => void;
 }
 
-export const RecentTrades = ({ trades, onViewAll }: RecentTradesProps) => {
+export const RecentTrades = ({ trades = [], onViewAll }: RecentTradesProps) => {
+  // Ensure trades is always an array
+  const safeTrades = Array.isArray(trades) ? trades : [];
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -41,12 +43,12 @@ export const RecentTrades = ({ trades, onViewAll }: RecentTradesProps) => {
         </div>
         
         <div className="divide-y divide-dark-border">
-          {trades.length === 0 ? (
+          {safeTrades.length === 0 ? (
             <div className="p-6 text-center text-gray-400">
               No trades yet
             </div>
           ) : (
-            trades.map((trade) => (
+            safeTrades.map((trade) => (
               <div key={trade.id} className="p-4 hover:bg-dark-bg transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
