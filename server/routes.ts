@@ -12,6 +12,7 @@ import { unstoppableAITrader } from "./services/unstoppableAITrader";
 import { ultimateSuccessEngine } from "./services/ultimateSuccessEngine";
 import { robinhoodTransferTester } from "./services/robinhoodTransferTester";
 import { realMoneyTradingService } from "./services/realMoneyTradingService";
+import { maximumProfitEngine } from "./services/maximumProfitEngine";
 
 // REAL MONEY: Get live Solana price from CoinGecko API
 async function getRealSolanaPrice(): Promise<number> {
@@ -1245,6 +1246,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Maximum Profit Mode Activation - Rocket Button
+  app.post('/api/trading/maximum-profit/activate', requireAuth, async (req: any, res) => {
+    try {
+      const result = await maximumProfitEngine.activateMaximumProfitMode();
+      
+      broadcastToAll({
+        type: 'BOT_STATUS',
+        data: {
+          mode: 'MAXIMUM_PROFIT_ACTIVATED',
+          userId: req.user.id,
+          strategies: result.strategies,
+          timestamp: Date.now()
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Maximum Profit Mode ACTIVATED - Trading with advanced algorithms',
+        strategies: result.strategies,
+        mode: 'MAXIMUM_PROFIT'
+      });
+    } catch (error) {
+      console.error('Maximum Profit Mode activation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to activate Maximum Profit Mode'
+      });
+    }
+  });
+
+  // Global Market Opportunities
+  app.get('/api/trading/global-opportunities', requireAuth, async (req: any, res) => {
+    try {
+      const opportunities = await maximumProfitEngine.getGlobalMarketOpportunities();
+      
+      res.json({
+        success: true,
+        opportunities,
+        totalRegions: opportunities.length,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Global opportunities error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch global opportunities'
+      });
+    }
+  });
+
+  // Advanced Analytics
+  app.get('/api/trading/advanced-analytics', requireAuth, async (req: any, res) => {
+    try {
+      const analytics = await maximumProfitEngine.getAdvancedAnalytics();
+      
+      res.json({
+        success: true,
+        analytics,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Advanced analytics error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch advanced analytics'
+      });
+    }
+  });
+
+  // Execute Maximum Profit Trade
+  app.post('/api/trading/maximum-profit/execute', requireAuth, async (req: any, res) => {
+    try {
+      const { opportunityId } = req.body;
+      const result = await maximumProfitEngine.executeMaximumProfitTrade(opportunityId);
+      
+      broadcastToAll({
+        type: 'NEW_TRADE',
+        data: {
+          userId: req.user.id,
+          tradeId: result.tradeId,
+          expectedProfit: result.expectedProfit,
+          executionTime: result.executionTime,
+          mode: 'MAXIMUM_PROFIT',
+          timestamp: Date.now()
+        }
+      });
+
+      res.json({
+        success: true,
+        trade: result,
+        message: 'Maximum profit trade executed successfully'
+      });
+    } catch (error) {
+      console.error('Maximum profit trade execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to execute maximum profit trade'
+      });
+    }
+  });
+
   // Trading snipe endpoint
   app.post('/api/trading/snipe', requireAuth, async (req: any, res) => {
     try {
@@ -2391,6 +2493,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   };
+
+  // Set up WebSocket broadcast for maximum profit engine
+  maximumProfitEngine.setWebSocketBroadcast(broadcastToAll);
+
+  // ===== MAXIMUM PROFIT MODE ENDPOINTS =====
+  
+  // Activate Maximum Profit Mode (Rocket Button)
+  app.post('/api/maximum-profit/activate', requireAuth, async (req: any, res) => {
+    try {
+      const result = await maximumProfitEngine.activateMaximumProfitMode();
+      
+      // Broadcast activation to WebSocket clients
+      broadcastToAll({
+        type: 'PROFIT_UPDATE',
+        data: {
+          status: 'MAXIMUM_PROFIT_ACTIVATED',
+          message: 'Maximum Profit Mode is now LIVE - scanning global markets for maximum opportunities!',
+          strategies: result.strategies,
+          timestamp: Date.now()
+        }
+      });
+
+      res.json({
+        message: 'Maximum Profit Mode activated successfully!',
+        ...result
+      });
+    } catch (error) {
+      console.error('Maximum Profit activation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to activate Maximum Profit Mode'
+      });
+    }
+  });
+
+  // Get global market opportunities
+  app.get('/api/maximum-profit/opportunities', requireAuth, async (req: any, res) => {
+    try {
+      const opportunities = await maximumProfitEngine.getGlobalMarketOpportunities();
+      res.json({
+        success: true,
+        opportunities
+      });
+    } catch (error) {
+      console.error('Global opportunities fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch global opportunities'
+      });
+    }
+  });
+
+  // Get advanced analytics
+  app.get('/api/maximum-profit/analytics', requireAuth, async (req: any, res) => {
+    try {
+      const analytics = await maximumProfitEngine.getAdvancedAnalytics();
+      res.json({
+        success: true,
+        analytics
+      });
+    } catch (error) {
+      console.error('Advanced analytics fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch advanced analytics'
+      });
+    }
+  });
+
+  // Execute maximum profit trade
+  app.post('/api/maximum-profit/execute', requireAuth, async (req: any, res) => {
+    try {
+      const { opportunityId } = req.body;
+      
+      if (!opportunityId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Opportunity ID is required'
+        });
+      }
+
+      const result = await maximumProfitEngine.executeMaximumProfitTrade(opportunityId);
+      
+      // Broadcast trade execution
+      broadcastToAll({
+        type: 'NEW_TRADE',
+        data: {
+          status: 'MAXIMUM_PROFIT_TRADE_EXECUTED',
+          tradeId: result.tradeId,
+          expectedProfit: result.expectedProfit,
+          timestamp: Date.now()
+        }
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Maximum profit trade execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to execute maximum profit trade'
+      });
+    }
+  });
 
   // Enhanced wallet creation for onboarding with exchange compatibility
   app.post('/api/wallet/create-onboarding', requireAuth, async (req: any, res) => {

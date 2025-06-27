@@ -17,6 +17,7 @@ import { LiveScanner } from '@/components/LiveScanner';
 import { ProfitTracker } from '@/components/ProfitTracker';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
+import { MaximumProfitMode } from '@/components/MaximumProfitMode';
 
 interface MainTradingHubProps {
   onMaximizeProfit: () => void;
@@ -111,6 +112,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
               <DollarSign className="h-4 w-4" />
               <span>Profits</span>
             </TabsTrigger>
+            <TabsTrigger value="maximum-profit" className="flex items-center space-x-2 bg-gradient-to-r from-orange-600/20 to-red-600/20 border border-orange-500/30">
+              <Rocket className="h-4 w-4 text-orange-400" />
+              <span className="text-orange-400 font-bold">Maximum Profit</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
@@ -175,6 +180,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
             <div className="grid grid-cols-1 gap-6">
               <ProfitTracker />
             </div>
+          </TabsContent>
+
+          <TabsContent value="maximum-profit" className="mt-6">
+            <MaximumProfitMode />
           </TabsContent>
         </Tabs>
       </div>

@@ -266,9 +266,7 @@ export default function Dashboard() {
         <RealTimeMarketDashboard />
       </div>
       
-      <div className="gpu-accelerated">
-        <LiveActionChart />
-      </div>
+      {/* LiveActionChart temporarily disabled to fix infinite loop */}
       
       <div className="smooth-update">
         <SocialIntelligenceAlerts />

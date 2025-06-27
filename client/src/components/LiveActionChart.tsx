@@ -72,12 +72,14 @@ export function LiveActionChart() {
     (Array.isArray(marketData) ? marketData : []) : 
     generateLiveTokens();
 
-  // Update chart data with new price points
+  // Update chart data with new price points - fixed infinite loop
   useEffect(() => {
-    const newChartData = new Map(chartData);
+    if (!tokens || tokens.length === 0) return;
+    
+    const newChartData = new Map();
     
     tokens.forEach(token => {
-      const existing = newChartData.get(token.symbol) || [];
+      const existing = chartData.get(token.symbol) || [];
       const newPoint: PricePoint = {
         timestamp: Date.now(),
         price: token.currentPrice,
@@ -91,7 +93,7 @@ export function LiveActionChart() {
     });
     
     setChartData(newChartData);
-  }, [tokens, marketData]);
+  }, [selectedToken]); // Fixed dependency array
 
   // Real-time chart rendering with 60fps
   const drawChart = useCallback(() => {
