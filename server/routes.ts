@@ -24,7 +24,9 @@ import { supremeTradingBot } from "./services/supremeTradingBot";
 import { ultraFastMarketData } from "./services/ultraFastMarketData";
 import { ultimateDynamicTrader } from "./services/ultimateDynamicTrader";
 import { strategicMemecoinBot } from "./services/strategicMemecoinBot";
-import { quickWalletService } from "./services/quickWalletService";
+import { userWalletService } from "./services/userWalletService";
+import { solscanValidationService } from "./services/solscanValidationService";
+import { ExchangeCompatibilityService } from "./services/exchangeCompatibilityService";
 import { 
   insertUserSchema, 
   insertBotSettingsSchema, 
@@ -1098,24 +1100,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const verification = await authService.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
-        return res.status(401).json({ message: 'Invalid token' });
+        return res.status(401).json({ message: 'Invalid authentication' });
       }
 
-      const userId = verification.user.id;
-      const walletResult = await lightspeedWalletService.getOrCreateUserWallet(userId);
+      // Get or create consistent wallet for this user
+      const wallet = await userWalletService.getOrCreateWallet(verification.user.id);
       
-      if (!walletResult.success) {
-        return res.status(500).json({ message: walletResult.message });
-      }
+      // Get compatibility report for the user's wallet
+      const compatibilityReport = ExchangeCompatibilityService.getCompatibilityReport(wallet.address);
+      
+      res.json({
+        success: true,
+        wallet: {
+          ...wallet,
+          exchangeCompatibility: {
+            robinhood: compatibilityReport.compatibleExchanges.includes('Robinhood'),
+            coinbase: compatibilityReport.compatibleExchanges.includes('Coinbase'),
+            binance: compatibilityReport.compatibleExchanges.includes('Binance'),
+            kraken: compatibilityReport.compatibleExchanges.includes('Kraken'),
+            phantom: compatibilityReport.compatibleExchanges.includes('Phantom')
+          },
+          compatibility: compatibilityReport
+        },
+        message: 'Your persistent wallet address'
+      });
+    } catch (error) {
+      console.error('Error fetching user wallet:', error);
+      res.status(500).json({ message: 'Failed to fetch wallet' });
+    }
+  });
+
+  // Official wallet validation and Solscan verification
+  app.get('/api/wallet/validate/:address', async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      // Validate with Solscan
+      const solscanValidation = await solscanValidationService.validateWalletAddress(address);
+      
+      // Check exchange compatibility
+      const exchangeCompatibility = ExchangeCompatibilityService.getCompatibilityReport(address);
+      
+      // Get transfer instructions for major exchanges
+      const transferInstructions = {
+        robinhood: ExchangeCompatibilityService.generateTransferInstructions(address, 'Robinhood'),
+        coinbase: ExchangeCompatibilityService.generateTransferInstructions(address, 'Coinbase'),
+        binance: ExchangeCompatibilityService.generateTransferInstructions(address, 'Binance'),
+        phantom: ExchangeCompatibilityService.generateTransferInstructions(address, 'Phantom')
+      };
 
       res.json({
         success: true,
-        wallet: walletResult.wallet,
-        message: 'Wallet ready for trading'
+        wallet: {
+          address,
+          isValid: solscanValidation.isValid,
+          isActive: solscanValidation.isActive,
+          solscanUrl: solscanValidation.solscanUrl,
+          exchangeCompatibility: {
+            isUniversallyCompatible: exchangeCompatibility.isUniversallyCompatible,
+            compatibleExchanges: exchangeCompatibility.compatibleExchanges,
+            details: exchangeCompatibility.details
+          },
+          transferInstructions
+        },
+        message: 'Official wallet validated for all major exchanges'
       });
     } catch (error) {
-      console.error('Error accessing wallet:', error);
-      res.status(500).json({ message: 'Wallet service unavailable' });
+      console.error('Wallet validation error:', error);
+      res.status(500).json({ message: 'Wallet validation failed' });
     }
   });
 

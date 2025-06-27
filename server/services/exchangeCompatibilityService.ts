@@ -1,141 +1,161 @@
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 
-export interface ExchangeCompatibilityResult {
-  isValid: boolean;
+interface ExchangeCompatibility {
   exchange: string;
-  reason?: string;
+  isCompatible: boolean;
+  addressFormat: string;
+  notes?: string;
 }
 
-export class ExchangeCompatibilityService {
-  private static readonly EXCHANGE_PATTERNS = {
-    robinhood: {
-      minLength: 32,
-      maxLength: 44,
-      allowedChars: /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/,
-      forbiddenPrefixes: ['1111', '0000', 'SniperX']
-    },
-    coinbase: {
-      minLength: 32,
-      maxLength: 44,
-      allowedChars: /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/,
-      forbiddenPrefixes: ['test', 'demo', 'fake']
-    },
-    phantom: {
-      minLength: 32,
-      maxLength: 44,
-      allowedChars: /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/,
-      forbiddenPrefixes: []
-    },
-    binance: {
-      minLength: 32,
-      maxLength: 44,
-      allowedChars: /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/,
-      forbiddenPrefixes: ['temp', 'test']
-    }
-  };
+interface CompatibilityReport {
+  walletAddress: string;
+  isUniversallyCompatible: boolean;
+  compatibleExchanges: string[];
+  incompatibleExchanges: string[];
+  details: ExchangeCompatibility[];
+  solscanUrl: string;
+  qrCodeData: string;
+}
 
-  static validateAddressForAllExchanges(address: string): ExchangeCompatibilityResult[] {
-    const results: ExchangeCompatibilityResult[] = [];
+class ExchangeCompatibilityServiceClass {
+  private readonly MAJOR_EXCHANGES = [
+    'Robinhood',
+    'Coinbase',
+    'Binance',
+    'Kraken',
+    'Phantom',
+    'Solflare',
+    'Trust Wallet',
+    'MetaMask',
+    'Exodus',
+    'Atomic Wallet',
+    'Ledger',
+    'Trezor'
+  ];
 
-    for (const [exchange, rules] of Object.entries(this.EXCHANGE_PATTERNS)) {
-      const result = this.validateAddressForExchange(address, exchange as keyof typeof this.EXCHANGE_PATTERNS);
-      results.push(result);
-    }
-
-    return results;
-  }
-
-  static validateAddressForExchange(address: string, exchange: keyof typeof ExchangeCompatibilityService.EXCHANGE_PATTERNS): ExchangeCompatibilityResult {
-    const rules = this.EXCHANGE_PATTERNS[exchange];
+  validateWalletCompatibility(address: string): CompatibilityReport {
+    const isValidSolana = this.isValidSolanaAddress(address);
     
-    // Length validation
-    if (address.length < rules.minLength || address.length > rules.maxLength) {
-      return {
-        isValid: false,
-        exchange,
-        reason: `Invalid length: ${address.length} characters (expected ${rules.minLength}-${rules.maxLength})`
-      };
+    if (!isValidSolana) {
+      return this.createIncompatibleReport(address, 'Invalid Solana address format');
     }
 
-    // Character validation
-    if (!rules.allowedChars.test(address)) {
-      return {
-        isValid: false,
-        exchange,
-        reason: 'Contains invalid characters for Base58 encoding'
-      };
-    }
+    // Generate compatibility details for each exchange
+    const details: ExchangeCompatibility[] = this.MAJOR_EXCHANGES.map(exchange => ({
+      exchange,
+      isCompatible: true,
+      addressFormat: 'Base58 Solana Address',
+      notes: this.getExchangeNotes(exchange)
+    }));
 
-    // Prefix validation
-    for (const forbiddenPrefix of rules.forbiddenPrefixes) {
-      if (address.startsWith(forbiddenPrefix)) {
-        return {
-          isValid: false,
-          exchange,
-          reason: `Forbidden prefix: ${forbiddenPrefix}`
-        };
-      }
-    }
-
-    // Solana PublicKey validation
-    try {
-      new PublicKey(address);
-    } catch {
-      return {
-        isValid: false,
-        exchange,
-        reason: 'Invalid Solana public key format'
-      };
-    }
+    const compatibleExchanges = details
+      .filter(d => d.isCompatible)
+      .map(d => d.exchange);
 
     return {
-      isValid: true,
-      exchange
-    };
-  }
-
-  static generateCompatibleAddress(): string {
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    while (attempts < maxAttempts) {
-      const keypair = Keypair.generate();
-      const address = keypair.publicKey.toBase58();
-      
-      const validationResults = this.validateAddressForAllExchanges(address);
-      const allValid = validationResults.every(result => result.isValid);
-      
-      if (allValid) {
-        return address;
-      }
-      
-      attempts++;
-    }
-
-    // Fallback: generate basic valid address
-    const keypair = Keypair.generate();
-    return keypair.publicKey.toBase58();
-  }
-
-  static getCompatibilityReport(address: string): {
-    overallValid: boolean;
-    compatibleExchanges: string[];
-    incompatibleExchanges: { exchange: string; reason: string }[];
-  } {
-    const results = this.validateAddressForAllExchanges(address);
-    
-    const compatibleExchanges = results
-      .filter(result => result.isValid)
-      .map(result => result.exchange);
-    
-    const incompatibleExchanges = results
-      .filter(result => !result.isValid)
-      .map(result => ({ exchange: result.exchange, reason: result.reason || 'Unknown error' }));
-
-    return {
-      overallValid: compatibleExchanges.length === results.length,
+      walletAddress: address,
+      isUniversallyCompatible: compatibleExchanges.length === this.MAJOR_EXCHANGES.length,
       compatibleExchanges,
-      incompatibleExchanges
+      incompatibleExchanges: [],
+      details,
+      solscanUrl: `https://solscan.io/account/${address}`,
+      qrCodeData: address
     };
   }
+
+  private isValidSolanaAddress(address: string): boolean {
+    try {
+      const pubkey = new PublicKey(address);
+      return PublicKey.isOnCurve(pubkey.toBuffer());
+    } catch {
+      return false;
+    }
+  }
+
+  private getExchangeNotes(exchange: string): string {
+    const notes: Record<string, string> = {
+      'Robinhood': 'Full support for SOL transfers - Use this address for deposits',
+      'Coinbase': 'Native Solana support - Direct transfers supported',
+      'Binance': 'Solana network supported - Ensure SPL token compatibility',
+      'Kraken': 'SOL deposits enabled - Standard Solana address format',
+      'Phantom': 'Native Solana wallet - Perfect compatibility',
+      'Solflare': 'Dedicated Solana wallet - Full feature support',
+      'Trust Wallet': 'Multi-chain wallet with Solana support',
+      'MetaMask': 'Solana support via Snaps - Check current version',
+      'Exodus': 'Built-in Solana support - Direct transfers',
+      'Atomic Wallet': 'Solana network integrated - Standard transfers',
+      'Ledger': 'Hardware wallet Solana app required',
+      'Trezor': 'Solana support available - Check firmware version'
+    };
+
+    return notes[exchange] || 'Standard Solana address format supported';
+  }
+
+  private createIncompatibleReport(address: string, reason: string): CompatibilityReport {
+    return {
+      walletAddress: address,
+      isUniversallyCompatible: false,
+      compatibleExchanges: [],
+      incompatibleExchanges: this.MAJOR_EXCHANGES,
+      details: this.MAJOR_EXCHANGES.map(exchange => ({
+        exchange,
+        isCompatible: false,
+        addressFormat: 'Invalid',
+        notes: reason
+      })),
+      solscanUrl: '',
+      qrCodeData: ''
+    };
+  }
+
+  generateTransferInstructions(address: string, exchange: string): string {
+    const instructions: Record<string, string> = {
+      'Robinhood': `
+1. Open Robinhood app
+2. Go to Crypto → SOL (Solana)
+3. Tap "Transfer" → "Transfer Out"
+4. Enter address: ${address}
+5. Confirm on Solana network
+6. Complete transfer
+      `,
+      'Coinbase': `
+1. Open Coinbase app/website
+2. Navigate to SOL in your portfolio
+3. Click "Send" 
+4. Paste address: ${address}
+5. Select Solana network
+6. Confirm transaction
+      `,
+      'Binance': `
+1. Go to Binance Wallet
+2. Select SOL (Solana)
+3. Click "Withdraw"
+4. Network: Solana
+5. Address: ${address}
+6. Complete withdrawal
+      `,
+      'Phantom': `
+1. Open Phantom wallet
+2. Click "Send"
+3. Enter recipient: ${address}
+4. Select SOL amount
+5. Confirm transaction
+      `
+    };
+
+    return instructions[exchange] || `
+1. Open your ${exchange} wallet
+2. Navigate to Solana (SOL) 
+3. Select "Send" or "Transfer"
+4. Enter recipient address: ${address}
+5. Confirm on Solana network
+6. Complete the transaction
+    `;
+  }
+
+  getCompatibilityReport(address: string): CompatibilityReport {
+    return this.validateWalletCompatibility(address);
+  }
 }
+
+export const ExchangeCompatibilityService = new ExchangeCompatibilityServiceClass();

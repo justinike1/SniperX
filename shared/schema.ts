@@ -11,6 +11,9 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   walletAddress: text("wallet_address").unique(),
   encryptedPrivateKey: text("encrypted_private_key"),
+  walletValidated: boolean("wallet_validated").default(false),
+  solscanVerified: boolean("solscan_verified").default(false),
+  exchangeCompatibility: jsonb("exchange_compatibility"), // Track which exchanges work with this wallet
   phoneNumber: text("phone_number"),
   isActive: boolean("is_active").default(true),
   emailVerified: boolean("email_verified").default(false),
