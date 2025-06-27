@@ -98,11 +98,14 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
   // Create personal trading wallet with exchange compatibility
   const createWalletMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', '/api/wallet/create-onboarding', {});
+      const response = await apiRequest('POST', '/api/wallet/create-onboarding', {});
+      return response;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/user/wallet'] });
-      markStepCompleted('wallet');
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ['/api/user/wallet'] });
+        markStepCompleted('wallet-setup');
+      }
     },
     onError: (error) => {
       console.error('Personal wallet creation failed:', error);
@@ -434,10 +437,12 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                       />
                     </div>
 
-                    {botSettings && (
+                    {botSettings && Object.keys(botSettings).length > 0 && (
                       <div className="p-4 bg-green-900/20 border border-green-500 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-green-500 mb-2" />
-                        <p className="text-green-500">Bot configuration saved successfully</p>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                          <span className="text-green-500">Bot configuration saved successfully</span>
+                        </div>
                       </div>
                     )}
                   </div>
