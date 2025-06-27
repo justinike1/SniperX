@@ -346,6 +346,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bot configuration for onboarding flow
+  app.post('/api/bot/configure', requireAuth, async (req: any, res) => {
+    try {
+      const config = req.body;
+      const settings = await storage.updateBotSettings(req.user.id, {
+        autoBuyAmount: config.maxPositionSize.toString(),
+        stopLossPercentage: config.stopLossPercentage.toString(),
+        isActive: false
+      });
+      
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error('Bot configuration error:', error);
+      res.status(500).json({ success: false, error: 'Failed to configure bot' });
+    }
+  });
+
+  // Activate trading bot
+  app.post('/api/bot/activate', requireAuth, async (req: any, res) => {
+    try {
+      const settings = await storage.updateBotSettings(req.user.id, { isActive: true });
+      
+      broadcastToAll({
+        type: 'BOT_STATUS',
+        data: { isActive: true, status: 'ACTIVE' }
+      });
+      
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error('Bot activation error:', error);
+      res.status(500).json({ success: false, error: 'Failed to activate bot' });
+    }
+  });
+
+  // Execute test trade
+  app.post('/api/trading/test-trade', requireAuth, async (req: any, res) => {
+    try {
+      const { amount, token } = req.body;
+      const testTrade = await storage.createTrade({
+        userId: req.user.id,
+        tokenSymbol: token || 'SOL',
+        tokenAddress: 'TEST_ADDRESS_' + Date.now(),
+        type: 'BUY',
+        amount: amount || '0.01',
+        price: '185.42',
+        status: 'COMPLETED',
+        profitLoss: '0',
+        profitPercentage: '0'
+      });
+
+      broadcastToAll({
+        type: 'NEW_TRADE',
+        data: testTrade
+      });
+      
+      res.json({ success: true, trade: testTrade });
+    } catch (error) {
+      console.error('Test trade error:', error);
+      res.status(500).json({ success: false, error: 'Test trade failed' });
+    }
+  });
+
   // Update bot settings
   app.put('/api/bot/settings', requireAuth, async (req: any, res) => {
     try {

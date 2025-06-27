@@ -14,6 +14,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import FinanceGeniusAI from '@/components/FinanceGeniusAI';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { SocialIntelligenceAlerts } from '@/components/SocialIntelligenceAlerts';
+import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
+import { TradingOnboardingFlow } from '@/components/TradingOnboardingFlow';
+import { BeginTradingButton } from '@/components/BeginTradingButton';
 import { WalletConnector } from '@/components/WalletConnector';
 import InteractiveCryptoChart from '@/components/InteractiveCryptoChart';
 import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
@@ -42,6 +45,8 @@ import { apiRequest } from '@/lib/queryClient';
 export default function Dashboard() {
   const [currentNotification, setCurrentNotification] = useState<NotificationData | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tradingActive, setTradingActive] = useState(false);
   const [botStatus, setBotStatus] = useState<BotStatusData>({
     isActive: false,
     tokensScanned: 0,
@@ -79,6 +84,21 @@ export default function Dashboard() {
   const { data: settings } = useQuery<BotSettingsData>({
     queryKey: ['/api/bot/settings'],
   });
+
+  // Check if user needs onboarding
+  useEffect(() => {
+    const needsOnboarding = !settings || !userWallet || !tradingActive;
+    setShowOnboarding(needsOnboarding);
+  }, [settings, userWallet, tradingActive]);
+
+  const handleOnboardingComplete = () => {
+    setTradingActive(true);
+    setShowOnboarding(false);
+  };
+
+  const handleBeginTrading = () => {
+    setShowOnboarding(true);
+  };
 
   // WebSocket connection for real-time updates
   const { isConnected } = useWebSocket((message: WebSocketMessage) => {
@@ -189,10 +209,26 @@ export default function Dashboard() {
     }
   };
 
+  // Show onboarding flow if user needs setup
+  if (showOnboarding) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black">
+        <TradingOnboardingFlow onComplete={handleOnboardingComplete} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-20 optimized-container">
       <div className="prevent-layout-shift">
         <ProductionModeNotification />
+      </div>
+      
+      <div className="gpu-accelerated">
+        <BeginTradingButton 
+          onBeginTrading={handleBeginTrading}
+          isActive={tradingActive && settings?.isActive}
+        />
       </div>
       
       <div className="gpu-accelerated">
@@ -209,6 +245,10 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <SocialIntelligenceAlerts />
+      </div>
+      
+      <div className="smooth-update">
+        <InsiderTradingIntelligence />
       </div>
       
       <div className="gpu-accelerated">
