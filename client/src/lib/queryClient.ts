@@ -11,7 +11,7 @@ export async function apiRequest(
   url: string,
   method: string = 'GET',
   data?: unknown | undefined,
-): Promise<Response> {
+): Promise<any> {
   const headers: Record<string, string> = {};
   
   if (data) {
@@ -26,7 +26,7 @@ export async function apiRequest(
   });
 
   await throwIfResNotOk(res);
-  return res;
+  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

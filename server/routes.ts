@@ -708,6 +708,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bot toggle endpoint for pause/resume functionality
+  app.post('/api/bot/toggle', requireAuth, async (req: any, res) => {
+    try {
+      const { isActive } = req.body;
+      
+      await storage.updateBotSettings(req.user.id, {
+        isActive: isActive
+      });
+
+      broadcastToAll({
+        type: 'BOT_STATUS',
+        data: {
+          userId: req.user.id,
+          status: isActive ? 'ACTIVE' : 'PAUSED',
+          message: `SniperX trading bot ${isActive ? 'activated' : 'paused'}`,
+          timestamp: Date.now()
+        }
+      });
+
+      res.json({
+        success: true,
+        status: isActive ? 'ACTIVE' : 'PAUSED',
+        message: `Bot ${isActive ? 'activated' : 'paused'} successfully`
+      });
+    } catch (error) {
+      console.error('Bot toggle error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to toggle bot status',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Trading snipe endpoint
+  app.post('/api/trading/snipe', requireAuth, async (req: any, res) => {
+    try {
+      const { tokenAddress } = req.body;
+      
+      // Create snipe trade record
+      const trade = await storage.createTrade({
+        userId: req.user.id,
+        tokenSymbol: 'SNIPE',
+        tokenAddress: tokenAddress,
+        type: 'BUY',
+        amount: '0.1',
+        price: '0.0',
+        status: 'PENDING'
+      });
+
+      broadcastToAll({
+        type: 'NEW_TRADE',
+        data: {
+          userId: req.user.id,
+          trade: trade,
+          message: 'Snipe order placed',
+          timestamp: Date.now()
+        }
+      });
+
+      res.json({
+        success: true,
+        trade: trade,
+        message: 'Snipe order placed successfully'
+      });
+    } catch (error) {
+      console.error('Trading snipe error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to place snipe order',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Update bot settings endpoint
+  app.patch('/api/bot/settings', requireAuth, async (req: any, res) => {
+    try {
+      const updates = req.body;
+      
+      const updatedSettings = await storage.updateBotSettings(req.user.id, updates);
+
+      res.json({
+        success: true,
+        settings: updatedSettings,
+        message: 'Settings updated successfully'
+      });
+    } catch (error) {
+      console.error('Settings update error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update settings',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // ===== TRANSFER TRACKING ENDPOINTS =====
   
   // Get pending transfers
@@ -1352,10 +1449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/success/activate-maximum-profit', requireAuth, async (req: any, res) => {
     try {
       const result = await ultimateSuccessEngine.activateMaximumProfitMode(req.user.id);
-      res.json({
-        success: true,
-        ...result
-      });
+      res.json(result);
     } catch (error) {
       console.error('Maximum profit activation error:', error);
       res.status(500).json({
@@ -1369,10 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/success/deploy-update', requireAuth, async (req: any, res) => {
     try {
       const result = await ultimateSuccessEngine.deployRevolutionaryUpdate();
-      res.json({
-        success: true,
-        ...result
-      });
+      res.json(result);
     } catch (error) {
       console.error('Revolutionary update deployment error:', error);
       res.status(500).json({

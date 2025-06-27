@@ -139,7 +139,13 @@ export default function RealTimeMarketDashboard() {
             volume24h: selectedToken.volume24h,
             marketCap: selectedToken.marketCap
           }}
-          onTrade={handleTrade}
+          onTrade={async (action, token) => {
+            await handleTrade(action, {
+              ...token,
+              price: token.currentPrice,
+              timestamp: Date.now()
+            });
+          }}
           onAddToWatchlist={(token) => console.log('Added to watchlist:', token)}
         />
       </div>
@@ -159,13 +165,13 @@ export default function RealTimeMarketDashboard() {
             <Activity className="w-3 h-3 mr-1" />
             LIVE
           </Badge>
-          {tradingStats?.success && (
+          {tradingStats && (
             <div className="text-right">
               <div className="text-sm text-gray-400">Total Profit</div>
               <div className={`text-lg font-bold ${
-                parseFloat(tradingStats.stats.totalProfit) >= 0 ? 'text-green-400' : 'text-red-400'
+                parseFloat(tradingStats.totalProfit || '0') >= 0 ? 'text-green-400' : 'text-red-400'
               }`}>
-                ${tradingStats.stats.totalProfit}
+                ${tradingStats.totalProfit || '0'}
               </div>
             </div>
           )}
@@ -204,7 +210,7 @@ export default function RealTimeMarketDashboard() {
                 <Activity className="w-5 h-5 text-purple-400" />
                 <span>Live Market Prices</span>
                 <Badge variant="outline" className="border-purple-500 text-purple-400">
-                  {marketPrices?.prices?.length || 0} Tokens
+                  {marketPrices?.length || 0} Tokens
                 </Badge>
               </CardTitle>
             </CardHeader>
@@ -215,7 +221,7 @@ export default function RealTimeMarketDashboard() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {marketPrices?.prices?.map((token: RealTimePrice) => (
+                  {marketPrices?.map((token: RealTimePrice) => (
                     <div
                       key={token.address}
                       onClick={() => handleTokenClick(token)}

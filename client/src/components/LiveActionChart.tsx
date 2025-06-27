@@ -56,11 +56,14 @@ export function LiveActionChart() {
       
       return {
         symbol: token.symbol,
+        address: `${token.symbol}_ADDRESS_${Date.now()}`,
         currentPrice,
         change24h,
         volume24h: Math.random() * 500000000,
         marketCap: currentPrice * (Math.random() * 1000000000 + 100000000),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        priceHistory: [],
+        lastUpdate: Date.now()
       };
     });
   };
