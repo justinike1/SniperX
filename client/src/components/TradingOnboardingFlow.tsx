@@ -114,6 +114,43 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
     }
   });
 
+  // Save bot configuration
+  const saveBotConfigMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('PATCH', '/api/bot/settings', tradingConfig);
+      return response;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        markStepCompleted('bot-configuration');
+        queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
+      }
+    },
+    onError: (error) => {
+      console.error('Bot configuration save failed:', error);
+    }
+  });
+
+  // Execute test trade
+  const executeTestTradeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/trading/simulate', {
+        amount: 50,
+        type: 'TEST'
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        markStepCompleted('test-trade');
+        queryClient.invalidateQueries({ queryKey: ['/api/trades/recent'] });
+      }
+    },
+    onError: (error) => {
+      console.error('Test trade execution failed:', error);
+    }
+  });
+
   // Check current bot settings
   const { data: botSettings } = useQuery({
     queryKey: ['/api/bot/settings'],
@@ -473,7 +510,16 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                       />
                     </div>
 
-                    {botSettings && Object.keys(botSettings).length > 0 && (
+                    {/* Save Configuration Button */}
+                    <Button 
+                      onClick={() => saveBotConfigMutation.mutate()}
+                      disabled={saveBotConfigMutation.isPending}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                    >
+                      {saveBotConfigMutation.isPending ? 'Saving Configuration...' : 'Save Bot Configuration'}
+                    </Button>
+
+                    {steps[2].completed && (
                       <div className="p-4 bg-green-900/20 border border-green-500 rounded-lg">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-5 h-5 text-green-500" />
@@ -518,6 +564,13 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                         onCheckedChange={(checked) => setTradingConfig(prev => ({ ...prev, enableWhaleTracking: checked }))}
                       />
                     </div>
+
+                    <Button 
+                      onClick={() => markStepCompleted('intelligence-setup')}
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                    >
+                      Save Intelligence Settings
+                    </Button>
 
                     {steps[3].completed && (
                       <div className="p-4 bg-green-900/20 border border-green-500 rounded-lg">
@@ -564,11 +617,11 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                     </div>
 
                     <Button 
-                      onClick={handleTestTrade} 
-                      disabled={testTradeMutation.isPending}
-                      className="w-full"
+                      onClick={() => executeTestTradeMutation.mutate()} 
+                      disabled={executeTestTradeMutation.isPending}
+                      className="w-full bg-green-600 hover:bg-green-700"
                     >
-                      {testTradeMutation.isPending ? 'Executing Test Trade...' : 'Execute Test Trade'}
+                      {executeTestTradeMutation.isPending ? 'Executing Test Trade...' : 'Execute Test Trade ($50)'}
                     </Button>
 
                     {steps[4].completed && (
@@ -593,8 +646,28 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                   </div>
 
                   <div className="space-y-4">
+                    {/* Setup Completion Status */}
                     <div className="p-4 bg-blue-900/20 border border-blue-500 rounded-lg">
-                      <h4 className="font-semibold mb-2">Trading Summary</h4>
+                      <h4 className="font-semibold mb-3">Setup Progress</h4>
+                      <div className="space-y-2">
+                        {steps.map((step, index) => (
+                          <div key={step.id} className="flex items-center gap-3">
+                            {step.completed ? (
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                            ) : (
+                              <div className="w-5 h-5 border-2 border-gray-500 rounded-full" />
+                            )}
+                            <span className={step.completed ? "text-green-500" : "text-gray-400"}>
+                              {step.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Trading Configuration Summary */}
+                    <div className="p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
+                      <h4 className="font-semibold mb-2">Your Trading Configuration</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>Risk Level: {tradingConfig.riskLevel}</div>
                         <div>Max Position: ${tradingConfig.maxPositionSize}</div>
@@ -605,28 +678,48 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
                       </div>
                     </div>
 
-                    <div className="p-4 bg-yellow-900/20 border border-yellow-500 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-yellow-500 mb-2" />
-                      <p className="text-yellow-500 font-semibold">Important Notice</p>
-                      <p className="text-sm text-gray-300">
-                        You are about to activate live trading with real money. Ensure you understand the risks involved.
-                      </p>
+                    {/* Action Options */}
+                    <div className="grid gap-3">
+                      {/* Go to Hub Option */}
+                      <Button 
+                        onClick={() => {
+                          onComplete?.();
+                        }}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        size="lg"
+                        disabled={!steps.every(step => step.completed)}
+                      >
+                        <Zap className="w-5 h-5 mr-2" />
+                        Go to Trading Hub
+                      </Button>
+
+                      {/* Immediate Bot Activation Option */}
+                      <Button 
+                        onClick={() => activateBotMutation.mutate()} 
+                        disabled={activateBotMutation.isPending || !steps.every(step => step.completed)}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        size="lg"
+                      >
+                        {activateBotMutation.isPending ? 'Activating Trading Bot...' : 'Activate Bot & Start Trading Now'}
+                      </Button>
                     </div>
 
-                    <Button 
-                      onClick={handleGoLive} 
-                      disabled={activateBotMutation.isPending}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                      size="lg"
-                    >
-                      {activateBotMutation.isPending ? 'Activating Trading Bot...' : 'Activate Trading Bot'}
-                    </Button>
-
-                    {steps[5].completed && (
+                    {/* Completion Status */}
+                    {steps.every(step => step.completed) ? (
                       <div className="p-4 bg-green-900/20 border border-green-500 rounded-lg">
                         <CheckCircle className="w-5 h-5 text-green-500 mb-2" />
-                        <p className="text-green-500 font-semibold">Trading Bot Activated!</p>
-                        <p className="text-sm text-gray-300">Your automated trading is now live.</p>
+                        <p className="text-green-500 font-semibold">Setup Complete!</p>
+                        <p className="text-sm text-gray-300">
+                          All systems ready. Choose to explore the hub or start automated trading immediately.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-yellow-900/20 border border-yellow-500 rounded-lg">
+                        <AlertTriangle className="w-5 h-5 text-yellow-500 mb-2" />
+                        <p className="text-yellow-500 font-semibold">Complete All Steps</p>
+                        <p className="text-sm text-gray-300">
+                          Please complete all setup steps above before proceeding to live trading.
+                        </p>
                       </div>
                     )}
                   </div>
