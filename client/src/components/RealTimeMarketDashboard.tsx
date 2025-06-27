@@ -143,7 +143,7 @@ export default function RealTimeMarketDashboard() {
             await handleTrade(action, {
               ...token,
               price: token.currentPrice,
-              timestamp: Date.now()
+              timestamp: new Date(Date.now())
             });
           }}
           onAddToWatchlist={(token) => console.log('Added to watchlist:', token)}

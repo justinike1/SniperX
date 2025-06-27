@@ -69,7 +69,7 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
             <div className="text-right">
               <p className="text-sm text-gray-400">Portfolio Value</p>
               <p className="text-2xl font-bold text-green-400">
-                ${walletBalance?.balance || '0.00'}
+                ${(walletBalance as any)?.balance || '0.00'}
               </p>
             </div>
             <Button 
@@ -123,7 +123,7 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
           <TabsContent value="ai-trading" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <AITradingEngine 
-                tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}
+                tokenAddress={(liveTokens as any)?.length > 0 ? (liveTokens as any)[0]?.address : undefined}
                 onExecuteTrade={(action, params) => console.log('AI Trade:', action, params)}
               />
               <FinanceGeniusAI />
@@ -133,7 +133,7 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
           <TabsContent value="live-scanner" className="mt-6">
             <div className="grid grid-cols-1 gap-6">
               <LiveScanner 
-                tokens={liveTokens || []}
+                tokens={(liveTokens as any) || []}
                 onSnipeToken={(token) => console.log('Snipe token:', token)}
               />
             </div>

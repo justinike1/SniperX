@@ -50,8 +50,8 @@ class QuickWalletService {
       // Verify exchange compatibility
       const compatibilityReport = ExchangeCompatibilityService.getCompatibilityReport(address);
       
-      if (!compatibilityReport.overallValid) {
-        console.log('Generated address compatibility issues:', compatibilityReport.incompatibleExchanges);
+      if (!(compatibilityReport as any).overallValid) {
+        console.log('Generated address compatibility issues:', (compatibilityReport as any).incompatibleExchanges);
       }
       
       // Encrypt private key

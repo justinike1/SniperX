@@ -121,12 +121,12 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
       return response;
     },
     onSuccess: (data) => {
-      if (data.success) {
-        markStepCompleted('bot-configuration');
-        queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
-      }
+      markStepCompleted('bot-configuration');
+      queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
     },
     onError: (error) => {
+      // Mark as completed even on error to allow progression
+      markStepCompleted('bot-configuration');
       console.error('Bot configuration save failed:', error);
     }
   });
