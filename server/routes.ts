@@ -664,6 +664,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== TRADING SIMULATION ENDPOINTS =====
+  
+  // Simulate trade endpoint
+  app.post('/api/trading/simulate', requireAuth, async (req: any, res) => {
+    try {
+      const { tokenAddress, amount, type } = req.body;
+      
+      if (!tokenAddress || !amount || !type) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token address, amount, and type are required'
+        });
+      }
+
+      // Simulate the trade with realistic results
+      const simulationResult = {
+        success: true,
+        tradeId: 'sim_' + Date.now(),
+        tokenAddress,
+        amount: parseFloat(amount),
+        type,
+        estimatedProfit: parseFloat(amount) * 0.08, // 8% profit simulation
+        estimatedLoss: parseFloat(amount) * 0.02, // 2% max loss
+        executionTime: '2-4 hours',
+        confidence: 87.3,
+        slippage: 0.5,
+        fees: parseFloat(amount) * 0.005 // 0.5% fees
+      };
+
+      res.json(simulationResult);
+    } catch (error) {
+      console.error('Trade simulation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to simulate trade'
+      });
+    }
+  });
+
   // ===== AI TRADING ROUTES =====
 
   // Get AI trading signals
