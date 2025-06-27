@@ -47,12 +47,19 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(loginForm),
       });
 
       const result = await response.json();
 
       if (result.success) {
+        // Store the authentication token
+        if (result.token) {
+          localStorage.setItem('auth-token', result.token);
+          document.cookie = `auth-token=${result.token}; path=/; max-age=604800; SameSite=Strict`;
+        }
+        
         toast({
           title: "Login Successful",
           description: "Welcome back to SniperX!",
@@ -111,9 +118,11 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           email: registerForm.email,
           password: registerForm.password,
+          username: registerForm.email.split('@')[0], // Generate username from email
           firstName: registerForm.firstName,
           lastName: registerForm.lastName,
           phoneNumber: registerForm.phoneNumber,
@@ -123,11 +132,17 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
       const result = await response.json();
 
       if (result.success) {
-        setRequiresEmailVerification(true);
+        // Store the authentication token if provided
+        if (result.token) {
+          localStorage.setItem('auth-token', result.token);
+          document.cookie = `auth-token=${result.token}; path=/; max-age=604800; SameSite=Strict`;
+        }
+        
         toast({
           title: "Registration Successful",
-          description: "Please check your email to verify your account.",
+          description: "Welcome to SniperX! Your account has been created.",
         });
+        onAuthSuccess();
       } else if (result.requiresEmailVerification) {
         setRequiresEmailVerification(true);
         toast({
