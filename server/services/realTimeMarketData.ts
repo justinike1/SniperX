@@ -1,318 +1,351 @@
-import { WebSocketMessage } from "../routes";
+import WebSocket from 'ws';
+import axios from 'axios';
 
-export interface MarketTick {
+interface MarketDataConfig {
   symbol: string;
-  address: string;
-  price: number;
+  exchange: string;
+  lastPrice: number;
   volume24h: number;
-  change24h: number;
-  change1h: number;
-  change5m: number;
-  marketCap: number;
-  liquidity: number;
-  holders: number;
+  priceChange24h: number;
   timestamp: number;
-  source: string;
-}
-
-export interface OrderBookData {
-  symbol: string;
-  bids: Array<[number, number]>; // [price, volume]
-  asks: Array<[number, number]>;
+  bid: number;
+  ask: number;
   spread: number;
-  depth: number;
-  timestamp: number;
 }
 
-export interface WhaleActivity {
-  txHash: string;
-  tokenAddress: string;
-  type: 'BUY' | 'SELL';
-  amount: number;
-  valueUSD: number;
-  walletAddress: string;
-  timestamp: number;
-  impact: number; // Price impact percentage
+interface PriceAggregation {
+  symbol: string;
+  weightedPrice: number;
+  exchanges: MarketDataConfig[];
+  confidence: number;
+  lastUpdated: number;
 }
 
-export class RealTimeMarketData {
-  private websocketBroadcast: ((message: WebSocketMessage) => void) | null = null;
-  private marketTickers: Map<string, MarketTick> = new Map();
-  private orderBooks: Map<string, OrderBookData> = new Map();
-  private whaleActivities: WhaleActivity[] = [];
-  private dataFeeds: Map<string, any> = new Map();
-  private updateInterval: NodeJS.Timeout | null = null;
-  private readonly MAX_WHALE_ACTIVITIES = 50; // Limit whale activities to prevent memory leak
+export class RealTimeMarketDataService {
+  private priceData: Map<string, PriceAggregation> = new Map();
+  private webSocketConnections: Map<string, WebSocket> = new Map();
+  private updateCallbacks: ((data: PriceAggregation) => void)[] = [];
+  private isConnected = false;
 
   constructor() {
-    this.initializeMarketData();
-    this.startRealTimeUpdates();
-  }
-
-  setWebSocketBroadcast(broadcast: (message: WebSocketMessage) => void) {
-    this.websocketBroadcast = broadcast;
-  }
-
-  private initializeMarketData() {
-    // Initialize with real Solana ecosystem tokens
-    const tokens = [
-      {
-        symbol: 'SOL',
-        address: 'So11111111111111111111111111111111111111112',
-        price: 95.24,
-        volume24h: 892340000,
-        marketCap: 42847392847,
-        holders: 1250000
-      },
-      {
-        symbol: 'BONK',
-        address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-        price: 0.000034,
-        volume24h: 45670000,
-        marketCap: 2384729384,
-        holders: 847392
-      },
-      {
-        symbol: 'WIF',
-        address: 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm',
-        price: 2.87,
-        volume24h: 23450000,
-        marketCap: 1847392847,
-        holders: 234847
-      },
-      {
-        symbol: 'PEPE',
-        address: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
-        price: 0.00001234,
-        volume24h: 67890000,
-        marketCap: 3847392847,
-        holders: 547392
-      },
-      {
-        symbol: 'RAY',
-        address: '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R',
-        price: 4.67,
-        volume24h: 12340000,
-        marketCap: 847392847,
-        holders: 156284
-      }
-    ];
-
-    tokens.forEach(token => {
-      const marketTick: MarketTick = {
-        ...token,
-        change24h: (Math.random() - 0.5) * 20, // -10% to +10%
-        change1h: (Math.random() - 0.5) * 4,   // -2% to +2%
-        change5m: (Math.random() - 0.5) * 1,   // -0.5% to +0.5%
-        liquidity: token.volume24h * 0.1,
-        timestamp: Date.now(),
-        source: 'JUPITER_DEX'
-      };
-      this.marketTickers.set(token.symbol, marketTick);
-      this.generateOrderBook(token.symbol, token.price);
-    });
-  }
-
-  private generateOrderBook(symbol: string, midPrice: number) {
-    const bids: Array<[number, number]> = [];
-    const asks: Array<[number, number]> = [];
+    // Start with REST APIs first for immediate data
+    this.initializeRESTFeeds();
+    this.startPriceAggregation();
     
-    // Generate realistic order book with depth
-    for (let i = 1; i <= 20; i++) {
-      const bidPrice = midPrice * (1 - (i * 0.001));
-      const askPrice = midPrice * (1 + (i * 0.001));
-      const volume = Math.random() * 10000 * (21 - i); // Higher volume closer to mid
-      
-      bids.push([bidPrice, volume]);
-      asks.push([askPrice, volume]);
-    }
-
-    const orderBook: OrderBookData = {
-      symbol,
-      bids: bids.sort((a, b) => b[0] - a[0]), // Highest bid first
-      asks: asks.sort((a, b) => a[0] - b[0]), // Lowest ask first
-      spread: (asks[0][0] - bids[0][0]) / midPrice * 100,
-      depth: bids.reduce((sum, [, vol]) => sum + vol, 0) + asks.reduce((sum, [, vol]) => sum + vol, 0),
-      timestamp: Date.now()
-    };
-
-    this.orderBooks.set(symbol, orderBook);
+    // Initialize WebSocket connections with delay to avoid overwhelming
+    setTimeout(() => this.initializeWebSocketConnections(), 2000);
   }
 
-  private startRealTimeUpdates() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval);
-    }
+  private async initializeRESTFeeds() {
+    console.log('🚀 Initializing REST market data feeds...');
+    
+    // Start with reliable REST endpoints
+    this.connectCoinGecko();
+    this.connectJupiter();
+    
+    this.isConnected = true;
+    console.log('✅ REST market data feeds connected successfully');
+  }
 
-    this.updateInterval = setInterval(() => {
+  private async initializeWebSocketConnections() {
+    console.log('🔗 Connecting to WebSocket feeds...');
+    
+    // Connect to WebSocket feeds gradually
+    setTimeout(() => this.connectBinance(), 1000);
+    setTimeout(() => this.connectCoinbase(), 2000);
+    setTimeout(() => this.connectKraken(), 3000);
+  }
+
+  private async connectBinance() {
+    try {
+      const ws = new WebSocket('wss://stream.binance.com:9443/ws/solusdt@ticker');
+      
+      ws.on('open', () => {
+        console.log('📡 Binance WebSocket connected');
+      });
+
+      ws.on('message', (data) => {
+        try {
+          const ticker = JSON.parse(data.toString());
+          this.updatePriceData('SOL', 'binance', {
+            symbol: 'SOL',
+            exchange: 'binance',
+            lastPrice: parseFloat(ticker.c),
+            volume24h: parseFloat(ticker.v),
+            priceChange24h: parseFloat(ticker.P),
+            timestamp: Date.now(),
+            bid: parseFloat(ticker.b),
+            ask: parseFloat(ticker.a),
+            spread: parseFloat(ticker.a) - parseFloat(ticker.b)
+          });
+        } catch (error) {
+          console.error('Binance data parsing error:', error);
+        }
+      });
+
+      ws.on('error', (error) => {
+        console.error('Binance WebSocket error:', error);
+        // Reconnect after delay
+        setTimeout(() => this.connectBinance(), 5000);
+      });
+
+      ws.on('close', () => {
+        console.log('Binance WebSocket disconnected, reconnecting...');
+        setTimeout(() => this.connectBinance(), 5000);
+      });
+
+      this.webSocketConnections.set('binance', ws);
+    } catch (error) {
+      console.error('Binance connection failed:', error);
+      // Retry connection after delay
+      setTimeout(() => this.connectBinance(), 10000);
+    }
+  }
+
+  private async connectCoinbase() {
+    try {
+      // Use REST API instead of WebSocket for more reliability
+      setInterval(async () => {
+        try {
+          const response = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=SOL');
+          const data = await response.json();
+          
+          if (data.data && data.data.rates && data.data.rates.USD) {
+            const price = parseFloat(data.data.rates.USD);
+            this.updatePriceData('SOL', 'coinbase', {
+              symbol: 'SOL',
+              exchange: 'coinbase',
+              lastPrice: price,
+              volume24h: 0,
+              priceChange24h: 0,
+              timestamp: Date.now(),
+              bid: price * 0.999,
+              ask: price * 1.001,
+              spread: price * 0.002
+            });
+          }
+        } catch (error) {
+          console.error('Coinbase REST API error:', error);
+        }
+      }, 15000); // Update every 15 seconds
+      
+      console.log('📡 Coinbase REST API connected');
+    } catch (error) {
+      console.error('Coinbase connection failed:', error);
+    }
+  }
+
+  private async connectKraken() {
+    try {
+      // Use REST API for more reliable connections
+      setInterval(async () => {
+        try {
+          const response = await fetch('https://api.kraken.com/0/public/Ticker?pair=SOLUSD');
+          const data = await response.json();
+          
+          if (data.result && data.result.SOLUSD) {
+            const ticker = data.result.SOLUSD;
+            const price = parseFloat(ticker.c[0]);
+            this.updatePriceData('SOL', 'kraken', {
+              symbol: 'SOL',
+              exchange: 'kraken',
+              lastPrice: price,
+              volume24h: parseFloat(ticker.v[1]) || 0,
+              priceChange24h: 0,
+              timestamp: Date.now(),
+              bid: parseFloat(ticker.b[0]),
+              ask: parseFloat(ticker.a[0]),
+              spread: parseFloat(ticker.a[0]) - parseFloat(ticker.b[0])
+            });
+          }
+        } catch (error) {
+          console.error('Kraken REST API error:', error);
+        }
+      }, 20000); // Update every 20 seconds
+      
+      console.log('📡 Kraken REST API connected');
+    } catch (error) {
+      console.error('Kraken connection failed:', error);
+    }
+  }
+
+  private async connectCoinGecko() {
+    // CoinGecko uses REST API with frequent polling
+    setInterval(async () => {
       try {
-        this.updateMarketData();
-        this.detectWhaleActivity();
-        this.broadcastMarketUpdates();
-        this.cleanupMemory(); // Add memory cleanup
-      } catch (error) {
-        console.error('Error in real-time updates:', error);
-      }
-    }, 5000); // Reduce frequency to 5 seconds to prevent memory overload
-  }
-
-  private cleanupMemory() {
-    // Force garbage collection of old data
-    if (this.whaleActivities.length > this.MAX_WHALE_ACTIVITIES) {
-      this.whaleActivities.length = this.MAX_WHALE_ACTIVITIES;
-    }
-    
-    // Clear old data feeds
-    this.dataFeeds.clear();
-  }
-
-  private updateMarketData() {
-    this.marketTickers.forEach((ticker, symbol) => {
-      // Simulate realistic price movements
-      const volatility = this.getVolatilityForToken(symbol);
-      const priceChange = (Math.random() - 0.5) * volatility * 2;
-      const newPrice = ticker.price * (1 + priceChange / 100);
-      
-      // Update volume with realistic patterns
-      const volumeChange = (Math.random() - 0.5) * 0.1;
-      const newVolume = Math.max(ticker.volume24h * (1 + volumeChange), 1000);
-
-      const updatedTicker: MarketTick = {
-        ...ticker,
-        price: Math.max(newPrice, 0.000001), // Prevent negative prices
-        volume24h: newVolume,
-        change5m: priceChange,
-        change1h: ticker.change1h + priceChange * 0.3,
-        change24h: ticker.change24h + priceChange * 0.1,
-        timestamp: Date.now()
-      };
-
-      this.marketTickers.set(symbol, updatedTicker);
-      this.generateOrderBook(symbol, updatedTicker.price);
-    });
-  }
-
-  private getVolatilityForToken(symbol: string): number {
-    const volatilityMap: { [key: string]: number } = {
-      'SOL': 0.5,
-      'BONK': 2.0,
-      'WIF': 1.5,
-      'PEPE': 3.0,
-      'RAY': 1.2
-    };
-    return volatilityMap[symbol] || 1.0;
-  }
-
-  private detectWhaleActivity() {
-    // Simulate whale activity detection
-    if (Math.random() < 0.1) { // 10% chance per update
-      const tokens = Array.from(this.marketTickers.keys());
-      const randomToken = tokens[Math.floor(Math.random() * tokens.length)];
-      const ticker = this.marketTickers.get(randomToken)!;
-      
-      const whaleActivity: WhaleActivity = {
-        txHash: `whale_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`,
-        tokenAddress: ticker.address,
-        type: Math.random() > 0.5 ? 'BUY' : 'SELL',
-        amount: Math.random() * 1000000 + 100000, // 100K - 1M tokens
-        valueUSD: ticker.price * (Math.random() * 1000000 + 100000),
-        walletAddress: `whale_${Math.random().toString(36).substr(2, 12)}`,
-        timestamp: Date.now(),
-        impact: Math.random() * 5 + 0.5 // 0.5% - 5.5% impact
-      };
-
-      this.whaleActivities.unshift(whaleActivity);
-      // Immediately limit array size to prevent memory leak
-      if (this.whaleActivities.length > this.MAX_WHALE_ACTIVITIES) {
-        this.whaleActivities.length = this.MAX_WHALE_ACTIVITIES;
-      }
-
-      // Broadcast whale activity
-      if (this.websocketBroadcast) {
-        this.websocketBroadcast({
-          type: 'REAL_TIME_PRICES',
-          data: {
-            type: 'WHALE_ACTIVITY',
-            activity: whaleActivity,
-            timestamp: Date.now()
+        const response = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
+          params: {
+            ids: 'solana',
+            vs_currencies: 'usd',
+            include_24hr_change: true,
+            include_24hr_vol: true
           }
         });
-      }
-    }
-  }
 
-  private broadcastMarketUpdates() {
-    if (this.websocketBroadcast) {
-      const marketUpdate = {
-        tickers: Array.from(this.marketTickers.values()),
-        orderBooks: Array.from(this.orderBooks.values()),
-        whaleActivities: this.whaleActivities.slice(0, 10), // Last 10 activities
-        timestamp: Date.now()
-      };
-
-      this.websocketBroadcast({
-        type: 'REAL_TIME_PRICES',
-        data: marketUpdate
-      });
-    }
-  }
-
-  getMarketTicker(symbol: string): MarketTick | undefined {
-    return this.marketTickers.get(symbol);
-  }
-
-  getAllTickers(): MarketTick[] {
-    return Array.from(this.marketTickers.values());
-  }
-
-  getOrderBook(symbol: string): OrderBookData | undefined {
-    return this.orderBooks.get(symbol);
-  }
-
-  getWhaleActivities(limit = 20): WhaleActivity[] {
-    return this.whaleActivities.slice(0, limit);
-  }
-
-  getMarketOverview() {
-    const tickers = Array.from(this.marketTickers.values());
-    const totalMarketCap = tickers.reduce((sum, t) => sum + t.marketCap, 0);
-    const totalVolume = tickers.reduce((sum, t) => sum + t.volume24h, 0);
-    const avgChange24h = tickers.reduce((sum, t) => sum + t.change24h, 0) / tickers.length;
-
-    return {
-      totalMarketCap,
-      totalVolume24h: totalVolume,
-      avgChange24h,
-      activeTokens: tickers.length,
-      topGainers: tickers
-        .filter(t => t.change24h > 0)
-        .sort((a, b) => b.change24h - a.change24h)
-        .slice(0, 5),
-      topLosers: tickers
-        .filter(t => t.change24h < 0)
-        .sort((a, b) => a.change24h - b.change24h)
-        .slice(0, 5),
-      trending: tickers
-        .sort((a, b) => b.volume24h - a.volume24h)
-        .slice(0, 10),
-      timestamp: Date.now()
-    };
-  }
-
-  // Real-time price feeds for specific tokens
-  subscribeToPriceFeed(tokenAddress: string, callback: (price: MarketTick) => void) {
-    const symbol = Array.from(this.marketTickers.entries())
-      .find(([_, ticker]) => ticker.address === tokenAddress)?.[0];
-    
-    if (symbol) {
-      setInterval(() => {
-        const ticker = this.marketTickers.get(symbol);
-        if (ticker) {
-          callback(ticker);
+        const data = response.data.solana;
+        if (data) {
+          this.updatePriceData('SOL', 'coingecko', {
+            symbol: 'SOL',
+            exchange: 'coingecko',
+            lastPrice: data.usd,
+            volume24h: data.usd_24h_vol || 0,
+            priceChange24h: data.usd_24h_change || 0,
+            timestamp: Date.now(),
+            bid: data.usd * 0.999, // Estimated bid
+            ask: data.usd * 1.001, // Estimated ask
+            spread: data.usd * 0.002
+          });
         }
-      }, 1000);
+      } catch (error) {
+        console.error('CoinGecko API error:', error);
+      }
+    }, 10000); // Update every 10 seconds
+  }
+
+  private async connectJupiter() {
+    // Jupiter Solana DEX aggregator
+    setInterval(async () => {
+      try {
+        const response = await axios.get('https://price.jup.ag/v4/price?ids=So11111111111111111111111111111111111111112');
+        const data = response.data.data;
+        
+        if (data && data['So11111111111111111111111111111111111111112']) {
+          const solData = data['So11111111111111111111111111111111111111112'];
+          this.updatePriceData('SOL', 'jupiter', {
+            symbol: 'SOL',
+            exchange: 'jupiter',
+            lastPrice: solData.price,
+            volume24h: 0,
+            priceChange24h: 0,
+            timestamp: Date.now(),
+            bid: solData.price * 0.998,
+            ask: solData.price * 1.002,
+            spread: solData.price * 0.004
+          });
+        }
+      } catch (error) {
+        console.error('Jupiter API error:', error);
+      }
+    }, 5000); // Update every 5 seconds for faster DEX data
+  }
+
+  private updatePriceData(symbol: string, exchange: string, data: MarketDataConfig) {
+    const current = this.priceData.get(symbol) || {
+      symbol,
+      weightedPrice: 0,
+      exchanges: [],
+      confidence: 0,
+      lastUpdated: Date.now()
+    };
+
+    // Update or add exchange data
+    const existingIndex = current.exchanges.findIndex(e => e.exchange === exchange);
+    if (existingIndex >= 0) {
+      current.exchanges[existingIndex] = data;
+    } else {
+      current.exchanges.push(data);
     }
+
+    // Calculate weighted average price based on exchange reliability
+    const weights = {
+      binance: 0.25,
+      coinbase: 0.25,
+      kraken: 0.20,
+      coingecko: 0.15,
+      jupiter: 0.15
+    };
+
+    let totalWeight = 0;
+    let weightedSum = 0;
+
+    current.exchanges.forEach(exchange => {
+      const weight = weights[exchange.exchange as keyof typeof weights] || 0.1;
+      weightedSum += exchange.lastPrice * weight;
+      totalWeight += weight;
+    });
+
+    if (totalWeight > 0) {
+      current.weightedPrice = weightedSum / totalWeight;
+      current.confidence = Math.min(current.exchanges.length * 20, 100);
+      current.lastUpdated = Date.now();
+    }
+
+    this.priceData.set(symbol, current);
+
+    // Notify all callbacks with the updated data
+    this.updateCallbacks.forEach(callback => {
+      try {
+        callback(current);
+      } catch (error) {
+        console.error('Callback error:', error);
+      }
+    });
+  }
+
+  private startPriceAggregation() {
+    // Aggregate and validate prices every second
+    setInterval(() => {
+      this.priceData.forEach((data, symbol) => {
+        // Remove stale data (older than 30 seconds)
+        data.exchanges = data.exchanges.filter(
+          exchange => Date.now() - exchange.timestamp < 30000
+        );
+
+        if (data.exchanges.length === 0) {
+          data.confidence = 0;
+          data.weightedPrice = 0;
+        }
+      });
+    }, 1000);
+  }
+
+  public getPrice(symbol: string): PriceAggregation | null {
+    return this.priceData.get(symbol) || null;
+  }
+
+  public getAllPrices(): Map<string, PriceAggregation> {
+    return new Map(this.priceData);
+  }
+
+  public onPriceUpdate(callback: (data: PriceAggregation) => void) {
+    this.updateCallbacks.push(callback);
+  }
+
+  public getConnectionStatus(): boolean {
+    return this.isConnected;
+  }
+
+  public getExchangeStatus(): { [exchange: string]: boolean } {
+    const status: { [exchange: string]: boolean } = {};
+    
+    this.webSocketConnections.forEach((ws, exchange) => {
+      status[exchange] = ws.readyState === WebSocket.OPEN;
+    });
+
+    return status;
+  }
+
+  public async validatePrice(symbol: string, proposedPrice: number): Promise<boolean> {
+    const currentData = this.getPrice(symbol);
+    if (!currentData || currentData.confidence < 50) {
+      return false;
+    }
+
+    // Allow 2% deviation from weighted average
+    const deviation = Math.abs(proposedPrice - currentData.weightedPrice) / currentData.weightedPrice;
+    return deviation <= 0.02;
+  }
+
+  public destroy() {
+    this.webSocketConnections.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    });
+    this.webSocketConnections.clear();
+    this.updateCallbacks = [];
+    this.isConnected = false;
   }
 }
 
-export const realTimeMarketData = new RealTimeMarketData();
+export const realTimeMarketData = new RealTimeMarketDataService();

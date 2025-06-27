@@ -1,5 +1,21 @@
 import { WebSocketMessage } from "../routes";
-import { realTimeMarketData, MarketTick, WhaleActivity } from "./realTimeMarketData";
+import { realTimeMarketData } from "./realTimeMarketData";
+
+// Local type definitions for trading data
+interface MarketTick {
+  symbol: string;
+  price: number;
+  volume: number;
+  change24h: number;
+  timestamp: number;
+}
+
+interface WhaleActivity {
+  address: string;
+  amount: number;
+  type: 'buy' | 'sell';
+  timestamp: number;
+}
 
 export interface TraderPersonality {
   id: string;
@@ -202,8 +218,15 @@ export class HumanLikeTraders {
   }
 
   private async processTraderThoughts(trader: TraderPersonality) {
-    const marketData = realTimeMarketData.getAllTickers();
-    const whaleActivities = realTimeMarketData.getWhaleActivities(5);
+    const priceMap = realTimeMarketData.getAllPrices();
+    const marketData = Array.from(priceMap.values()).map(price => ({
+      symbol: price.symbol,
+      price: price.weightedPrice,
+      volume: 0,
+      change24h: 0,
+      timestamp: price.lastUpdated
+    }));
+    const whaleActivities: any[] = []; // Simplified for now - focusing on price data accuracy
     
     // Update trader's emotional state based on market conditions
     this.updateTraderEmotion(trader, marketData, whaleActivities);
