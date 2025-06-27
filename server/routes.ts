@@ -3,6 +3,11 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { simpleAuth } from "./services/simpleAuth";
+import { aiTradingEngine } from "./services/aiTradingEngine";
+import { realTimeMarketData } from "./services/realTimeMarketData";
+import { humanLikeTraders } from "./services/humanLikeTraders";
+import { ultimateMarketIntelligence } from "./services/ultimateMarketIntelligence";
+import { unstoppableAITrader } from "./services/unstoppableAITrader";
 
 // WebSocket message interface
 export interface WebSocketMessage {
@@ -355,19 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get real-time market data
   app.get('/api/market/data', async (req, res) => {
     try {
-      const marketData = {
-        solPrice: 95.24,
-        btcPrice: 67432.18,
-        ethPrice: 3891.42,
-        totalMarketCap: 2847392847382,
-        volumeChange24h: 8.3,
-        trending: [
-          { symbol: 'SOL', change: 5.2 },
-          { symbol: 'BONK', change: 12.4 },
-          { symbol: 'WIF', change: -3.1 }
-        ]
-      };
-      
+      const marketData = realTimeMarketData.getMarketOverview();
       res.json({
         success: true,
         data: marketData
@@ -381,19 +374,457 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get token opportunities
+  // Get real-time token prices
+  app.get('/api/market/tickers', async (req, res) => {
+    try {
+      const tickers = realTimeMarketData.getAllTickers();
+      res.json({
+        success: true,
+        tickers
+      });
+    } catch (error) {
+      console.error('Tickers fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch tickers'
+      });
+    }
+  });
+
+  // Get whale activities
+  app.get('/api/market/whales', requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const whaleActivities = realTimeMarketData.getWhaleActivities(limit);
+      res.json({
+        success: true,
+        whaleActivities
+      });
+    } catch (error) {
+      console.error('Whale activities fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch whale activities'
+      });
+    }
+  });
+
+  // Get order book data
+  app.get('/api/market/orderbook/:symbol', async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      const orderBook = realTimeMarketData.getOrderBook(symbol.toUpperCase());
+      
+      if (!orderBook) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order book not found for symbol'
+        });
+      }
+
+      res.json({
+        success: true,
+        orderBook
+      });
+    } catch (error) {
+      console.error('Order book fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch order book'
+      });
+    }
+  });
+
+  // ===== AI TRADING ROUTES =====
+
+  // Get AI trading signals
+  app.get('/api/ai/signals', requireAuth, async (req: any, res) => {
+    try {
+      const signals = aiTradingEngine.getActiveSignals();
+      res.json({
+        success: true,
+        signals
+      });
+    } catch (error) {
+      console.error('AI signals fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch AI signals'
+      });
+    }
+  });
+
+  // Get AI trading strategies
+  app.get('/api/ai/strategies', requireAuth, async (req: any, res) => {
+    try {
+      const strategies = aiTradingEngine.getStrategies();
+      res.json({
+        success: true,
+        strategies
+      });
+    } catch (error) {
+      console.error('AI strategies fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch AI strategies'
+      });
+    }
+  });
+
+  // Execute AI trading signal
+  app.post('/api/ai/execute', requireAuth, async (req: any, res) => {
+    try {
+      const { signalId, amount } = req.body;
+      
+      if (!signalId || !amount) {
+        return res.status(400).json({
+          success: false,
+          message: 'Signal ID and amount are required'
+        });
+      }
+
+      const result = await aiTradingEngine.executeSignal(signalId, amount);
+      
+      // Create trade record
+      const trade = await storage.createTrade({
+        userId: req.user.id,
+        tokenSymbol: 'AI_SIGNAL',
+        tokenAddress: signalId,
+        type: 'BUY',
+        amount: amount.toString(),
+        price: result.executionPrice.toString(),
+        status: 'COMPLETED',
+        profitLoss: '0',
+        profitPercentage: '0'
+      });
+
+      res.json({
+        success: true,
+        execution: result,
+        trade,
+        message: 'AI signal executed successfully'
+      });
+    } catch (error) {
+      console.error('AI execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to execute AI signal'
+      });
+    }
+  });
+
+  // Get AI performance metrics
+  app.get('/api/ai/performance', requireAuth, async (req: any, res) => {
+    try {
+      const metrics = aiTradingEngine.getPerformanceMetrics();
+      res.json({
+        success: true,
+        metrics
+      });
+    } catch (error) {
+      console.error('AI performance fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch AI performance'
+      });
+    }
+  });
+
+  // ===== HUMAN-LIKE TRADERS ROUTES =====
+
+  // Get active human-like traders
+  app.get('/api/traders', requireAuth, async (req: any, res) => {
+    try {
+      const traders = humanLikeTraders.getActiveTraders();
+      res.json({
+        success: true,
+        traders
+      });
+    } catch (error) {
+      console.error('Traders fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch traders'
+      });
+    }
+  });
+
+  // Get recent trading decisions from human-like traders
+  app.get('/api/traders/decisions', requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const decisions = humanLikeTraders.getRecentDecisions(limit);
+      res.json({
+        success: true,
+        decisions
+      });
+    } catch (error) {
+      console.error('Trader decisions fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch trader decisions'
+      });
+    }
+  });
+
+  // Get specific trader details and their decisions
+  app.get('/api/traders/:traderId', requireAuth, async (req: any, res) => {
+    try {
+      const { traderId } = req.params;
+      const trader = humanLikeTraders.getTraderById(traderId);
+      
+      if (!trader) {
+        return res.status(404).json({
+          success: false,
+          message: 'Trader not found'
+        });
+      }
+
+      const decisions = humanLikeTraders.getTraderDecisions(traderId, 10);
+      
+      res.json({
+        success: true,
+        trader,
+        recentDecisions: decisions
+      });
+    } catch (error) {
+      console.error('Trader details fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch trader details'
+      });
+    }
+  });
+
+  // ===== UNSTOPPABLE AI TRADER ROUTES =====
+
+  // Get unstoppable AI trading signals
+  app.get('/api/unstoppable/signals', requireAuth, async (req: any, res) => {
+    try {
+      const signals = unstoppableAITrader.getActiveSignals();
+      res.json({
+        success: true,
+        signals
+      });
+    } catch (error) {
+      console.error('Unstoppable signals fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch unstoppable signals'
+      });
+    }
+  });
+
+  // Get unstoppable AI performance metrics
+  app.get('/api/unstoppable/performance', requireAuth, async (req: any, res) => {
+    try {
+      const metrics = unstoppableAITrader.getPerformanceMetrics();
+      const dominanceStats = unstoppableAITrader.getMarketDominanceStats();
+      res.json({
+        success: true,
+        metrics,
+        dominanceStats
+      });
+    } catch (error) {
+      console.error('Unstoppable performance fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch performance metrics'
+      });
+    }
+  });
+
+  // Execute unstoppable AI signal
+  app.post('/api/unstoppable/execute', requireAuth, async (req: any, res) => {
+    try {
+      const { signalId } = req.body;
+      
+      if (!signalId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Signal ID is required'
+        });
+      }
+
+      const result = await unstoppableAITrader.executeManualSignal(signalId);
+      
+      res.json({
+        success: true,
+        result,
+        message: 'Unstoppable AI signal executed'
+      });
+    } catch (error) {
+      console.error('Unstoppable execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to execute signal'
+      });
+    }
+  });
+
+  // Get executed trades from unstoppable AI
+  app.get('/api/unstoppable/trades', requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const trades = unstoppableAITrader.getExecutedTrades(limit);
+      res.json({
+        success: true,
+        trades
+      });
+    } catch (error) {
+      console.error('Unstoppable trades fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch executed trades'
+      });
+    }
+  });
+
+  // ===== ULTIMATE MARKET INTELLIGENCE ROUTES =====
+
+  // Get comprehensive market intelligence
+  app.get('/api/intelligence/overview', requireAuth, async (req: any, res) => {
+    try {
+      const intelligence = ultimateMarketIntelligence.getAllMarketIntelligence();
+      res.json({
+        success: true,
+        intelligence
+      });
+    } catch (error) {
+      console.error('Market intelligence fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch market intelligence'
+      });
+    }
+  });
+
+  // Get token risk assessment
+  app.get('/api/intelligence/risk/:tokenAddress', requireAuth, async (req: any, res) => {
+    try {
+      const { tokenAddress } = req.params;
+      const riskAssessment = ultimateMarketIntelligence.getTokenRiskAssessment(tokenAddress);
+      
+      if (!riskAssessment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Token not found in intelligence database'
+        });
+      }
+
+      res.json({
+        success: true,
+        riskAssessment
+      });
+    } catch (error) {
+      console.error('Risk assessment fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch risk assessment'
+      });
+    }
+  });
+
+  // Get social sentiment analysis
+  app.get('/api/intelligence/sentiment/:tokenAddress', requireAuth, async (req: any, res) => {
+    try {
+      const { tokenAddress } = req.params;
+      const sentiment = ultimateMarketIntelligence.getSocialSentiment(tokenAddress);
+      
+      if (!sentiment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Sentiment data not found for token'
+        });
+      }
+
+      res.json({
+        success: true,
+        sentiment
+      });
+    } catch (error) {
+      console.error('Sentiment fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch sentiment data'
+      });
+    }
+  });
+
+  // Get insider activities
+  app.get('/api/intelligence/insider', requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const activities = ultimateMarketIntelligence.getInsiderActivities(limit);
+      res.json({
+        success: true,
+        activities
+      });
+    } catch (error) {
+      console.error('Insider activities fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch insider activities'
+      });
+    }
+  });
+
+  // Get combined trading opportunities from all AI systems
   app.get('/api/market/opportunities', requireAuth, async (req: any, res) => {
     try {
-      const opportunities = [
-        {
-          token: 'BONK',
-          address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
-          confidence: 85,
-          action: 'BUY',
-          targetPrice: 0.000034,
-          reason: 'Strong momentum detected'
-        }
-      ];
+      const unstoppableSignals = unstoppableAITrader.getActiveSignals().slice(0, 3);
+      const aiSignals = aiTradingEngine.getActiveSignals().slice(0, 3);
+      const traderDecisions = humanLikeTraders.getRecentDecisions(3);
+      const insiderActivities = ultimateMarketIntelligence.getInsiderActivities(3);
+      
+      const opportunities = {
+        unstoppableAI: unstoppableSignals.map(signal => ({
+          type: 'UNSTOPPABLE_AI',
+          id: signal.id,
+          tokenSymbol: signal.tokenSymbol,
+          tokenAddress: signal.tokenAddress,
+          action: signal.action,
+          confidence: signal.confidence,
+          targetPrice: signal.targetPrice,
+          reasoning: signal.reasoning,
+          strategy: signal.strategy,
+          urgency: signal.urgency,
+          executionSpeed: signal.executionSpeed,
+          expectedReturn: signal.expectedReturn
+        })),
+        aiSignals: aiSignals.map(signal => ({
+          type: 'AI_SIGNAL',
+          tokenSymbol: signal.tokenSymbol,
+          tokenAddress: signal.tokenAddress,
+          action: signal.action,
+          confidence: signal.confidence,
+          targetPrice: signal.targetPrice,
+          reasoning: signal.reasoning,
+          strategy: signal.strategy,
+          timeframe: signal.timeframe
+        })),
+        humanDecisions: traderDecisions.map(decision => ({
+          type: 'HUMAN_TRADER',
+          traderName: decision.traderName,
+          tokenSymbol: decision.tokenSymbol,
+          tokenAddress: decision.tokenAddress,
+          action: decision.action,
+          confidence: decision.confidence,
+          targetPrice: decision.targetPrice,
+          reasoning: decision.reasoning,
+          emotion: decision.emotion,
+          urgency: decision.urgency
+        })),
+        insiderIntel: insiderActivities.map(activity => ({
+          type: 'INSIDER_INTEL',
+          tokenAddress: activity.tokenAddress,
+          activityType: activity.activityType,
+          confidence: activity.confidence,
+          predictedMove: activity.predictedMove,
+          valueUSD: activity.valueUSD,
+          pattern: activity.pattern
+        }))
+      };
       
       res.json({
         success: true,
@@ -411,16 +842,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== WEBSOCKET SETUP =====
   
   const httpServer = createServer(app);
-  const wss = new WebSocketServer({ server: httpServer });
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    perMessageDeflate: false
+  });
 
-  // WebSocket connection handling
+  // WebSocket connection handling with error prevention
   wss.on('connection', (ws, req) => {
     console.log('WebSocket client connected');
+    
+    // Send immediate welcome message to prevent frame errors
+    ws.send(JSON.stringify({
+      type: 'CONNECTION_ESTABLISHED',
+      data: { timestamp: Date.now() }
+    }));
     
     ws.on('message', (message) => {
       try {
         const data = JSON.parse(message.toString());
-        // Handle WebSocket messages
+        // Handle WebSocket messages safely
       } catch (error) {
         console.error('WebSocket message error:', error);
       }
@@ -433,16 +874,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
     });
+
+    // Prevent connection timeout
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === ws.OPEN) {
+        ws.ping();
+      } else {
+        clearInterval(pingInterval);
+      }
+    }, 30000);
   });
 
-  // Broadcast function for real-time updates
+  // Safe broadcast function for real-time updates
   const broadcastToAll = (message: WebSocketMessage) => {
     wss.clients.forEach((client) => {
-      if (client.readyState === client.OPEN) {
-        client.send(JSON.stringify(message));
+      if (client.readyState === 1) { // WebSocket.OPEN
+        try {
+          client.send(JSON.stringify(message));
+        } catch (error) {
+          console.error('Broadcast error:', error);
+        }
       }
     });
   };
+
+  // Connect AI services to WebSocket broadcasting
+  aiTradingEngine.setWebSocketBroadcast(broadcastToAll);
+  realTimeMarketData.setWebSocketBroadcast(broadcastToAll);
+  humanLikeTraders.setWebSocketBroadcast(broadcastToAll);
+  ultimateMarketIntelligence.setWebSocketBroadcast(broadcastToAll);
+  unstoppableAITrader.setWebSocketBroadcast(broadcastToAll);
 
   return httpServer;
 }
