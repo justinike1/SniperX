@@ -13,10 +13,12 @@ import { ProfitTracker } from '@/components/ProfitTracker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import FinanceGeniusAI from '@/components/FinanceGeniusAI';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
+import { SocialIntelligenceAlerts } from '@/components/SocialIntelligenceAlerts';
 import { WalletConnector } from '@/components/WalletConnector';
 import InteractiveCryptoChart from '@/components/InteractiveCryptoChart';
 import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
 import LiveActionCharts from '@/components/LiveActionCharts';
+import { LiveActionChart } from '@/components/LiveActionChart';
 import HighWinRateStrategy from '@/components/HighWinRateStrategy';
 import ContinuousTradingBot from '@/components/ContinuousTradingBot';
 import { NotificationToast } from '@/components/NotificationToast';
@@ -199,6 +201,14 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <RealTimeMarketDashboard />
+      </div>
+      
+      <div className="gpu-accelerated">
+        <LiveActionChart />
+      </div>
+      
+      <div className="smooth-update">
+        <SocialIntelligenceAlerts />
       </div>
       
       <div className="gpu-accelerated">

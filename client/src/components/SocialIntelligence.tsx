@@ -48,17 +48,23 @@ interface InsiderActivity {
 export function SocialIntelligence() {
   const { data: trendingData } = useQuery({
     queryKey: ['/api/intelligence/trending'],
-    refetchInterval: 30000
+    refetchInterval: 1000, // Ultra-fast 1-second updates for first-to-party advantage
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
 
   const { data: socialSignalsData } = useQuery({
     queryKey: ['/api/intelligence/social-signals'],
-    refetchInterval: 15000
+    refetchInterval: 800, // Even faster social signals for immediate alerts
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
 
   const { data: insiderData } = useQuery({
     queryKey: ['/api/intelligence/insider-activity'], 
-    refetchInterval: 20000
+    refetchInterval: 1200, // Critical insider activity updates
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
 
   const trending: TrendingToken[] = (trendingData as any)?.tokens || [];

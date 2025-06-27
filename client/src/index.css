@@ -154,4 +154,66 @@
   .price-update.loss {
     color: var(--loss-red);
   }
+
+  /* Ultra-high-performance optimizations for millisecond-level updates */
+  .optimized-container {
+    contain: layout style paint;
+    will-change: contents;
+    transform: translateZ(0);
+    isolation: isolate;
+  }
+
+  .smooth-update {
+    contain: layout style;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    animation: smoothPulse 2s ease-in-out infinite alternate;
+  }
+
+  .gpu-accelerated {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .prevent-layout-shift {
+    contain: layout;
+    height: auto;
+    min-height: 0;
+    content-visibility: auto;
+  }
+
+  .smooth-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #4f4f4f #1a1a1a;
+    scroll-behavior: smooth;
+  }
+
+  /* Real-time update animations */
+  @keyframes smoothPulse {
+    0% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.2); }
+    100% { box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+  }
+
+  /* Live data indicators */
+  .live-indicator {
+    position: relative;
+  }
+
+  .live-indicator::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: #ff4444;
+    border-radius: 50%;
+    animation: liveBlink 1s infinite;
+  }
+
+  @keyframes liveBlink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0.3; }
+  }
 }
