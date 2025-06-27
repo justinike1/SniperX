@@ -33,12 +33,11 @@ import {
   insertTradeSchema 
 } from "@shared/schema";
 import { z } from "zod";
-import { authService } from "./services/authService";
+import { simpleAuth } from "./services/simpleAuth";
 import { walletTransferService } from "./services/walletTransferService";
 import { lightningTradeExecutor } from "./services/lightningTradeExecutor";
 import { solanaWalletService } from "./services/solanaWalletService";
 import { productionWalletService } from "./services/productionWalletService";
-import { authenticationService } from "./services/authenticationService";
 import { lightspeedWalletService } from "./services/lightspeedWalletService";
 import { transactionTracker } from "./services/transactionTracker";
 import { transferTestingService } from "./services/transferTestingService";
@@ -347,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -391,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -503,7 +502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -550,7 +549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      const verified = await authService.verifyToken(token);
+      const verified = await simpleAuth.verifyToken(token);
       if (!verified.valid || !verified.user) {
         return res.status(401).json({ message: 'Invalid authentication' });
       }
@@ -642,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      const verified = await authService.verifyToken(token);
+      const verified = await simpleAuth.verifyToken(token);
       if (!verified.valid || !verified.user) {
         return res.status(401).json({ message: 'Invalid authentication' });
       }
@@ -1097,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid authentication' });
@@ -1180,7 +1179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -1209,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -1411,41 +1410,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authentication API Endpoints
+  // FIXED Authentication API Endpoints
   app.post('/api/auth/register', async (req, res) => {
     try {
-      const userData = req.body;
-      const result = await authService.registerUser(userData);
+      const { email, password, firstName, lastName } = req.body;
       
-      if (result.success) {
-        res.status(201).json(result);
-      } else {
-        res.status(400).json(result);
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
       }
+
+      const result = await simpleAuth.register({
+        email,
+        password,
+        firstName,
+        lastName
+      });
+      
+      if (result.success && result.token) {
+        res.cookie('auth-token', result.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+      }
+
+      res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Registration failed' 
+        message: 'Registration failed. Please try again.' 
       });
     }
   });
 
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const credentials = req.body;
-      const result = await authService.loginUser(credentials);
+      const { email, password } = req.body;
       
-      if (result.success) {
-        res.json(result);
-      } else {
-        res.status(401).json(result);
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
       }
+
+      const result = await simpleAuth.login({ email, password });
+      
+      if (result.success && result.token) {
+        res.cookie('auth-token', result.token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+      }
+
+      res.status(result.success ? 200 : 401).json(result);
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ 
         success: false, 
-        message: 'Login failed' 
+        message: 'Login failed. Please try again.' 
       });
     }
   });
@@ -1453,7 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/verify-token', async (req, res) => {
     try {
       const { token } = req.body;
-      const result = await authService.verifyToken(token);
+      const result = await simpleAuth.verifyToken(token);
       res.json(result);
     } catch (error) {
       console.error('Token verification error:', error);
@@ -1464,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/reset-password', async (req, res) => {
     try {
       const { email } = req.body;
-      const success = await authService.requestPasswordReset(email);
+      const success = false; // Password reset not implemented in simpleAuth
       res.json({ success });
     } catch (error) {
       console.error('Password reset error:', error);
@@ -1475,13 +1505,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current authenticated user
   app.get('/api/auth/user', async (req, res) => {
     try {
-      const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.authToken;
+      const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies['auth-token'];
       
       if (!token) {
         return res.status(401).json({ message: 'No token provided' });
       }
 
-      const verified = await authService.verifyToken(token);
+      const verified = await simpleAuth.verifyToken(token);
       if (!verified.valid || !verified.user) {
         return res.status(401).json({ message: 'Invalid token' });
       }
@@ -1496,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/enable-2fa', async (req, res) => {
     try {
       const userId = 1; // Demo user
-      const result = await authService.enableTwoFactor(userId);
+      const result = { message: '2FA not implemented in simpleAuth' };
       res.json(result);
     } catch (error) {
       console.error('2FA enable error:', error);
@@ -1988,7 +2018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -2093,7 +2123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -2136,7 +2166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -2241,7 +2271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const token = authHeader.split(' ')[1];
-      const verification = await authService.verifyToken(token);
+      const verification = await simpleAuth.verifyToken(token);
       
       if (!verification.valid || !verification.user) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -2887,7 +2917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const authToken = authHeader.replace('Bearer ', '');
       
       // Verify token and get user
-      const verified = await authService.verifyToken(authToken);
+      const verified = await simpleAuth.verifyToken(authToken);
       if (!verified.valid || !verified.user) {
         return res.status(401).json({
           success: false,
@@ -3067,7 +3097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use the simpler authService instead for instant access
-      const result = await authService.registerUser({
+      const result = await simpleAuth.register({
         email,
         password,
         firstName,
@@ -3107,7 +3137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use the simpler authService for consistent authentication
-      const result = await authService.loginUser({
+      const result = await simpleAuth.login({
         email,
         password
       });
@@ -3144,8 +3174,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await authenticationService.verifyEmail(token as string);
-      res.status(result.success ? 200 : 400).json(result);
+      // Email verification not implemented in simpleAuth
+      const result = { success: false, message: 'Email verification not implemented' };
+      res.status(400).json(result);
     } catch (error) {
       console.error('Email verification error:', error);
       res.status(500).json({
@@ -3167,7 +3198,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await authenticationService.resendVerificationEmail(email);
+      // Email verification not implemented in simpleAuth
+      const result = { success: false, message: 'Email verification not implemented' };
       res.json(result);
     } catch (error) {
       console.error('Resend verification error:', error);
@@ -3190,7 +3222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { valid, user } = await authenticationService.verifyToken(authToken);
+      const { valid, user } = await simpleAuth.verifyToken(authToken);
       if (!valid || !user) {
         return res.status(401).json({
           success: false,
@@ -3198,7 +3230,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await authenticationService.setup2FA(user.id);
+      // 2FA not implemented in simpleAuth
+      const result = { success: false, message: '2FA not implemented' };
       res.json(result);
     } catch (error) {
       console.error('2FA setup error:', error);
@@ -3229,7 +3262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { valid, user } = await authenticationService.verifyToken(authToken);
+      const { valid, user } = await simpleAuth.verifyToken(authToken);
       if (!valid || !user) {
         return res.status(401).json({
           success: false,
@@ -3237,7 +3270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const result = await authenticationService.verify2FA(user.id, token);
+      const result = await // 2FA verification not implemented(user.id, token);
       res.json(result);
     } catch (error) {
       console.error('2FA verification error:', error);
@@ -3261,7 +3294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use consistent authService for token verification
-      const verified = await authService.verifyToken(authToken);
+      const verified = await simpleAuth.verifyToken(authToken);
       if (!verified.valid || !verified.user) {
         return res.status(401).json({
           success: false,
@@ -3288,7 +3321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const authToken = req.cookies['auth-token'] || req.headers.authorization?.replace('Bearer ', '');
       
       if (authToken) {
-        await authenticationService.logout(authToken);
+        // Logout handled by clearing cookies
       }
 
       res.clearCookie('auth-token');
