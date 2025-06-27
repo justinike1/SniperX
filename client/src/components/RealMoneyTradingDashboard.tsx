@@ -214,7 +214,7 @@ export const RealMoneyTradingDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-400 text-sm">Total Trades</p>
-                  <p className="text-2xl font-bold text-white">{performance.performance.totalTrades}</p>
+                  <p className="text-2xl font-bold text-white">{(performance as any)?.performance?.totalTrades || 0}</p>
                 </div>
                 <Shield className="w-8 h-8 text-blue-400" />
               </div>
@@ -227,7 +227,7 @@ export const RealMoneyTradingDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-400 text-sm">Win Rate</p>
-                  <p className="text-2xl font-bold text-green-400">{performance.performance.winRate}%</p>
+                  <p className="text-2xl font-bold text-green-400">{(performance as any)?.performance?.winRate || 0}%</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-400" />
               </div>
@@ -240,8 +240,8 @@ export const RealMoneyTradingDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-400 text-sm">Total Profit</p>
-                  <p className="text-xl font-bold text-green-400">{performance.performance.totalProfitSOL} SOL</p>
-                  <p className="text-sm text-green-300">${performance.performance.totalProfitUSD}</p>
+                  <p className="text-xl font-bold text-green-400">{(performance as any)?.performance?.totalProfitSOL || 0} SOL</p>
+                  <p className="text-sm text-green-300">${(performance as any)?.performance?.totalProfitUSD || 0}</p>
                 </div>
                 <DollarSign className="w-8 h-8 text-green-400" />
               </div>
@@ -254,7 +254,7 @@ export const RealMoneyTradingDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-400 text-sm">SOL Price</p>
-                  <p className="text-xl font-bold text-white">${solPrice?.price?.toFixed(2) || 'Loading...'}</p>
+                  <p className="text-xl font-bold text-white">${(solPrice as any)?.price?.toFixed(2) || 'Loading...'}</p>
                   <p className="text-xs text-slate-400">Live CoinGecko</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-yellow-400" />
@@ -298,7 +298,7 @@ export const RealMoneyTradingDashboard = () => {
                 className="bg-slate-800 border-slate-600 text-white"
               />
               <p className="text-slate-400 text-xs mt-1">
-                Current Balance: {walletBalance?.solBalance || '0.0'} SOL (${walletBalance?.usdValue || '0.00'})
+                Current Balance: {(walletBalance as any)?.solBalance || '0.0'} SOL (${(walletBalance as any)?.usdValue || '0.00'})
               </p>
             </div>
 
@@ -373,14 +373,14 @@ export const RealMoneyTradingDashboard = () => {
       </div>
 
       {/* Recent Real Trades */}
-      {performance?.trades && performance.trades.length > 0 && (
+      {(performance as any)?.trades && (performance as any).trades.length > 0 && (
         <Card className="bg-slate-900/50 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">Recent REAL MONEY Trades</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {performance.trades.map((trade: RealTrade, index: number) => (
+              {(performance as any).trades.map((trade: RealTrade, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
                   <div className="flex items-center space-x-3">
                     <Badge className={trade.type === 'BUY' ? 'bg-green-600' : 'bg-red-600'}>

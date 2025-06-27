@@ -76,7 +76,7 @@ export const RealMoneyBanner = () => {
                 <div>
                   <p className="text-slate-400 text-sm">Live SOL Price</p>
                   <p className="text-2xl font-bold text-white">
-                    {solPrice?.price && typeof solPrice.price === 'number' ? `$${solPrice.price.toFixed(2)}` : 'Loading...'}
+                    {(solPrice as any)?.price && typeof (solPrice as any).price === 'number' ? `$${(solPrice as any).price.toFixed(2)}` : 'Loading...'}
                   </p>
                 </div>
                 <TrendingUp className="w-6 h-6 text-green-400" />
@@ -89,10 +89,10 @@ export const RealMoneyBanner = () => {
                 <div>
                   <p className="text-slate-400 text-sm">Your Balance</p>
                   <p className="text-lg font-bold text-white">
-                    {(walletBalance && typeof walletBalance.solBalance === 'string') ? walletBalance.solBalance : '0.0'} SOL
+                    {((walletBalance as any) && typeof (walletBalance as any).solBalance === 'string') ? (walletBalance as any).solBalance : '0.0'} SOL
                   </p>
                   <p className="text-sm text-green-400">
-                    ${(walletBalance && typeof walletBalance.usdValue === 'string') ? walletBalance.usdValue : '0.00'}
+                    ${((walletBalance as any) && typeof (walletBalance as any).usdValue === 'string') ? (walletBalance as any).usdValue : '0.00'}
                   </p>
                 </div>
                 <DollarSign className="w-6 h-6 text-blue-400" />

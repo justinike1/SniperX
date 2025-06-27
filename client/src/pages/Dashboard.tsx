@@ -12,7 +12,8 @@ import { AITradingEngine } from '@/components/AITradingEngine';
 import { MarketIntelligence } from '@/components/MarketIntelligence';
 import { ProfitTracker } from '@/components/ProfitTracker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import FinanceGeniusAI from '@/components/FinanceGeniusAI';
+import EnhancedFinanceGeniusAI from '@/components/EnhancedFinanceGeniusAI';
+import SocialIntelligenceCenter from '@/components/SocialIntelligenceCenter';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { SocialIntelligenceAlerts } from '@/components/SocialIntelligenceAlerts';
 import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
@@ -110,7 +111,9 @@ export default function Dashboard() {
   };
 
   const handleBeginTrading = () => {
-    setShowOnboarding(true);
+    // Direct navigation to trading bot - no wizard
+    setTradingActive(true);
+    setShowOnboarding(false);
   };
 
   const handleSetupTrading = () => {
@@ -288,7 +291,7 @@ export default function Dashboard() {
       
       <HighWinRateStrategy />
       
-      <FinanceGeniusAI />
+      <EnhancedFinanceGeniusAI />
       
       <SocialIntelligence />
       

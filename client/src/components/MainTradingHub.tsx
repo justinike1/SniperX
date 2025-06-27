@@ -8,7 +8,8 @@ import { TrendingUp, Activity, Zap, Target, DollarSign, Bot, Rocket } from 'luci
 import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
 // UltimateSuccessDashboard temporarily disabled to fix crash
 import { AITradingEngine } from '@/components/AITradingEngine';
-import FinanceGeniusAI from '@/components/FinanceGeniusAI';
+import EnhancedFinanceGeniusAI from '@/components/EnhancedFinanceGeniusAI';
+import SocialIntelligenceCenter from '@/components/SocialIntelligenceCenter';
 import { SupremeTradingBot } from '@/components/SupremeTradingBot';
 import { AutomatedLightTrading } from '@/components/AutomatedLightTrading';
 import HighWinRateStrategy from '@/components/HighWinRateStrategy';
@@ -147,7 +148,7 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
                 tokenAddress={(liveTokens as any)?.length > 0 ? (liveTokens as any)[0]?.address : undefined}
                 onExecuteTrade={(action, params) => console.log('AI Trade:', action, params)}
               />
-              <FinanceGeniusAI />
+              <EnhancedFinanceGeniusAI />
             </div>
           </TabsContent>
 
@@ -170,9 +171,8 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
           </TabsContent>
 
           <TabsContent value="intelligence" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <SocialIntelligence />
-              <InsiderTradingIntelligence />
+            <div className="grid grid-cols-1 gap-6">
+              <SocialIntelligenceCenter />
             </div>
           </TabsContent>
 
