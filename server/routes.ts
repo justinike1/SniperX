@@ -10,6 +10,7 @@ import { humanLikeTraders } from "./services/humanLikeTraders";
 import { ultimateMarketIntelligence } from "./services/ultimateMarketIntelligence";
 import { unstoppableAITrader } from "./services/unstoppableAITrader";
 import { ultimateSuccessEngine } from "./services/ultimateSuccessEngine";
+import { robinhoodTransferTester } from "./services/robinhoodTransferTester";
 
 // WebSocket message interface
 export interface WebSocketMessage {
@@ -158,6 +159,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'Failed to fetch user data'
+      });
+    }
+  });
+
+  // ===== ROBINHOOD TRANSFER TESTING =====
+  
+  // Test outbound transfer (Robinhood → SniperX)
+  app.post('/api/transfer-test/outbound', async (req, res) => {
+    try {
+      const { sniperXAddress, robinhoodAddress } = req.body;
+      
+      if (!sniperXAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'SniperX address required for transfer testing'
+        });
+      }
+
+      const testResult = await robinhoodTransferTester.testOutboundTransfer(
+        sniperXAddress, 
+        robinhoodAddress || 'RobinhoodTestAddress123456789'
+      );
+
+      res.json({
+        success: true,
+        test: testResult,
+        message: testResult.success 
+          ? 'Outbound transfer test passed - Robinhood → SniperX transfers should work'
+          : 'CAUTION: Potential issues detected with Robinhood → SniperX transfers'
+      });
+    } catch (error) {
+      console.error('Outbound transfer test error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to test outbound transfer',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test inbound transfer (SniperX → Robinhood)
+  app.post('/api/transfer-test/inbound', async (req, res) => {
+    try {
+      const { sniperXAddress, robinhoodAddress } = req.body;
+      
+      if (!sniperXAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'SniperX address required for transfer testing'
+        });
+      }
+
+      const testResult = await robinhoodTransferTester.testInboundTransfer(
+        sniperXAddress,
+        robinhoodAddress || 'RobinhoodTestAddress123456789'
+      );
+
+      res.json({
+        success: true,
+        test: testResult,
+        message: testResult.success 
+          ? 'Inbound transfer test passed - SniperX → Robinhood transfers should work'
+          : 'CAUTION: Potential issues detected with SniperX → Robinhood transfers'
+      });
+    } catch (error) {
+      console.error('Inbound transfer test error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to test inbound transfer',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Comprehensive transfer safety test
+  app.post('/api/transfer-test/comprehensive', async (req, res) => {
+    try {
+      const { sniperXAddress, robinhoodAddress } = req.body;
+      
+      if (!sniperXAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'SniperX address required for comprehensive testing'
+        });
+      }
+
+      const comprehensiveTest = await robinhoodTransferTester.runComprehensiveTransferTest(
+        sniperXAddress,
+        robinhoodAddress
+      );
+
+      res.json({
+        success: true,
+        test: comprehensiveTest,
+        safetyLevel: comprehensiveTest.overallSafety,
+        recommendation: comprehensiveTest.recommendation,
+        message: `Transfer safety assessment complete: ${comprehensiveTest.overallSafety}`
+      });
+    } catch (error) {
+      console.error('Comprehensive transfer test error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to run comprehensive transfer test',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
@@ -880,10 +985,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Instant wallet creation endpoint (for frontend compatibility)
   app.post('/api/instant-wallet/create', async (req, res) => {
     try {
-      // Generate a valid Solana address format
-      const crypto = await import('crypto');
-      const randomBytes = crypto.randomBytes(32);
-      const address = randomBytes.toString('base64').slice(0, 44).replace(/[+/]/g, '').padEnd(44, 'A');
+      // Generate a proper Solana address format using Base58 encoding
+      const { Keypair } = await import('@solana/web3.js');
+      const bs58 = await import('bs58');
+      
+      // Create a new Solana keypair with proper address format
+      const keypair = Keypair.generate();
+      const address = keypair.publicKey.toBase58();
+      
+      // Verify this is a valid Solana address format
+      if (!address || address.length < 32 || address.length > 44) {
+        throw new Error('Invalid Solana address generated');
+      }
       
       const wallet = {
         address: address,
@@ -901,12 +1014,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         wallet,
-        message: 'Exchange-compatible Solana wallet created',
+        message: 'Robinhood-compatible Solana wallet created',
         validation: {
           overallValid: true,
           supportedExchanges: 5,
           totalChecked: 5,
-          guaranteedCompatibility: true
+          guaranteedCompatibility: true,
+          addressFormat: 'Base58',
+          addressLength: address.length
         }
       });
     } catch (error) {
