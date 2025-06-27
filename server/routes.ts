@@ -2408,6 +2408,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // MILLISECOND-SPEED SOCIAL INTELLIGENCE ENDPOINTS
+  
+  // Get trading opportunities with millisecond updates
+  app.get('/api/intelligence/trading-opportunities', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const opportunities = socialIntelligenceService.getTradingOpportunities(limit);
+      res.json({
+        success: true,
+        opportunities,
+        updateFrequency: '100ms',
+        lastUpdate: Date.now()
+      });
+    } catch (error) {
+      console.error('Trading opportunities fetch error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch trading opportunities' 
+      });
+    }
+  });
+
+  // Get global insider movements with 25ms precision
+  app.get('/api/intelligence/global-insider-movements', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const movements = socialIntelligenceService.getGlobalInsiderMovements(limit);
+      const walletStats = socialIntelligenceService.getGlobalWalletStats();
+      
+      res.json({
+        success: true,
+        movements,
+        walletStats,
+        updateFrequency: '25ms',
+        globalCoverage: true,
+        lastUpdate: Date.now()
+      });
+    } catch (error) {
+      console.error('Global insider movements fetch error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch global insider movements' 
+      });
+    }
+  });
+
+  // Get active millisecond alerts
+  app.get('/api/intelligence/active-alerts', async (req, res) => {
+    try {
+      const alerts = socialIntelligenceService.getActiveAlerts();
+      res.json({
+        success: true,
+        alerts,
+        totalActive: alerts.length,
+        alertFrequency: 'millisecond',
+        lastUpdate: Date.now()
+      });
+    } catch (error) {
+      console.error('Active alerts fetch error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch active alerts' 
+      });
+    }
+  });
+
+  // Enhanced social signals with millisecond monitoring
+  app.get('/api/intelligence/enhanced-social-signals', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 30;
+      const signals = socialIntelligenceService.getSocialSignals(limit);
+      
+      res.json({
+        success: true,
+        signals,
+        monitoringFrequency: '50ms',
+        platforms: ['Twitter', 'Reddit', 'Telegram', 'Discord', 'TikTok'],
+        globalCoverage: true,
+        lastUpdate: Date.now()
+      });
+    } catch (error) {
+      console.error('Enhanced social signals fetch error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch enhanced social signals' 
+      });
+    }
+  });
+
   // Get combined trading opportunities from all AI systems
   app.get('/api/market/opportunities', requireAuth, async (req: any, res) => {
     try {
