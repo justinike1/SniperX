@@ -98,17 +98,25 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
   // Create personal trading wallet with exchange compatibility
   const createWalletMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/wallet/create-onboarding', {});
-      return response;
+      try {
+        const response = await apiRequest('POST', '/api/wallet/create-onboarding', {});
+        return response;
+      } catch (error) {
+        // If authenticated endpoint fails, try instant wallet creation as fallback
+        console.log('Trying instant wallet creation...');
+        const fallbackResponse = await apiRequest('POST', '/api/instant-wallet/create', {});
+        return fallbackResponse;
+      }
     },
     onSuccess: (data) => {
       if (data.success) {
         queryClient.invalidateQueries({ queryKey: ['/api/user/wallet'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/wallet/balance'] });
         markStepCompleted('wallet-setup');
       }
     },
     onError: (error) => {
-      console.error('Personal wallet creation failed:', error);
+      console.error('Wallet creation failed:', error);
     }
   });
 
@@ -128,27 +136,56 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
     }
   });
 
-  // Test trade execution
+  // Test trade execution with real market demonstration
   const testTradeMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', '/api/trading/test-trade', {
+      return await apiRequest('POST', '/api/trading/execute-test-trade', {
         amount: '0.01',
-        token: 'SOL'
+        testMode: true,
+        showTechniques: true,
+        strategy: tradingConfig.riskLevel
       });
     },
-    onSuccess: () => {
-      markStepCompleted('test-trade');
+    onSuccess: (data) => {
+      if (data.success) {
+        markStepCompleted('test-trade');
+      }
+    },
+    onError: (error) => {
+      console.error('Test trade execution failed:', error);
     }
   });
 
-  // Activate trading bot
+  // Activate real-time AI trading bot
   const activateBotMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', '/api/bot/activate');
+      return await apiRequest('POST', '/api/bot/activate-live-trading', {
+        enableRealTimeTrading: true,
+        enableProfitMaximization: true,
+        marketMode: 'LIVE',
+        strategy: tradingConfig.riskLevel,
+        maxPositionSize: tradingConfig.maxPositionSize,
+        stopLoss: tradingConfig.stopLossPercentage,
+        takeProfit: tradingConfig.takeProfitPercentage,
+        enableAutomatedTrading: tradingConfig.enableAutomatedTrading
+      });
     },
-    onSuccess: () => {
-      markStepCompleted('go-live');
-      setTimeout(() => onComplete(), 2000);
+    onSuccess: (data) => {
+      if (data.success) {
+        markStepCompleted('go-live');
+        // Broadcast successful activation to all components
+        queryClient.invalidateQueries({ queryKey: ['/api/bot/settings'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/trading/stats'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/wallet/balance'] });
+        
+        setTimeout(() => {
+          // Open main trading hub with full capabilities
+          onComplete();
+        }, 2000);
+      }
+    },
+    onError: (error) => {
+      console.error('Bot activation failed:', error);
     }
   });
 
@@ -164,6 +201,11 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
       markStepCompleted('wallet-setup');
     }
   }, [walletData]);
+
+  // Auto-complete bot configuration step when user makes any selection
+  useEffect(() => {
+    markStepCompleted('bot-config');
+  }, [tradingConfig]);
 
   // Auto-complete intelligence setup
   useEffect(() => {
@@ -611,7 +653,7 @@ export function TradingOnboardingFlow({ onComplete }: { onComplete: () => void }
             
             <Button 
               onClick={nextStep} 
-              disabled={currentStep === steps.length - 1 || !steps[currentStep]?.completed}
+              disabled={currentStep === steps.length - 1 || (currentStep === 0 && !steps[0]?.completed)}
             >
               {currentStep === steps.length - 1 ? 'Complete' : 'Next'}
             </Button>

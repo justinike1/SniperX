@@ -31,6 +31,8 @@ import { AutomatedLightTrading } from '@/components/AutomatedLightTrading';
 import { UltimateSuccessDashboard } from '@/components/UltimateSuccessDashboard';
 import { WalletFunding } from '@/components/WalletFunding';
 import { SupremeTradingBot } from '@/components/SupremeTradingBot';
+import { MainTradingHub } from '@/components/MainTradingHub';
+import { WalletBalanceSlider } from '@/components/WalletBalanceSlider';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -100,6 +102,17 @@ export default function Dashboard() {
     setTradingActive(true);
     setShowOnboarding(false);
     localStorage.setItem('onboarding_completed', 'true');
+    
+    // Enable all trading systems and profit maximization
+    setBotStatus({
+      isActive: true,
+      tokensScanned: 0,
+      snipesToday: 0,
+      status: 'ACTIVE'
+    });
+    
+    // Trigger immediate refresh of all trading components
+    window.location.reload();
   };
 
   const handleBeginTrading = () => {
@@ -321,6 +334,11 @@ export default function Dashboard() {
           notification={currentNotification}
           onClose={() => setCurrentNotification(null)}
         />
+      )}
+
+      {/* Wallet Balance Slider at bottom after setup completion */}
+      {!showOnboarding && (
+        <WalletBalanceSlider />
       )}
     </div>
   );
