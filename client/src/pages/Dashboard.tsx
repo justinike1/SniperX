@@ -65,10 +65,10 @@ export default function Dashboard() {
   
   const recentTrades = Array.isArray(recentTradesData?.trades) ? recentTradesData.trades : [];
 
-  // Fetch live tokens with safe data handling
+  // Fetch live tokens with safe data handling - reduced refresh rate
   const { data: liveTokensData } = useQuery<any>({
     queryKey: ['/api/scanner/tokens'],
-    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchInterval: 15000, // Refetch every 15 seconds for smoother experience
   });
   
   const liveTokens = Array.isArray(liveTokensData?.tokens) ? liveTokensData.tokens : [];
@@ -188,14 +188,22 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <ProductionModeNotification />
+    <div className="space-y-6 pb-20 optimized-container">
+      <div className="prevent-layout-shift">
+        <ProductionModeNotification />
+      </div>
       
-      <InstantMarketAccess />
+      <div className="gpu-accelerated">
+        <InstantMarketAccess />
+      </div>
       
-      <RealTimeMarketDashboard />
+      <div className="smooth-update">
+        <RealTimeMarketDashboard />
+      </div>
       
-      <InstantWalletAccess />
+      <div className="gpu-accelerated">
+        <InstantWalletAccess />
+      </div>
       
       <ErrorBoundary>
         <ProfitTracker />

@@ -113,4 +113,45 @@
   .bg-warning-orange {
     background-color: var(--warning-orange);
   }
+
+  /* High-performance optimizations for aggressive refresh rates */
+  .optimized-container {
+    contain: layout style paint;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  .smooth-update {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+  }
+
+  .prevent-layout-shift {
+    min-height: 1px;
+    contain: layout;
+  }
+
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+  }
+
+  /* Smooth number transitions for price updates */
+  .price-update {
+    transition: color 0.3s ease, transform 0.15s ease;
+  }
+
+  .price-update.updating {
+    transform: scale(1.02);
+  }
+
+  .price-update.profit {
+    color: var(--profit-green);
+  }
+
+  .price-update.loss {
+    color: var(--loss-red);
+  }
 }

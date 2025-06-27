@@ -44,11 +44,14 @@ export default function RealTimeMarketDashboard() {
   const [selectedToken, setSelectedToken] = useState<RealTimePrice | null>(null);
   const [activeTab, setActiveTab] = useState('prices');
 
-  // Fetch real-time market prices
+  // Fetch real-time market prices with aggressive updates but optimized performance
   const { data: marketPrices, isLoading: pricesLoading } = useQuery({
     queryKey: ['/api/market/prices'],
     queryFn: () => apiRequest('GET', '/api/market/prices'),
-    refetchInterval: 5000, // Update every 5 seconds
+    refetchInterval: 3000, // Aggressive 3-second updates
+    refetchIntervalInBackground: true,
+    staleTime: 1000,
+    notifyOnChangeProps: ['data'],
   });
 
   // Fetch trading opportunities

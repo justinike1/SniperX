@@ -43,12 +43,14 @@ export const ProfitTracker = () => {
 
   const { data: opportunities = {} } = useQuery({
     queryKey: ['/api/strategy/high-probability-trades'],
-    refetchInterval: 15000, // Refresh every 15 seconds
+    refetchInterval: 60000, // Refresh every minute for smoother experience
   });
 
   const { data: performance = {} } = useQuery({
     queryKey: ['/api/strategy/performance-metrics'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000, // Balanced 30-second updates
+    staleTime: 15000,
+    notifyOnChangeProps: ['data'],
   });
 
   // Get actual wallet balance instead of simulated data
