@@ -216,6 +216,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create fresh active wallet address with Solscan verification
+  app.post('/api/wallet/create-fresh', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { activeWalletService } = await import('./services/activeWalletService');
+      
+      const activeWallet = await activeWalletService.createActiveWallet(userId);
+      
+      res.json({
+        success: true,
+        wallet: {
+          address: activeWallet.address,
+          isActive: activeWallet.isActive,
+          solscanVerified: activeWallet.solscanVerified,
+          transferCapable: activeWallet.transferCapable,
+          balance: activeWallet.balance,
+          createdAt: activeWallet.createdAt
+        }
+      });
+    } catch (error) {
+      console.error('Error creating fresh wallet:', error);
+      res.status(500).json({ success: false, message: 'Failed to create fresh wallet' });
+    }
+  });
+
+  // Get transfer instructions for specific platform
+  app.post('/api/wallet/transfer-instructions', requireAuth, async (req: any, res) => {
+    try {
+      const { fromPlatform, toAddress } = req.body;
+      const { activeWalletService } = await import('./services/activeWalletService');
+      
+      const instructions = activeWalletService.generateTransferInstructions(fromPlatform, toAddress);
+      
+      res.json({
+        success: true,
+        instructions
+      });
+    } catch (error) {
+      console.error('Error generating transfer instructions:', error);
+      res.status(500).json({ success: false, message: 'Failed to generate transfer instructions' });
+    }
+  });
+
+  // Verify wallet address with Solscan
+  app.post('/api/wallet/verify-solscan', requireAuth, async (req: any, res) => {
+    try {
+      const { address } = req.body;
+      const { activeWalletService } = await import('./services/activeWalletService');
+      
+      const [solscanVerified, transferCapable, balance] = await Promise.all([
+        activeWalletService.verifySolscanActive(address),
+        activeWalletService.verifyTransferCapability(address),
+        activeWalletService.getWalletBalance(address)
+      ]);
+      
+      res.json({
+        success: true,
+        verification: {
+          address,
+          solscanVerified,
+          transferCapable,
+          balance,
+          verifiedAt: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error verifying wallet:', error);
+      res.status(500).json({ success: false, message: 'Failed to verify wallet' });
+    }
+  });
+
   // ===== TRADING ROUTES =====
   
   // Get trading performance

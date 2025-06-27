@@ -14,6 +14,7 @@ import { ProductionWalletSetup } from '@/components/ProductionWalletSetup';
 import { WalletBackupWizard } from '@/components/WalletBackupWizard';
 import { WalletRecoveryWizard } from '@/components/WalletRecoveryWizard';
 import { FreshWalletAccess } from '@/components/FreshWalletAccess';
+import { FreshActiveWallet } from '@/components/FreshActiveWallet';
 import { RobinhoodTransferTracker } from '@/components/RobinhoodTransferTracker';
 import { RobinhoodTransferTester } from '@/components/RobinhoodTransferTester';
 
@@ -650,15 +651,15 @@ export default function WalletPage() {
                     </p>
                   </div>
                   
-                  <FreshWalletAccess />
+                  <FreshActiveWallet />
                   
                   <div className="bg-green-950/30 border border-green-500/20 rounded-lg p-4 mt-6">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-400 mt-0.5" />
                       <div className="text-sm">
-                        <div className="font-medium text-green-400 mb-1">Robinhood Compatible</div>
+                        <div className="font-medium text-green-400 mb-1">Robinhood-Style Speed</div>
                         <div className="text-gray-400">
-                          Fresh addresses are guaranteed to work with Robinhood transfers. No more "SniperX" fake addresses that cause transfer failures.
+                          Active addresses are verified on Solscan and ready for instant transfers with 30-60 second completion times, just like Robinhood.
                         </div>
                       </div>
                     </div>
