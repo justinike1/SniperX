@@ -41,7 +41,7 @@ import { productionWalletService } from "./services/productionWalletService";
 import { authenticationService } from "./services/authenticationService";
 import { lightspeedWalletService } from "./services/lightspeedWalletService";
 import { transactionTracker } from "./services/transactionTracker";
-import { ExchangeCompatibilityService } from "./services/exchangeCompatibilityService";
+import { transferTestingService } from "./services/transferTestingService";
 import { Keypair } from "@solana/web3.js";
 
 export interface WebSocketMessage {
@@ -1721,6 +1721,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Compatibility test error:', error);
       res.status(500).json({ message: 'Failed to test compatibility' });
+    }
+  });
+
+  // Comprehensive Robinhood Transfer Testing Endpoint
+  app.post('/api/wallet/test-robinhood-transfer', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID required' });
+      }
+
+      console.log(`🧪 Testing Robinhood → SniperX transfer for user ${userId}`);
+      
+      const testResult = await transferTestingService.testRobinhoodToSniperXTransfer(userId);
+      
+      res.json({
+        success: testResult.success,
+        realWorldReady: testResult.realWorldReady,
+        walletAddress: testResult.walletAddress,
+        robinhoodCompatible: testResult.robinhoodCompatible,
+        solscanVerified: testResult.solscanVerified,
+        currentBalance: testResult.currentBalance,
+        transferInstructions: testResult.transferInstructions,
+        estimatedArrivalTime: testResult.estimatedArrivalTime,
+        networkFees: testResult.networkFees,
+        addressValidation: testResult.addressValidation,
+        errors: testResult.errors,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Robinhood transfer test failed:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Transfer test failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

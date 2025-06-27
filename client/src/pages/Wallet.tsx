@@ -15,6 +15,7 @@ import { WalletBackupWizard } from '@/components/WalletBackupWizard';
 import { WalletRecoveryWizard } from '@/components/WalletRecoveryWizard';
 import { FreshWalletAccess } from '@/components/FreshWalletAccess';
 import { RobinhoodTransferTracker } from '@/components/RobinhoodTransferTracker';
+import { RobinhoodTransferTester } from '@/components/RobinhoodTransferTester';
 
 interface WalletBalance {
   address: string;
@@ -408,7 +409,7 @@ export default function WalletPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="send" className="w-full">
-                <TabsList className="grid w-full grid-cols-6 bg-slate-700">
+                <TabsList className="grid w-full grid-cols-7 bg-slate-700">
                   <TabsTrigger value="send" className="flex items-center gap-2">
                     <Send className="h-4 w-4" />
                     Send SOL
@@ -416,6 +417,10 @@ export default function WalletPage() {
                   <TabsTrigger value="receive" className="flex items-center gap-2">
                     <Download className="h-4 w-4" />
                     Receive SOL
+                  </TabsTrigger>
+                  <TabsTrigger value="test-transfer" className="flex items-center gap-2 text-green-400">
+                    <CheckCircle className="h-4 w-4" />
+                    Transfer Test
                   </TabsTrigger>
                   <TabsTrigger value="transfers" className="flex items-center gap-2 text-red-400">
                     <ArrowUpRight className="h-4 w-4" />
@@ -617,6 +622,18 @@ export default function WalletPage() {
                       <div className="text-gray-400">Loading wallet information...</div>
                     )}
                   </div>
+                </TabsContent>
+
+                {/* Transfer Test Tab */}
+                <TabsContent value="test-transfer" className="space-y-4 mt-6">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-green-400 mb-2">Real-World Transfer Validation</h3>
+                    <p className="text-sm text-gray-400">
+                      Test complete Robinhood → SniperX transfer compatibility with 100% accuracy validation
+                    </p>
+                  </div>
+                  
+                  <RobinhoodTransferTester />
                 </TabsContent>
 
                 {/* Transfer Tracking Tab */}
