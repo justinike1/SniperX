@@ -104,7 +104,7 @@ export const ProfitTracker = () => {
   const performanceData: PerformanceMetrics = (performance as any)?.performance || {
     totalTrades: 0,
     winRate: 0,
-    portfolioValue: portfolioValueUSD,
+    portfolioValue: portfolioValueUSD || 0,
     totalReturn: 0,
     averageReturn: 0,
     profitableTrades: 0
@@ -148,13 +148,13 @@ export const ProfitTracker = () => {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-white">
-                ${performanceData.portfolioValue.toFixed(2)}
+                ${(performanceData.portfolioValue || 0).toFixed(2)}
               </div>
               <div className="text-sm text-emerald-300">Portfolio Value</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-emerald-400">
-                {performanceData.winRate.toFixed(1)}%
+                {(performanceData.winRate || 0).toFixed(1)}%
               </div>
               <div className="text-sm text-emerald-300">Win Rate</div>
             </div>
@@ -175,16 +175,16 @@ export const ProfitTracker = () => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-400">Total Trades</span>
-                <span className="text-white font-semibold">{performanceData.totalTrades}</span>
+                <span className="text-white font-semibold">{performanceData.totalTrades || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Profitable</span>
-                <span className="text-emerald-400 font-semibold">{performanceData.profitableTrades}</span>
+                <span className="text-emerald-400 font-semibold">{performanceData.profitableTrades || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Average Return</span>
                 <span className="text-emerald-400 font-semibold">
-                  +{performanceData.averageReturn.toFixed(2)}%
+                  +{(performanceData.averageReturn || 0).toFixed(2)}%
                 </span>
               </div>
             </div>
@@ -200,12 +200,12 @@ export const ProfitTracker = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white mb-2">
-              +{performanceData.totalReturn.toFixed(2)}%
+              +{(performanceData.totalReturn || 0).toFixed(2)}%
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
               <div 
                 className="bg-emerald-500 h-2 rounded-full transition-all duration-300" 
-                style={{ width: `${Math.min(Math.max(performanceData.totalReturn, 0), 100)}%` }}
+                style={{ width: `${Math.min(Math.max(performanceData.totalReturn || 0, 0), 100)}%` }}
               />
             </div>
             <div className="text-sm text-gray-400">

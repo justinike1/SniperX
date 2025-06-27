@@ -67,6 +67,8 @@ export class UnstoppableAITrader {
   private analysisInterval: NodeJS.Timeout | null = null;
   private emergencyMonitoring: NodeJS.Timeout | null = null;
   private competitorTracking: NodeJS.Timeout | null = null;
+  private readonly MAX_EXECUTED_TRADES = 100; // Limit to prevent memory leak
+  private readonly MAX_ACTIVE_SIGNALS = 50;   // Limit active signals
 
   constructor() {
     this.initializeDecisionEngine();
@@ -112,20 +114,33 @@ export class UnstoppableAITrader {
   }
 
   private startUnstoppableTrading() {
-    // Ultra-fast analysis every 100ms for maximum speed
+    // Reduce frequency to prevent memory overload - changed from 100ms to 10 seconds
     this.analysisInterval = setInterval(() => {
-      this.performUltraFastAnalysis();
-    }, 100);
+      try {
+        this.performUltraFastAnalysis();
+        this.cleanupMemory(); // Add memory cleanup
+      } catch (error) {
+        console.error('Error in unstoppable trading analysis:', error);
+      }
+    }, 10000);
 
-    // Emergency monitoring every 50ms for instant reactions
+    // Emergency monitoring reduced from 50ms to 30 seconds to prevent memory overload
     this.emergencyMonitoring = setInterval(() => {
-      this.monitorEmergencyConditions();
-    }, 50);
+      try {
+        this.monitorEmergencyConditions();
+      } catch (error) {
+        console.error('Error in emergency monitoring:', error);
+      }
+    }, 30000);
 
-    // Competitor tracking every second
+    // Competitor tracking reduced from 1 second to 60 seconds
     this.competitorTracking = setInterval(() => {
-      this.trackCompetitors();
-    }, 1000);
+      try {
+        this.trackCompetitors();
+      } catch (error) {
+        console.error('Error in competitor tracking:', error);
+      }
+    }, 60000);
   }
 
   private async performUltraFastAnalysis() {
@@ -691,6 +706,22 @@ export class UnstoppableAITrader {
 
   private calculateSuccessProbability(confidence: number, fundamentalScore: number): number {
     return Math.min(98, (confidence + fundamentalScore) / 2);
+  }
+
+  private cleanupMemory() {
+    // Limit executed trades array to prevent memory leak
+    if (this.executedTrades.length > this.MAX_EXECUTED_TRADES) {
+      this.executedTrades.length = this.MAX_EXECUTED_TRADES;
+    }
+
+    // Limit active signals map
+    if (this.activeSignals.size > this.MAX_ACTIVE_SIGNALS) {
+      const signals = Array.from(this.activeSignals.entries());
+      this.activeSignals.clear();
+      signals.slice(0, this.MAX_ACTIVE_SIGNALS).forEach(([key, value]) => {
+        this.activeSignals.set(key, value);
+      });
+    }
   }
 
   private assessMarketConditions(ticker: MarketTick, volatilityScore: number): string {

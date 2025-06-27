@@ -42,6 +42,7 @@ export class RealTimeMarketData {
   private whaleActivities: WhaleActivity[] = [];
   private dataFeeds: Map<string, any> = new Map();
   private updateInterval: NodeJS.Timeout | null = null;
+  private readonly MAX_WHALE_ACTIVITIES = 50; // Limit whale activities to prevent memory leak
 
   constructor() {
     this.initializeMarketData();
@@ -144,10 +145,25 @@ export class RealTimeMarketData {
     }
 
     this.updateInterval = setInterval(() => {
-      this.updateMarketData();
-      this.detectWhaleActivity();
-      this.broadcastMarketUpdates();
-    }, 2000); // Update every 2 seconds for real-time feel
+      try {
+        this.updateMarketData();
+        this.detectWhaleActivity();
+        this.broadcastMarketUpdates();
+        this.cleanupMemory(); // Add memory cleanup
+      } catch (error) {
+        console.error('Error in real-time updates:', error);
+      }
+    }, 5000); // Reduce frequency to 5 seconds to prevent memory overload
+  }
+
+  private cleanupMemory() {
+    // Force garbage collection of old data
+    if (this.whaleActivities.length > this.MAX_WHALE_ACTIVITIES) {
+      this.whaleActivities.length = this.MAX_WHALE_ACTIVITIES;
+    }
+    
+    // Clear old data feeds
+    this.dataFeeds.clear();
   }
 
   private updateMarketData() {
@@ -206,8 +222,9 @@ export class RealTimeMarketData {
       };
 
       this.whaleActivities.unshift(whaleActivity);
-      if (this.whaleActivities.length > 50) {
-        this.whaleActivities = this.whaleActivities.slice(0, 50);
+      // Immediately limit array size to prevent memory leak
+      if (this.whaleActivities.length > this.MAX_WHALE_ACTIVITIES) {
+        this.whaleActivities.length = this.MAX_WHALE_ACTIVITIES;
       }
 
       // Broadcast whale activity
