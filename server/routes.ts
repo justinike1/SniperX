@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { simpleAuth } from "./services/simpleAuth";
+import { solscanVerification } from "./services/solscanVerification";
 import { aiTradingEngine } from "./services/aiTradingEngine";
 import { realTimeMarketData } from "./services/realTimeMarketData";
 import { humanLikeTraders } from "./services/humanLikeTraders";
@@ -1207,6 +1208,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'Failed to simulate trade'
+      });
+    }
+  });
+
+  // ===== WALLET VERIFICATION ROUTES =====
+
+  // Verify wallet address through Solscan for legal compliance
+  app.post('/api/wallet/verify', requireAuth, async (req: any, res) => {
+    try {
+      const { address } = req.body;
+      
+      if (!address) {
+        return res.status(400).json({
+          success: false,
+          message: 'Wallet address is required'
+        });
+      }
+
+      const verification = await solscanVerification.verifyWalletAddress(address);
+      
+      // Update user wallet with verification status
+      await storage.updateUser(req.user.id, {
+        walletValidated: verification.isVerified,
+        solscanVerified: verification.isVerified
+      });
+
+      res.json({
+        success: true,
+        verification
+      });
+    } catch (error) {
+      console.error('Wallet verification error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to verify wallet address'
+      });
+    }
+  });
+
+  // Get legal compliance report for wallet
+  app.get('/api/wallet/compliance/:address', requireAuth, async (req: any, res) => {
+    try {
+      const { address } = req.params;
+      
+      const complianceReport = await solscanVerification.generateLegalComplianceReport(address);
+      
+      res.json({
+        success: true,
+        compliance: complianceReport
+      });
+    } catch (error) {
+      console.error('Compliance report error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate compliance report'
       });
     }
   });
