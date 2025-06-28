@@ -69,9 +69,7 @@ export class SimpleAuth {
         walletAddress,
         encryptedPrivateKey,
         isActive: true,
-        emailVerified: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        emailVerified: true
       });
 
       // Generate JWT token

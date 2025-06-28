@@ -2,8 +2,12 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    try {
+      const text = (await res.text()) || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    } catch (error) {
+      throw new Error(`${res.status}: ${res.statusText}`);
+    }
   }
 }
 
@@ -12,21 +16,36 @@ export async function apiRequest(
   method: string = 'GET',
   data?: unknown | undefined,
 ): Promise<any> {
-  const headers: Record<string, string> = {};
-  
-  if (data) {
-    headers["Content-Type"] = "application/json";
+  try {
+    const headers: Record<string, string> = {};
+    
+    if (data) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        // Handle authentication errors gracefully
+        throw new Error(`401: Unauthorized`);
+      }
+      const errorText = await res.text().catch(() => res.statusText);
+      throw new Error(`${res.status}: ${errorText}`);
+    }
+    
+    return await res.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Network request failed');
   }
-
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // Use session-based auth instead of JWT
-  });
-
-  await throwIfResNotOk(res);
-  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -35,16 +54,27 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include", // Use session-based auth
-    });
+    try {
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => res.statusText);
+        throw new Error(`${res.status}: ${errorText}`);
+      }
+
+      return await res.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Query failed');
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

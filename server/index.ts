@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./services/fixedRoutes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeDatabase } from "./initDatabase";
 
