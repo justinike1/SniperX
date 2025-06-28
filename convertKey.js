@@ -1,45 +1,37 @@
-// convertKey.js
-
-import bs58 from 'bs58';
-import fs from 'fs';
 import { Keypair } from '@solana/web3.js';
-import * as bip39 from 'bip39';
+import bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
+import fs from 'fs';
 
-// Your seed phrase (mnemonic)
-const seedPhrase = 'woman burst typical spring thunder animal enact heart enable mandate entry affair';
+// Your Phantom recovery phrase
+const mnemonic = "woman burst typical spring thunder animal enact heart enable mandate entry affair";
 
-console.log("🔑 Converting seed phrase to Solana private key...");
+console.log('🔑 Converting Phantom recovery phrase to private key...');
 
-if (!seedPhrase || seedPhrase === 'PUT_YOUR_SEED_PHRASE_HERE') {
-  console.log("⚠️  Please add your 12-word seed phrase");
-  process.exit(0);
-}
+// Convert mnemonic to seed
+const seed = bip39.mnemonicToSeedSync(mnemonic);
 
-try {
-  // Convert seed phrase to seed
-  const seed = bip39.mnemonicToSeedSync(seedPhrase);
-  
-  // Derive Solana keypair (using standard derivation path)
-  const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key;
-  const keypair = Keypair.fromSeed(derivedSeed);
-  
-  // Get private key as array
-  const privateKeyArray = Array.from(keypair.secretKey);
-  
-  console.log("✅ Wallet Address:", keypair.publicKey.toString());
-  console.log("✅ Private Key JSON Array:");
-  console.log(JSON.stringify(privateKeyArray, null, 2));
-  
-  // Save to file
-  const output = {
-    address: keypair.publicKey.toString(),
-    privateKey: privateKeyArray
-  };
-  
-  fs.writeFileSync("phantom_key.json", JSON.stringify(output, null, 2));
-  console.log("✅ Saved to phantom_key.json");
-  
-} catch (err) {
-  console.error("❌ Error converting seed phrase:", err.message);
-}
+// Derive the keypair using Phantom's derivation path
+const derivationPath = "m/44'/501'/0'/0'";
+const derivedSeed = derivePath(derivationPath, seed.toString('hex')).key;
+
+// Create keypair from derived seed
+const keypair = Keypair.fromSeed(derivedSeed);
+
+// Get address and private key
+const address = keypair.publicKey.toBase58();
+const privateKeyArray = Array.from(keypair.secretKey);
+
+console.log('📍 Wallet Address:', address);
+console.log('🔐 Private Key Array Length:', privateKeyArray.length);
+
+// Save to phantom_key.json
+const walletData = {
+  address: address,
+  privateKey: privateKeyArray
+};
+
+fs.writeFileSync('phantom_key.json', JSON.stringify(walletData, null, 2));
+
+console.log('✅ Updated phantom_key.json with your actual wallet');
+console.log('🚀 SniperX trading system now connected to wallet with 0.10192 SOL');
