@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import UltraFastCryptoBot from './UltraFastCryptoBot';
+import UltimateCompetitorDestroyer from './UltimateCompetitorDestroyer';
 import { 
   TrendingUp, 
   Zap, 
@@ -408,6 +409,11 @@ const RevolutionaryTradingHub: React.FC = () => {
         {/* Ultra-Fast Crypto Bot Section */}
         <div className="space-y-6">
           <UltraFastCryptoBot />
+        </div>
+
+        {/* Competitor Destruction Analysis */}
+        <div className="space-y-6">
+          <UltimateCompetitorDestroyer />
         </div>
 
         {/* Revolutionary Features Banner */}
