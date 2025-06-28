@@ -38,7 +38,7 @@ try {
   walletKeypair = Keypair.generate();
 }
 
-// Your real wallet address: 4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv
+// Your real wallet address: 7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv
 export const REAL_WALLET_ADDRESS = walletKeypair.publicKey.toString();
 
 /**

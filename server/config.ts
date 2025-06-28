@@ -2,7 +2,7 @@
 export const config = {
   dryRun: false, // 🚀 LIVE TRADING ACTIVATED - Real SOL transactions enabled
   tradeAmount: 0.001,
-  destinationWallet: "4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv",
+  destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
   tradeIntervalMs: 60000, // Run every 60 seconds
   
@@ -12,7 +12,7 @@ export const config = {
   requireConfirmation: true, // Require explicit confirmation for trades
   
   // Wallet settings
-  userWalletAddress: "4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv",
+  userWalletAddress: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   
   // API settings
   rpcEndpoint: process.env.HELIUS_API_KEY 

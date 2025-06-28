@@ -69,7 +69,7 @@ const { confidence, signal } = await getRealAIAnalysis();
 ```
 
 ### Transaction Attempt (Confirmed)
-- System attempts real SOL transactions
+- System attempts real SOL transactions to wallet: 7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv
 - Fails only due to insufficient funds in demo wallet
 - Ready for live trading with funded Phantom wallet
 

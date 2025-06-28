@@ -16,7 +16,7 @@ const connection = new Connection(
 );
 
 // User's real wallet address
-export const userPublicKey = new PublicKey("4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv");
+export const userPublicKey = new PublicKey("7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv");
 
 // Live trading toggle - can be controlled via API
 let liveTradeEnabled = false;
