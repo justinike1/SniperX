@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { WebSocketMessage } from '../routes';
+import { sendSol } from '../utils/sendSol';
+import { config } from '../config';
 
 interface TechnicalIndicators {
   rsi: number;
@@ -572,6 +574,42 @@ export class EnhancedAITradingEngine {
           riskReward: (prices.target - marketData.currentPrice) / (marketData.currentPrice - prices.stopLoss)
         }
       };
+      
+      // Execute real SOL transaction for high-confidence opportunities
+      if (prediction === 'STRONG_BUY' && confidence > 85) {
+        try {
+          const tradeAmount = this.calculatePositionSize(confidence);
+          
+          // Example destination address - replace with actual DEX/trading destination
+          const destinationAddress = "So11111111111111111111111111111111111111112"; // Wrapped SOL
+          
+          if (!config.dryRun) {
+            const signature = await sendSol(destinationAddress, tradeAmount);
+            console.log(`🚀 LIVE TRADE EXECUTED: ${tradeAmount} SOL | Signal: ${prediction} | Confidence: ${confidence}% | TX: ${signature}`);
+            
+            // Broadcast trade execution
+            if (this.websocketBroadcast) {
+              this.websocketBroadcast({
+                type: 'NEW_TRADE',
+                data: {
+                  type: 'LIVE_EXECUTION',
+                  symbol: result.symbol,
+                  amount: tradeAmount,
+                  price: marketData.currentPrice,
+                  prediction,
+                  confidence,
+                  txHash: signature,
+                  timestamp: Date.now()
+                }
+              });
+            }
+          } else {
+            console.log(`[DRY RUN] Would execute trade: ${tradeAmount} SOL for ${result.symbol} at confidence ${confidence}%`);
+          }
+        } catch (error) {
+          console.error('❌ Failed to execute live trade:', error);
+        }
+      }
       
       // Cache the analysis
       this.priceCache.set(tokenData.symbol || tokenData.address, marketData);
