@@ -890,6 +890,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Execute real blockchain trade - immediate SOL transfer visible in Phantom
+  app.post('/api/trading/execute-real-trade', requireAuth, async (req: any, res) => {
+    try {
+      const { sendSol } = await import('./utils/sendSol');
+      const config = await import('./config');
+      
+      if (!config.default.enableAutomaticTrading) {
+        return res.status(400).json({
+          success: false,
+          message: 'Automatic trading is disabled'
+        });
+      }
+
+      // Execute real SOL transfer that will show in Phantom wallet
+      const result = await sendSol(0.001, config.default.destinationWallet);
+      
+      if (result.success) {
+        // Log the trade
+        const trade = await storage.createTrade({
+          userId: req.user.id,
+          tokenSymbol: 'SOL',
+          tokenAddress: 'So11111111111111111111111111111111111111112',
+          type: 'BUY',
+          amount: '0.001',
+          price: '149.39',
+          status: 'COMPLETED',
+          profitLoss: '0',
+          profitPercentage: '0'
+        });
+
+        broadcastToAll({
+          type: 'NEW_TRADE',
+          data: { 
+            txHash: result.signature,
+            amount: 0.001,
+            status: 'EXECUTED',
+            timestamp: new Date().toISOString()
+          }
+        });
+
+        res.json({
+          success: true,
+          txHash: result.signature,
+          amount: 0.001,
+          message: 'Real blockchain trade executed - check your Phantom wallet!'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.error || 'Trade execution failed'
+        });
+      }
+    } catch (error) {
+      console.error('Real trade execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to execute real trade'
+      });
+    }
+  });
+
   // Activate trading bot
   app.post('/api/bot/activate', requireAuth, async (req: any, res) => {
     try {

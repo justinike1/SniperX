@@ -20,7 +20,7 @@ export const config = {
     : 'https://api.mainnet-beta.solana.com',
     
   // Trading bot settings
-  enableAutomaticTrading: false,
+  enableAutomaticTrading: true,
   minConfidenceLevel: 85, // Minimum confidence for automatic trades
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit
@@ -28,8 +28,8 @@ export const config = {
 
 // Environment-based overrides
 if (process.env.NODE_ENV === 'production') {
-  config.requireConfirmation = true;
-  config.enableAutomaticTrading = false;
+  config.requireConfirmation = false; // Allow automatic trading
+  config.enableAutomaticTrading = true; // Enable live trading
 }
 
 export default config;
