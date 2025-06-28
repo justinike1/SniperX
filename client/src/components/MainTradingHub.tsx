@@ -23,6 +23,7 @@ import { SystemHealthDashboard } from '@/components/SystemHealthDashboard';
 import IndustryDominationDashboard from '@/components/IndustryDominationDashboard';
 import LightningSpeedWallet from '@/components/LightningSpeedWallet';
 import AdvancedAITrader from '@/components/AdvancedAITrader';
+import LiveTradingDashboard from '@/components/LiveTradingDashboard';
 
 interface MainTradingHubProps {
   onMaximizeProfit: () => void;
@@ -129,6 +130,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
               <Rocket className="h-4 w-4 text-orange-400" />
               <span className="text-orange-400 font-bold">Maximum Profit</span>
             </TabsTrigger>
+            <TabsTrigger value="live-wallet" className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30">
+              <Zap className="h-4 w-4 text-purple-400" />
+              <span className="text-purple-400 font-bold">Live Wallet</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
@@ -204,6 +209,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
 
           <TabsContent value="maximum-profit" className="mt-6">
             <MaximumProfitMode />
+          </TabsContent>
+
+          <TabsContent value="live-wallet" className="mt-6">
+            <LiveTradingDashboard />
           </TabsContent>
         </Tabs>
       </div>

@@ -4017,6 +4017,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // LIVE SOLANA TRADING ENDPOINTS
+  
+  // Get real wallet balance
+  app.get('/api/wallet/balance', requireAuth, async (req: any, res) => {
+    try {
+      const { getSolBalance } = await import('./utils/solana');
+      const balance = await getSolBalance();
+      res.json({ 
+        success: true,
+        balance,
+        address: "4E9EpM...JNv",
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Wallet balance error:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Unable to fetch wallet balance'
+      });
+    }
+  });
+
+  // Toggle live trading mode
+  app.post('/api/trading/toggle-live', requireAuth, async (req: any, res) => {
+    try {
+      const { enable } = req.body;
+      const { enableLiveTrading, disableLiveTrading, isLiveTradingEnabled } = await import('./utils/solana');
+      
+      if (enable) {
+        enableLiveTrading();
+      } else {
+        disableLiveTrading();
+      }
+      
+      res.json({
+        success: true,
+        liveTrading: isLiveTradingEnabled(),
+        message: enable ? 'Live trading enabled' : 'Live trading disabled'
+      });
+    } catch (error) {
+      console.error('Toggle live trading error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to toggle live trading'
+      });
+    }
+  });
+
+  // Execute live trade (with safety checks)
+  app.post('/api/trading/execute-live', requireAuth, async (req: any, res) => {
+    try {
+      const { destination, amount, confirm } = req.body;
+      const { simulateSolTransfer, isLiveTradingEnabled } = await import('./utils/solana');
+      const config = await import('./config');
+      
+      if (!confirm) {
+        return res.status(400).json({
+          success: false,
+          error: 'Confirmation required for live trades'
+        });
+      }
+      
+      if (amount > config.default.maxTradeAmount) {
+        return res.status(400).json({
+          success: false,
+          error: `Trade amount exceeds maximum of ${config.default.maxTradeAmount} SOL`
+        });
+      }
+      
+      if (config.default.dryRun || !isLiveTradingEnabled()) {
+        // Simulate the trade
+        const simulation = await simulateSolTransfer(destination, amount);
+        res.json({
+          success: true,
+          simulation: true,
+          ...simulation,
+          message: 'Trade simulated successfully (DRY RUN MODE)'
+        });
+      } else {
+        // This would execute real trades when live trading is enabled
+        res.json({
+          success: false,
+          error: 'Live trading requires keypair integration - contact administrator'
+        });
+      }
+    } catch (error) {
+      console.error('Execute live trade error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to execute trade'
+      });
+    }
+  });
+
+  // Get transaction history
+  app.get('/api/wallet/transactions', requireAuth, async (req: any, res) => {
+    try {
+      const { getTransactionHistory } = await import('./utils/solana');
+      const limit = parseInt(req.query.limit as string) || 10;
+      const transactions = await getTransactionHistory(limit);
+      
+      res.json({
+        success: true,
+        transactions,
+        count: transactions.length
+      });
+    } catch (error) {
+      console.error('Transaction history error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch transaction history'
+      });
+    }
+  });
+
   // ULTIMATE COMPETITOR ANALYSIS ENDPOINTS
   
   // Set WebSocket broadcast for competitor analyzer
