@@ -17,6 +17,8 @@ import { socialIntelligenceService } from "./services/socialIntelligenceService"
 import { systemHealthChecker } from "./services/systemHealthChecker";
 import { competitorAnalysis } from "./services/competitorAnalysis";
 import { millionDollarEngine } from "./services/millionDollarEngine";
+import { smartPositionSizing } from "./services/smartPositionSizing";
+import { adaptiveTradingEngine } from "./services/adaptiveTradingEngine";
 
 // REAL MONEY: Get live Solana price from multiple exchanges for maximum accuracy
 async function getRealSolanaPrice(): Promise<number> {
@@ -892,6 +894,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Bot activation error:', error);
       res.status(500).json({ success: false, error: 'Failed to activate bot' });
+    }
+  });
+
+  // Smart Position Sizing Calculator
+  app.post('/api/trading/position-size', requireAuth, async (req: any, res) => {
+    try {
+      const { 
+        confidence, 
+        accountBalance, 
+        riskScore, 
+        socialSignals, 
+        whaleActivity, 
+        technicalStrength, 
+        volatility, 
+        marketCondition 
+      } = req.body;
+
+      const positionSizing = smartPositionSizing.calculatePositionSize({
+        confidence: confidence || 0.75,
+        accountBalance: accountBalance || 1000,
+        riskScore: riskScore || 0.5,
+        socialSignals: socialSignals || 0,
+        whaleActivity: whaleActivity || 0.3,
+        technicalStrength: technicalStrength || 0.6,
+        volatility: volatility || 0.5,
+        marketCondition: marketCondition || 'SIDEWAYS'
+      });
+
+      res.json({
+        success: true,
+        positionSizing,
+        scenarios: smartPositionSizing.getScenarioRecommendations()
+      });
+    } catch (error) {
+      console.error('Position sizing error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to calculate position size'
+      });
+    }
+  });
+
+  // Get active trading opportunities
+  app.get('/api/trading/opportunities', requireAuth, async (req: any, res) => {
+    try {
+      const opportunities = adaptiveTradingEngine.getActiveOpportunities();
+      res.json({
+        success: true,
+        opportunities,
+        message: `${opportunities.length} high-confidence opportunities available`
+      });
+    } catch (error) {
+      console.error('Opportunities fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch opportunities'
+      });
+    }
+  });
+
+  // Execute smart trade with adaptive position sizing
+  app.post('/api/trading/execute-smart', requireAuth, async (req: any, res) => {
+    try {
+      const { opportunityId, accountBalance = 1000 } = req.body;
+      
+      const trade = await adaptiveTradingEngine.executeSmartTrade(
+        req.user.id,
+        opportunityId,
+        accountBalance
+      );
+
+      if (trade) {
+        res.json({
+          success: true,
+          trade,
+          message: `Smart trade executed: ${(trade.positionSize * 100).toFixed(1)}% position on ${trade.symbol}`
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'Opportunity not found'
+        });
+      }
+    } catch (error) {
+      console.error('Smart trade execution error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to execute smart trade'
+      });
+    }
+  });
+
+  // Get active trades with real-time PnL
+  app.get('/api/trading/active-trades', requireAuth, async (req: any, res) => {
+    try {
+      const activeTrades = adaptiveTradingEngine.getActiveTrades();
+      res.json({
+        success: true,
+        activeTrades,
+        message: `${activeTrades.length} active trades being monitored`
+      });
+    } catch (error) {
+      console.error('Active trades fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch active trades'
+      });
+    }
+  });
+
+  // Get adaptive trading performance metrics
+  app.get('/api/trading/adaptive-performance', requireAuth, async (req: any, res) => {
+    try {
+      const metrics = adaptiveTradingEngine.getPerformanceMetrics();
+      res.json({
+        success: true,
+        metrics,
+        message: `Performance: ${(metrics.winRate * 100).toFixed(1)}% win rate, $${metrics.totalProfit.toFixed(2)} profit`
+      });
+    } catch (error) {
+      console.error('Performance metrics error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch performance metrics'
+      });
     }
   });
 
@@ -3124,6 +3251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ultimateMarketIntelligence.setWebSocketBroadcast(broadcastToAll);
   unstoppableAITrader.setWebSocketBroadcast(broadcastToAll);
   ultimateSuccessEngine.setWebSocketBroadcast(broadcastToAll);
+  adaptiveTradingEngine.setWebSocketBroadcast(broadcastToAll);
   
   // Real-time market data with 100% accurate pricing from multiple exchanges
   app.get('/api/market/real-time-data', async (req, res) => {
