@@ -582,7 +582,7 @@ export class EnhancedAITradingEngine {
       result.reasoning = ['OVERNIGHT_TRADING_SIGNAL', 'Maximum confidence for continuous trading', 'Phantom wallet integration active'];
       
       // Execute real SOL transaction for high-confidence opportunities
-      if (result.prediction === 'STRONG_BUY' && result.confidence > 10) {
+      if (result.prediction === 'STRONG_BUY' && result.confidence > 85) {
         try {
           const tradeAmount = this.calculatePositionSize(result.confidence);
           
