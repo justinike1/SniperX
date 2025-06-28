@@ -15,8 +15,8 @@ const connection = new Connection(
   'confirmed'
 );
 
-// User's real wallet address
-export const userPublicKey = new PublicKey("7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv");
+// User's real wallet address (from converted Phantom seed phrase)
+export const userPublicKey = new PublicKey("F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2");
 
 // Live trading toggle - can be controlled via API
 let liveTradeEnabled = false;

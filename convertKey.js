@@ -2,36 +2,44 @@
 
 import bs58 from 'bs58';
 import fs from 'fs';
+import { Keypair } from '@solana/web3.js';
+import * as bip39 from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
 
-// Replace this with your Base58 Phantom private key
-const base58PrivateKey = 'PUT_YOUR_BASE58_KEY_HERE';
+// Your seed phrase (mnemonic)
+const seedPhrase = 'woman burst typical spring thunder animal enact heart enable mandate entry affair';
 
-console.log("📋 Instructions:");
-console.log("1. Get your Phantom wallet private key (Base58 format)");
-console.log("2. Replace 'PUT_YOUR_BASE58_KEY_HERE' with your actual key");
-console.log("3. Run: node convertKey.js");
-console.log("4. Copy the JSON array output to PHANTOM_PRIVATE_KEY environment variable");
-console.log("");
+console.log("🔑 Converting seed phrase to Solana private key...");
 
-if (base58PrivateKey === 'PUT_YOUR_BASE58_KEY_HERE') {
-  console.log("⚠️  Please replace the placeholder with your actual Phantom private key");
+if (!seedPhrase || seedPhrase === 'PUT_YOUR_SEED_PHRASE_HERE') {
+  console.log("⚠️  Please add your 12-word seed phrase");
   process.exit(0);
 }
 
 try {
-  const decoded = bs58.decode(base58PrivateKey);
+  // Convert seed phrase to seed
+  const seed = bip39.mnemonicToSeedSync(seedPhrase);
   
-  if (decoded.length !== 64) {
-    console.error("❌ Invalid key: should decode to 64 bytes.");
-    process.exit(1);
-  }
-
-  const keyArray = Array.from(decoded);
-  console.log("✅ JSON array format:");
-  console.log(JSON.stringify(keyArray, null, 2));
-
-  // Optional: save to file
-  fs.writeFileSync("phantom_key.json", JSON.stringify(keyArray, null, 2));
+  // Derive Solana keypair (using standard derivation path)
+  const derivedSeed = derivePath("m/44'/501'/0'/0'", seed.toString('hex')).key;
+  const keypair = Keypair.fromSeed(derivedSeed);
+  
+  // Get private key as array
+  const privateKeyArray = Array.from(keypair.secretKey);
+  
+  console.log("✅ Wallet Address:", keypair.publicKey.toString());
+  console.log("✅ Private Key JSON Array:");
+  console.log(JSON.stringify(privateKeyArray, null, 2));
+  
+  // Save to file
+  const output = {
+    address: keypair.publicKey.toString(),
+    privateKey: privateKeyArray
+  };
+  
+  fs.writeFileSync("phantom_key.json", JSON.stringify(output, null, 2));
+  console.log("✅ Saved to phantom_key.json");
+  
 } catch (err) {
-  console.error("❌ Error decoding key:", err.message);
+  console.error("❌ Error converting seed phrase:", err.message);
 }
