@@ -21,11 +21,19 @@ const walletFilePath = process.env.WALLET_FILE_PATH || './secret.json';
 let walletKeypair: Keypair;
 
 try {
-  const secretKey = JSON.parse(fs.readFileSync(walletFilePath, 'utf-8'));
-  walletKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKey));
-  console.log(`🔗 Real wallet loaded from ${walletFilePath}: ${walletKeypair.publicKey.toString()}`);
+  if (process.env.PHANTOM_PRIVATE_KEY) {
+    // Load from Phantom wallet private key environment variable
+    const secretKey = JSON.parse(process.env.PHANTOM_PRIVATE_KEY);
+    walletKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKey));
+    console.log(`🔗 Phantom wallet loaded from environment: ${walletKeypair.publicKey.toString()}`);
+  } else {
+    // Fallback to secret.json file
+    const secretKey = JSON.parse(fs.readFileSync(walletFilePath, 'utf-8'));
+    walletKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKey));
+    console.log(`🔗 Real wallet loaded from ${walletFilePath}: ${walletKeypair.publicKey.toString()}`);
+  }
 } catch (error) {
-  console.error(`❌ Failed to load wallet from ${walletFilePath} - creating demo keypair for safety`);
+  console.error(`❌ Failed to load wallet - creating demo keypair for safety`);
   // Create a demo keypair if wallet file doesn't exist (safety fallback)
   walletKeypair = Keypair.generate();
 }

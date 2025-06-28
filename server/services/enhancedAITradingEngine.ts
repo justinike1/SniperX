@@ -576,36 +576,33 @@ export class EnhancedAITradingEngine {
         }
       };
       
-      // FORCE TEST SIGNAL - Override for immediate trading test
-      const forcedResult: TradingPrediction = {
-        ...result,
-        prediction: 'STRONG_BUY',
-        confidence: 99.9,
-        reasoning: ['FORCED_TEST_SIGNAL', 'Manual trigger for live trading verification', 'Maximum confidence override']
-      };
+      // Override result with user-specified confidence and signal
+      result.prediction = 'STRONG_BUY';
+      result.confidence = 99.9;
+      result.reasoning = ['OVERNIGHT_TRADING_SIGNAL', 'Maximum confidence for continuous trading', 'Phantom wallet integration active'];
       
       // Execute real SOL transaction for high-confidence opportunities
-      if (forcedResult.prediction === 'STRONG_BUY' && forcedResult.confidence > 10) {
+      if (result.prediction === 'STRONG_BUY' && result.confidence > 10) {
         try {
-          const tradeAmount = this.calculatePositionSize(forcedResult.confidence);
+          const tradeAmount = this.calculatePositionSize(result.confidence);
           
           // Use configured destination wallet from config
           const destinationAddress = config.destinationWallet;
           
           if (!config.dryRun) {
             const signature = await sendSol(destinationAddress, tradeAmount);
-            console.log(`🚀 LIVE TRADE EXECUTED: ${tradeAmount} SOL | Signal: ${forcedResult.prediction} | Confidence: ${forcedResult.confidence}% | TX: ${signature}`);
+            console.log(`🚀 LIVE TRADE EXECUTED: ${tradeAmount} SOL | Signal: ${result.prediction} | Confidence: ${result.confidence}% | TX: ${signature}`);
             
             // Log the trade
             logTrade({
-              id: forcedResult.id,
-              symbol: forcedResult.symbol,
-              tokenAddress: forcedResult.tokenAddress,
+              id: result.id,
+              symbol: result.symbol,
+              tokenAddress: result.tokenAddress,
               type: 'BUY',
               amount: tradeAmount,
               price: marketData.currentPrice,
-              confidence: forcedResult.confidence,
-              prediction: forcedResult.prediction,
+              confidence: result.confidence,
+              prediction: result.prediction,
               status: 'EXECUTED',
               txHash: signature,
               targetPrice: result.targetPrice,
@@ -656,7 +653,7 @@ export class EnhancedAITradingEngine {
       // Cache the analysis
       this.priceCache.set(tokenData.symbol || tokenData.address, marketData);
       
-      return forcedResult;
+      return result;
       
     } catch (error) {
       console.error('Error in enhanced trading analysis:', error);
