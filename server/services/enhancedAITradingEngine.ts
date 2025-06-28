@@ -2,6 +2,7 @@ import axios from 'axios';
 import { WebSocketMessage } from '../routes';
 import { sendSol } from '../utils/sendSol';
 import { config } from '../config';
+import { logTrade } from '../utils/tradeLogger';
 
 interface TechnicalIndicators {
   rsi: number;
@@ -587,6 +588,23 @@ export class EnhancedAITradingEngine {
             const signature = await sendSol(destinationAddress, tradeAmount);
             console.log(`🚀 LIVE TRADE EXECUTED: ${tradeAmount} SOL | Signal: ${prediction} | Confidence: ${confidence}% | TX: ${signature}`);
             
+            // Log the trade
+            logTrade({
+              id: result.id,
+              symbol: result.symbol,
+              tokenAddress: result.tokenAddress,
+              type: 'BUY',
+              amount: tradeAmount,
+              price: marketData.currentPrice,
+              confidence,
+              prediction,
+              status: 'EXECUTED',
+              txHash: signature,
+              targetPrice: result.targetPrice,
+              stopLoss: result.stopLoss,
+              reasoning: result.reasoning
+            });
+            
             // Broadcast trade execution
             if (this.websocketBroadcast) {
               this.websocketBroadcast({
@@ -605,6 +623,22 @@ export class EnhancedAITradingEngine {
             }
           } else {
             console.log(`[DRY RUN] Would execute trade: ${tradeAmount} SOL for ${result.symbol} at confidence ${confidence}%`);
+            
+            // Log dry run trade
+            logTrade({
+              id: result.id,
+              symbol: result.symbol,
+              tokenAddress: result.tokenAddress,
+              type: 'BUY',
+              amount: tradeAmount,
+              price: marketData.currentPrice,
+              confidence,
+              prediction,
+              status: 'DRY_RUN',
+              targetPrice: result.targetPrice,
+              stopLoss: result.stopLoss,
+              reasoning: result.reasoning
+            });
           }
         } catch (error) {
           console.error('❌ Failed to execute live trade:', error);

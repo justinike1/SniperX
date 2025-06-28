@@ -2,7 +2,9 @@
 export const config = {
   dryRun: true, // ✅ Start in dry run. Set to false when ready.
   tradeAmount: 0.001,
-  destinationWallet: "4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv", // You can reuse your own address for safety
+  destinationWallet: "4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv",
+  logFilePath: "./server/logs/tradeLogs.json",
+  tradeIntervalMs: 60000, // Run every 60 seconds
   
   // Safety settings
   maxTradeAmount: 0.1, // Maximum SOL per trade

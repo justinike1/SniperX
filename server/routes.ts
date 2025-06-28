@@ -22,6 +22,9 @@ import { adaptiveTradingEngine } from "./services/adaptiveTradingEngine";
 import { realSolanaTrading } from "./services/realSolanaTrading";
 import { ultimateCompetitorAnalyzer } from "./services/ultimateCompetitorAnalyzer";
 
+// Import scheduled trading system - this will start the autonomous trading loop
+import "./scheduledTrader";
+
 // REAL MONEY: Get live Solana price from multiple exchanges for maximum accuracy
 async function getRealSolanaPrice(): Promise<number> {
   try {
