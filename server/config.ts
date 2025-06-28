@@ -1,6 +1,6 @@
 // Trading Configuration
 export const config = {
-  dryRun: true, // ✅ Start in dry run. Set to false when ready.
+  dryRun: false, // 🚀 LIVE TRADING ACTIVATED - Real SOL transactions enabled
   tradeAmount: 0.001,
   destinationWallet: "4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv",
   logFilePath: "./server/logs/tradeLogs.json",
