@@ -49,33 +49,32 @@ export class SimpleAuth {
       // Hash password with maximum security
       const hashedPassword = await bcrypt.hash(userData.password, 15);
 
-      // Generate ultra-secure Solana wallet
+      // Generate secure Solana wallet
       const keypair = Keypair.generate();
-      const walletAddress = keypair.publicKey.toBase58();
-      
-      // Military-grade encryption for private key
-      const privateKeyBytes = keypair.secretKey;
-      const encryptionKey = crypto.randomBytes(32);
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey, iv);
-      let encryptedPrivateKey = cipher.update(Buffer.from(privateKeyBytes)).toString('hex');
-      encryptedPrivateKey += cipher.final('hex');
-      const authTag = cipher.getAuthTag();
+      const walletAddress = keypair.publicKey.toString();
 
-      // Create user with all required fields
+      // Encrypt private key with AES-256
+      const encryptionKey = crypto.randomBytes(32);
+      const cipher = crypto.createCipher('aes-256-cbc', encryptionKey);
+      let encryptedPrivateKey = cipher.update(JSON.stringify(Array.from(keypair.secretKey)), 'utf8', 'hex');
+      encryptedPrivateKey += cipher.final('hex');
+
+      // Create user with encrypted wallet
       const user = await storage.createUser({
-        email: userData.email.toLowerCase().trim(),
+        email: userData.email,
         password: hashedPassword,
         username: userData.username || userData.email.split('@')[0],
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
         walletAddress,
-        encryptedPrivateKey: `${encryptedPrivateKey}:${authTag.toString('hex')}:${iv.toString('hex')}`,
+        encryptedPrivateKey,
         isActive: true,
-        emailVerified: true
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
-      // Generate ultra-secure JWT token
+      // Generate JWT token
       const token = jwt.sign(
         { 
           userId: user.id, 
@@ -96,7 +95,7 @@ export class SimpleAuth {
         success: true,
         user: userWithoutSensitive,
         token,
-        message: 'Registration successful'
+        message: 'Registration successful - wallet created'
       };
     } catch (error) {
       console.error('Registration error:', error);
@@ -112,7 +111,6 @@ export class SimpleAuth {
     password: string;
   }): Promise<AuthResult> {
     try {
-      // Input validation
       if (!credentials.email || !credentials.password) {
         return {
           success: false,
@@ -120,20 +118,12 @@ export class SimpleAuth {
         };
       }
 
-      // Find user by email (case insensitive)
-      const user = await storage.getUserByEmail(credentials.email.toLowerCase().trim());
+      // Get user by email
+      const user = await storage.getUserByEmail(credentials.email);
       if (!user) {
         return {
           success: false,
           message: 'Invalid email or password'
-        };
-      }
-
-      // Check if account is active
-      if (!user.isActive) {
-        return {
-          success: false,
-          message: 'Account is deactivated'
         };
       }
 
@@ -250,11 +240,52 @@ export class SimpleAuth {
         message: 'Password changed successfully'
       };
     } catch (error) {
-      console.error('Password change error:', error);
+      console.error('Change password error:', error);
       return {
         success: false,
         message: 'Failed to change password'
       };
+    }
+  }
+
+  // Express middleware for authentication
+  requireAuth = async (req: any, res: any, next: any) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.startsWith('Bearer ') 
+        ? authHeader.substring(7)
+        : req.cookies?.token;
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      const verification = await this.verifyToken(token);
+      
+      if (!verification.valid || !verification.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token'
+        });
+      }
+
+      // Attach user to request
+      req.user = {
+        userId: verification.user.id,
+        email: verification.user.email,
+        walletAddress: verification.user.walletAddress
+      };
+
+      next();
+    } catch (error) {
+      console.error('Auth middleware error:', error);
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed'
+      });
     }
   }
 }

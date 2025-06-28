@@ -21,6 +21,8 @@ import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntellige
 import { MaximumProfitMode } from '@/components/MaximumProfitMode';
 import { SystemHealthDashboard } from '@/components/SystemHealthDashboard';
 import IndustryDominationDashboard from '@/components/IndustryDominationDashboard';
+import LightningSpeedWallet from '@/components/LightningSpeedWallet';
+import AdvancedAITrader from '@/components/AdvancedAITrader';
 
 interface MainTradingHubProps {
   onMaximizeProfit: () => void;
@@ -153,12 +155,16 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
           </TabsContent>
 
           <TabsContent value="ai-trading" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AITradingEngine 
-                tokenAddress={(liveTokens as any)?.length > 0 ? (liveTokens as any)[0]?.address : undefined}
-                onExecuteTrade={(action, params) => console.log('AI Trade:', action, params)}
-              />
-              <EnhancedFinanceGeniusAI />
+            <div className="space-y-6">
+              <LightningSpeedWallet />
+              <AdvancedAITrader />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AITradingEngine 
+                  tokenAddress={(liveTokens as any)?.length > 0 ? (liveTokens as any)[0]?.address : undefined}
+                  onExecuteTrade={(action, params) => console.log('AI Trade:', action, params)}
+                />
+                <EnhancedFinanceGeniusAI />
+              </div>
             </div>
           </TabsContent>
 
