@@ -1,0 +1,21 @@
+[
+  {
+    "id": "test_1751098009090",
+    "symbol": "SOL",
+    "tokenAddress": "So11111111111111111111111111111111111111112",
+    "type": "BUY",
+    "amount": 0.001,
+    "price": 145.81,
+    "confidence": 99.9,
+    "prediction": "STRONG_BUY",
+    "status": "EXECUTED",
+    "targetPrice": 170.49605160026286,
+    "stopLoss": 164.23631050809252,
+    "reasoning": [
+      "FORCED_TEST_SIGNAL",
+      "Manual trigger for live trading verification",
+      "Maximum confidence override"
+    ],
+    "timestamp": "2025-06-28T08:06:49.093Z"
+  }
+]
