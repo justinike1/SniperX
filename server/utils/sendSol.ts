@@ -10,24 +10,27 @@ import {
 import fs from 'fs';
 import { config } from '../config';
 
-// Solana RPC connection
-const connection = new Connection(
-  process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com", 
-  "confirmed"
-);
+// Solana RPC connection - using mainnet-beta as user specified
+import { clusterApiUrl } from '@solana/web3.js';
+const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
 
 // Load keypair from wallet file - YOUR REAL WALLET
 const walletFilePath = process.env.WALLET_FILE_PATH || './secret.json';
 let walletKeypair: Keypair;
 
 try {
-  if (process.env.PHANTOM_PRIVATE_KEY) {
-    // Load from Phantom wallet private key environment variable
+  // Load directly from phantom_key.json for reliability
+  if (fs.existsSync('./phantom_key.json')) {
+    const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
+    walletKeypair = Keypair.fromSecretKey(Uint8Array.from(phantomData.privateKey));
+    console.log(`🔗 Phantom wallet loaded successfully: ${walletKeypair.publicKey.toString()}`);
+  } else if (process.env.PHANTOM_PRIVATE_KEY) {
+    // Backup: Load from environment variable
     const secretKey = JSON.parse(process.env.PHANTOM_PRIVATE_KEY);
     walletKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKey));
     console.log(`🔗 Phantom wallet loaded from environment: ${walletKeypair.publicKey.toString()}`);
   } else {
-    // Fallback to secret.json file
+    // Last fallback to secret.json file
     const secretKey = JSON.parse(fs.readFileSync(walletFilePath, 'utf-8'));
     walletKeypair = Keypair.fromSecretKey(Uint8Array.from(secretKey));
     console.log(`🔗 Real wallet loaded from ${walletFilePath}: ${walletKeypair.publicKey.toString()}`);
