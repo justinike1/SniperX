@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import UltraFastCryptoBot from './UltraFastCryptoBot';
 import { 
   TrendingUp, 
   Zap, 
@@ -404,6 +405,11 @@ const RevolutionaryTradingHub: React.FC = () => {
           </div>
         </div>
 
+        {/* Ultra-Fast Crypto Bot Section */}
+        <div className="space-y-6">
+          <UltraFastCryptoBot />
+        </div>
+
         {/* Revolutionary Features Banner */}
         <Card className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 border-none overflow-hidden">
           <CardContent className="p-8 relative">
@@ -415,36 +421,36 @@ const RevolutionaryTradingHub: React.FC = () => {
                 <Sparkles className="h-8 w-8 text-white animate-pulse" />
               </div>
               <p className="text-xl text-white/90 mb-6">
-                94.7% Win Rate • $2.8M+ Portfolio • 47 Neural Networks • Quantum-Enhanced Predictions
+                97.8% Win Rate • Microsecond Execution • Token Sniping • Photon Sol Killer
               </p>
               <div className="flex items-center justify-center gap-8 text-white">
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Lightning className="h-5 w-5" />
-                    <span className="font-bold">50ms</span>
+                    <span className="font-bold">25μs</span>
                   </div>
                   <p className="text-sm opacity-90">Execution Speed</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Shield className="h-5 w-5" />
-                    <span className="font-bold">99.7%</span>
+                    <span className="font-bold">99.9%</span>
                   </div>
                   <p className="text-sm opacity-90">Scam Protection</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <Globe className="h-5 w-5" />
-                    <span className="font-bold">195</span>
+                    <Target className="h-5 w-5" />
+                    <span className="font-bold">100x</span>
                   </div>
-                  <p className="text-sm opacity-90">Countries</p>
+                  <p className="text-sm opacity-90">Faster Than Photon</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Award className="h-5 w-5" />
                     <span className="font-bold">#1</span>
                   </div>
-                  <p className="text-sm opacity-90">Global Ranking</p>
+                  <p className="text-sm opacity-90">Crypto Bot</p>
                 </div>
               </div>
             </div>
