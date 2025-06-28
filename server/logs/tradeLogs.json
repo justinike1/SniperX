@@ -318,5 +318,25 @@
       "Phantom wallet integration active"
     ],
     "timestamp": "2025-06-28T17:20:43.252Z"
+  },
+  {
+    "id": "analysis_1751131571212_bfyfffv5n",
+    "symbol": "SOL",
+    "tokenAddress": "So11111111111111111111111111111111111111112",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 458.7674139987721,
+    "confidence": 99.9,
+    "prediction": "STRONG_BUY",
+    "status": "EXECUTED",
+    "txHash": "5qHdSJ8hsJA3brdmjfQVEuPKuTa14EgMa1kohp7SWvqdLbwkUXfWXMeJuVPpZPQTaje7XfSHKvxc4QAS26wigtWX",
+    "targetPrice": 464.1891707716863,
+    "stopLoss": 449.38490207812805,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-28T17:26:12.934Z"
   }
 ]
