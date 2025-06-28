@@ -307,6 +307,18 @@ export class RealTimeMarketDataService {
     return new Map(this.priceData);
   }
 
+  public getAllTickers(): any[] {
+    return Array.from(this.priceData.values()).map(data => ({
+      symbol: data.symbol,
+      price: data.weightedPrice,
+      change24h: data.exchanges[0]?.priceChange24h || 0,
+      volume: data.exchanges[0]?.volume24h || 0,
+      timestamp: data.lastUpdated,
+      exchanges: data.exchanges.length,
+      confidence: data.confidence
+    }));
+  }
+
   public onPriceUpdate(callback: (data: PriceAggregation) => void) {
     this.updateCallbacks.push(callback);
   }

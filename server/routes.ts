@@ -13,6 +13,8 @@ import { ultimateSuccessEngine } from "./services/ultimateSuccessEngine";
 import { robinhoodTransferTester } from "./services/robinhoodTransferTester";
 import { realMoneyTradingService } from "./services/realMoneyTradingService";
 import { maximumProfitEngine } from "./services/maximumProfitEngine";
+import { socialIntelligenceService } from "./services/socialIntelligenceService";
+import { systemHealthChecker } from "./services/systemHealthChecker";
 
 // REAL MONEY: Get live Solana price from multiple exchanges for maximum accuracy
 async function getRealSolanaPrice(): Promise<number> {
@@ -35,7 +37,7 @@ async function getRealSolanaPrice(): Promise<number> {
 
 // WebSocket message interface
 export interface WebSocketMessage {
-  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT' | 'PERFORMANCE_UPDATE' | 'SECURITY_UPDATE' | 'SECURITY_ALERT';
+  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT' | 'PERFORMANCE_UPDATE' | 'SECURITY_UPDATE' | 'SECURITY_ALERT' | 'SOCIAL_SIGNALS' | 'INSIDER_MOVEMENTS' | 'URGENT_ALERT';
   data: any;
 }
 
@@ -2324,10 +2326,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get comprehensive market intelligence
   app.get('/api/intelligence/overview', requireAuth, async (req: any, res) => {
     try {
-      const intelligence = ultimateMarketIntelligence.getAllMarketIntelligence();
+      const opportunities = ultimateMarketIntelligence.getTradingOpportunities(20);
+      const insiderMovements = ultimateMarketIntelligence.getGlobalInsiderMovements(15);
+      const globalRegions = ultimateMarketIntelligence.getGlobalRegions();
+      const summary = ultimateMarketIntelligence.getMarketIntelligenceSummary();
+      
       res.json({
         success: true,
-        intelligence
+        intelligence: {
+          opportunities,
+          insiderMovements,
+          globalRegions,
+          summary
+        }
       });
     } catch (error) {
       console.error('Market intelligence fetch error:', error);
@@ -2338,72 +2349,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get token risk assessment
-  app.get('/api/intelligence/risk/:tokenAddress', requireAuth, async (req: any, res) => {
-    try {
-      const { tokenAddress } = req.params;
-      const riskAssessment = ultimateMarketIntelligence.getTokenRiskAssessment(tokenAddress);
-      
-      if (!riskAssessment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Token not found in intelligence database'
-        });
-      }
-
-      res.json({
-        success: true,
-        riskAssessment
-      });
-    } catch (error) {
-      console.error('Risk assessment fetch error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch risk assessment'
-      });
-    }
-  });
-
-  // Get social sentiment analysis
-  app.get('/api/intelligence/sentiment/:tokenAddress', requireAuth, async (req: any, res) => {
-    try {
-      const { tokenAddress } = req.params;
-      const sentiment = ultimateMarketIntelligence.getSocialSentiment(tokenAddress);
-      
-      if (!sentiment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Sentiment data not found for token'
-        });
-      }
-
-      res.json({
-        success: true,
-        sentiment
-      });
-    } catch (error) {
-      console.error('Sentiment fetch error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch sentiment data'
-      });
-    }
-  });
-
-  // Get insider activities
-  app.get('/api/intelligence/insider', requireAuth, async (req: any, res) => {
+  // Get trading opportunities
+  app.get('/api/intelligence/opportunities', requireAuth, async (req: any, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
-      const activities = ultimateMarketIntelligence.getInsiderActivities(limit);
+      const opportunities = ultimateMarketIntelligence.getTradingOpportunities(limit);
+      
       res.json({
         success: true,
-        activities
+        opportunities
       });
     } catch (error) {
-      console.error('Insider activities fetch error:', error);
+      console.error('Opportunities fetch error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch insider activities'
+        message: 'Failed to fetch trading opportunities'
+      });
+    }
+  });
+
+  // Get AI predictions
+  app.get('/api/ai/predictions', requireAuth, async (req: any, res) => {
+    try {
+      const symbols = req.query.symbols ? (req.query.symbols as string).split(',') : ['SOL', 'BTC', 'ETH'];
+      const predictions = aiTradingEngine.getPredictions(symbols);
+      
+      res.json({
+        success: true,
+        predictions
+      });
+    } catch (error) {
+      console.error('AI predictions fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch AI predictions'
+      });
+    }
+  });
+
+  // Get insider movements
+  app.get('/api/intelligence/insider', requireAuth, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 15;
+      const insiderMovements = ultimateMarketIntelligence.getGlobalInsiderMovements(limit);
+      res.json({
+        success: true,
+        insiderMovements
+      });
+    } catch (error) {
+      console.error('Insider movements fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch insider movements'
       });
     }
   });
@@ -2478,7 +2475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/intelligence/enhanced-social-signals', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 30;
-      const signals = socialIntelligenceService.getSocialSignals(limit);
+      const signals = socialIntelligenceService.getRecentSignals(limit);
       
       res.json({
         success: true,
@@ -2728,8 +2725,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   };
 
-  // Set up WebSocket broadcast for maximum profit engine
+  // Set up WebSocket broadcast for all AI services
   maximumProfitEngine.setWebSocketBroadcast(broadcastToAll);
+  ultimateMarketIntelligence.setWebSocketBroadcast(broadcastToAll);
+  aiTradingEngine.setWebSocketBroadcast(broadcastToAll);
+
+  // ===== AI TRADING ENGINE ENDPOINTS =====
+
+  // Get AI trading signals
+  app.get('/api/ai/signals', requireAuth, async (req: any, res) => {
+    try {
+      const signals = aiTradingEngine.getTradingSignals();
+      res.json({
+        success: true,
+        signals
+      });
+    } catch (error) {
+      console.error('AI signals fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch AI trading signals'
+      });
+    }
+  });
+
+  // Get neural networks status
+  app.get('/api/ai/networks', requireAuth, async (req: any, res) => {
+    try {
+      const networks = aiTradingEngine.getNeuralNetworks();
+      const status = aiTradingEngine.getEngineStatus();
+      res.json({
+        success: true,
+        networks,
+        status
+      });
+    } catch (error) {
+      console.error('Neural networks fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch neural networks'
+      });
+    }
+  });
+
+  // Get market analysis
+  app.get('/api/ai/analysis/:symbol?', requireAuth, async (req: any, res) => {
+    try {
+      const { symbol } = req.params;
+      const analysis = aiTradingEngine.getMarketAnalysis(symbol);
+      res.json({
+        success: true,
+        analysis
+      });
+    } catch (error) {
+      console.error('Market analysis fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch market analysis'
+      });
+    }
+  });
+
+  // Generate advanced analysis for specific token
+  app.get('/api/ai/advanced/:symbol', requireAuth, async (req: any, res) => {
+    try {
+      const { symbol } = req.params;
+      const advancedAnalysis = aiTradingEngine.generateAdvancedAnalysis(symbol);
+      res.json({
+        success: true,
+        analysis: advancedAnalysis
+      });
+    } catch (error) {
+      console.error('Advanced analysis fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate advanced analysis'
+      });
+    }
+  });
+
+  // Get global regions data
+  app.get('/api/intelligence/regions', requireAuth, async (req: any, res) => {
+    try {
+      const regions = ultimateMarketIntelligence.getGlobalRegions();
+      res.json({
+        success: true,
+        regions
+      });
+    } catch (error) {
+      console.error('Global regions fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch global regions'
+      });
+    }
+  });
+
+  // Get market intelligence summary
+  app.get('/api/intelligence/summary', requireAuth, async (req: any, res) => {
+    try {
+      const summary = ultimateMarketIntelligence.getMarketIntelligenceSummary();
+      res.json({
+        success: true,
+        summary
+      });
+    } catch (error) {
+      console.error('Intelligence summary fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch intelligence summary'
+      });
+    }
+  });
 
   // ===== MAXIMUM PROFIT MODE ENDPOINTS =====
   
@@ -2947,6 +3054,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Price validation error:', error);
       res.status(500).json({ success: false, error: 'Failed to validate price' });
+    }
+  });
+
+  // COMPREHENSIVE A-Z SYSTEM TESTING ENDPOINTS
+  
+  // Get system health status for comprehensive testing
+  app.get('/api/system/health', async (req, res) => {
+    try {
+      const healthReport = await systemHealthChecker.performComprehensiveHealthCheck();
+      res.json({
+        success: true,
+        ...healthReport
+      });
+    } catch (error) {
+      console.error('System health check error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to perform health check'
+      });
+    }
+  });
+
+  // Test all API endpoints systematically
+  app.get('/api/system/test-endpoints', async (req, res) => {
+    try {
+      const endpointTests = await systemHealthChecker.testAllAPIEndpoints();
+      res.json({
+        success: true,
+        endpointTests,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Endpoint testing error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to test endpoints'
+      });
+    }
+  });
+
+  // Get system perfection status
+  app.get('/api/system/perfection-status', async (req, res) => {
+    try {
+      const perfectionStatus = systemHealthChecker.getSystemPerfectionStatus();
+      res.json({
+        success: true,
+        ...perfectionStatus,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Perfection status error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get perfection status'
+      });
+    }
+  });
+
+  // Get health history for monitoring trends
+  app.get('/api/system/health-history', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const healthHistory = systemHealthChecker.getHealthHistory(limit);
+      res.json({
+        success: true,
+        healthHistory,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Health history error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get health history'
+      });
     }
   });
 

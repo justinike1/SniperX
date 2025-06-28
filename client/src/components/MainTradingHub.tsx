@@ -19,6 +19,7 @@ import { ProfitTracker } from '@/components/ProfitTracker';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
 import { MaximumProfitMode } from '@/components/MaximumProfitMode';
+import { SystemHealthDashboard } from '@/components/SystemHealthDashboard';
 
 interface MainTradingHubProps {
   onMaximizeProfit: () => void;
@@ -112,6 +113,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
             <TabsTrigger value="profits" className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4" />
               <span>Profits</span>
+            </TabsTrigger>
+            <TabsTrigger value="system-health" className="flex items-center space-x-2 bg-gradient-to-r from-green-600/20 to-blue-600/20 border border-green-500/30">
+              <Activity className="h-4 w-4 text-green-400" />
+              <span className="text-green-400 font-bold">System Health</span>
             </TabsTrigger>
             <TabsTrigger value="maximum-profit" className="flex items-center space-x-2 bg-gradient-to-r from-orange-600/20 to-red-600/20 border border-orange-500/30">
               <Rocket className="h-4 w-4 text-orange-400" />

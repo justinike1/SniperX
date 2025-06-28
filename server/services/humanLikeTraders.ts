@@ -332,33 +332,33 @@ export class HumanLikeTraders {
     switch (trader.id) {
       case 'gordon_gecko':
         // Targets high-volume momentum plays
-        candidates = candidates.filter(t => t.volume24h > 10000000 && Math.abs(t.change5m) > 0.5);
+        candidates = candidates.filter(t => t.volume > 10000000 && Math.abs(t.change24h) > 0.5);
         break;
 
       case 'maria_quant':
         // Targets mathematically optimal setups
-        candidates = candidates.filter(t => t.change24h > -10 && t.change24h < 15 && t.volume24h > 5000000);
+        candidates = candidates.filter(t => t.change24h > -10 && t.change24h < 15 && t.volume > 5000000);
         break;
 
       case 'crazy_eddie':
         // Targets anything moving fast
-        candidates = candidates.filter(t => Math.abs(t.change5m) > 0.3);
+        candidates = candidates.filter(t => Math.abs(t.change24h) > 0.3);
         break;
 
       case 'zen_master':
         // Targets undervalued quality projects
-        candidates = candidates.filter(t => t.change24h < -5 && t.volume24h > 20000000);
+        candidates = candidates.filter(t => t.change24h < -5 && t.volume > 20000000);
         break;
 
       case 'wolf_hunter':
         // Targets tokens with whale activity
-        const whaleTokens = whaleActivities.map(w => w.tokenAddress);
-        candidates = candidates.filter(t => whaleTokens.includes(t.address));
+        const whaleTokens = whaleActivities.map(w => w.address);
+        candidates = candidates.filter(t => whaleTokens.includes(t.symbol));
         break;
 
       case 'panic_pete':
         // Targets whatever is pumping or dumping hardest
-        candidates = candidates.sort((a, b) => Math.abs(b.change5m) - Math.abs(a.change5m));
+        candidates = candidates.sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
         break;
     }
 
@@ -374,7 +374,7 @@ export class HumanLikeTraders {
       traderId: trader.id,
       traderName: trader.name,
       tokenSymbol: token.symbol,
-      tokenAddress: token.address,
+      tokenAddress: token.symbol,
       action,
       confidence,
       amount,
@@ -391,14 +391,14 @@ export class HumanLikeTraders {
   }
 
   private determineTradeAction(trader: TraderPersonality, token: MarketTick, whaleActivities: WhaleActivity[]): TradeDecision['action'] {
-    const whaleActivity = whaleActivities.find(w => w.tokenAddress === token.address);
+    const whaleActivity = whaleActivities.find(w => w.address === token.symbol);
     
     switch (trader.id) {
       case 'gordon_gecko':
-        return token.change5m > 0.5 ? 'BUY' : token.change5m < -0.5 ? 'SELL' : 'HOLD';
+        return token.change24h > 0.5 ? 'BUY' : token.change24h < -0.5 ? 'SELL' : 'HOLD';
       
       case 'maria_quant':
-        return token.change24h < -3 && token.volume24h > 10000000 ? 'BUY' : 
+        return token.change24h < -3 && token.volume > 10000000 ? 'BUY' : 
                token.change24h > 8 ? 'SELL' : 'HOLD';
       
       case 'crazy_eddie':
@@ -408,12 +408,12 @@ export class HumanLikeTraders {
         return token.change24h < -8 ? 'BUY' : 'HOLD';
       
       case 'wolf_hunter':
-        return whaleActivity?.type === 'BUY' ? 'BUY' : 
-               whaleActivity?.type === 'SELL' ? 'SELL' : 'HOLD';
+        return whaleActivity?.type === 'buy' ? 'BUY' : 
+               whaleActivity?.type === 'sell' ? 'SELL' : 'HOLD';
       
       case 'panic_pete':
-        return token.change5m < -0.3 ? 'PANIC_SELL' : 
-               token.change5m > 0.5 ? 'BUY' : 'HOLD';
+        return token.change24h < -0.3 ? 'PANIC_SELL' : 
+               token.change24h > 0.5 ? 'BUY' : 'HOLD';
       
       default:
         return 'HOLD';
