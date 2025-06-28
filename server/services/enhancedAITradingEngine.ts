@@ -580,8 +580,8 @@ export class EnhancedAITradingEngine {
         try {
           const tradeAmount = this.calculatePositionSize(confidence);
           
-          // Example destination address - replace with actual DEX/trading destination
-          const destinationAddress = "So11111111111111111111111111111111111111112"; // Wrapped SOL
+          // Use configured destination wallet from config
+          const destinationAddress = config.destinationWallet;
           
           if (!config.dryRun) {
             const signature = await sendSol(destinationAddress, tradeAmount);

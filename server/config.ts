@@ -1,6 +1,8 @@
 // Trading Configuration
 export const config = {
-  dryRun: true, // change to false to enable live trades
+  dryRun: true, // ✅ Start in dry run. Set to false when ready.
+  tradeAmount: 0.001,
+  destinationWallet: "4E9EpMExeUcpD7RE3cCfq5RR432R2Jdy2hFW9TBifJNv", // You can reuse your own address for safety
   
   // Safety settings
   maxTradeAmount: 0.1, // Maximum SOL per trade

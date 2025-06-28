@@ -4262,6 +4262,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint for sendSol functionality
+  app.post('/api/trade/test', async (req, res) => {
+    try {
+      console.log('🧪 Testing sendSol functionality...');
+      
+      const { sendSol } = await import('./utils/sendSol');
+      const { config } = await import('./config');
+      
+      const result = await sendSol(config.destinationWallet, config.tradeAmount);
+      
+      if (config.dryRun) {
+        console.log(`✅ DRY RUN SUCCESS: ${result}`);
+        res.json({
+          success: true,
+          mode: 'DRY_RUN',
+          signature: result,
+          amount: config.tradeAmount,
+          destination: config.destinationWallet,
+          message: 'Dry run executed successfully - no real SOL moved'
+        });
+      } else {
+        console.log(`✅ LIVE TRANSACTION SUCCESS: ${result}`);
+        console.log(`🔗 View on Solscan: https://solscan.io/tx/${result}`);
+        res.json({
+          success: true,
+          mode: 'LIVE',
+          signature: result,
+          amount: config.tradeAmount,
+          destination: config.destinationWallet,
+          solscanUrl: `https://solscan.io/tx/${result}`,
+          message: 'Live transaction executed successfully'
+        });
+      }
+    } catch (error) {
+      console.error('❌ Test failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        message: 'sendSol test failed'
+      });
+    }
+  });
+
   // Start continuous optimization for ultimate success
   ultimateSuccessEngine.runContinuousOptimization();
 
