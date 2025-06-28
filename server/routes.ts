@@ -15,6 +15,8 @@ import { realMoneyTradingService } from "./services/realMoneyTradingService";
 import { maximumProfitEngine } from "./services/maximumProfitEngine";
 import { socialIntelligenceService } from "./services/socialIntelligenceService";
 import { systemHealthChecker } from "./services/systemHealthChecker";
+import { competitorAnalysis } from "./services/competitorAnalysis";
+import { millionDollarEngine } from "./services/millionDollarEngine";
 
 // REAL MONEY: Get live Solana price from multiple exchanges for maximum accuracy
 async function getRealSolanaPrice(): Promise<number> {
@@ -37,7 +39,7 @@ async function getRealSolanaPrice(): Promise<number> {
 
 // WebSocket message interface
 export interface WebSocketMessage {
-  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT' | 'PERFORMANCE_UPDATE' | 'SECURITY_UPDATE' | 'SECURITY_ALERT' | 'SOCIAL_SIGNALS' | 'INSIDER_MOVEMENTS' | 'URGENT_ALERT';
+  type: 'WALLET_UPDATE' | 'BOT_STATUS' | 'NEW_TRADE' | 'TOKEN_SCAN' | 'NOTIFICATION' | 'REAL_TIME_PRICES' | 'TRADING_OPPORTUNITIES' | 'PROFIT_UPDATE' | 'RAPID_EXIT' | 'PERFORMANCE_UPDATE' | 'SECURITY_UPDATE' | 'SECURITY_ALERT' | 'SOCIAL_SIGNALS' | 'INSIDER_MOVEMENTS' | 'URGENT_ALERT' | 'MILLION_DOLLAR_ACTIVATION';
   data: any;
 }
 
@@ -2729,6 +2731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   maximumProfitEngine.setWebSocketBroadcast(broadcastToAll);
   ultimateMarketIntelligence.setWebSocketBroadcast(broadcastToAll);
   aiTradingEngine.setWebSocketBroadcast(broadcastToAll);
+  millionDollarEngine.setWebSocketBroadcast(broadcastToAll);
 
   // ===== AI TRADING ENGINE ENDPOINTS =====
 
@@ -2834,6 +2837,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         success: false,
         message: 'Failed to fetch intelligence summary'
+      });
+    }
+  });
+
+  // ===== MILLION DOLLAR ENGINE ENDPOINTS =====
+
+  // Get industry-beating performance summary
+  app.get('/api/million-dollar/performance', requireAuth, async (req: any, res) => {
+    try {
+      const summary = millionDollarEngine.getIndustryBeatingSummary();
+      res.json({
+        success: true,
+        performance: summary
+      });
+    } catch (error) {
+      console.error('Performance summary fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch performance summary'
+      });
+    }
+  });
+
+  // Get competitor analysis and superiority report
+  app.get('/api/million-dollar/competitors', requireAuth, async (req: any, res) => {
+    try {
+      const superiority = competitorAnalysis.getSuperiorityReport();
+      const weaknesses = competitorAnalysis.getCompetitorWeaknesses();
+      const validation = competitorAnalysis.validateSuperiorityInEveryAspect();
+      
+      res.json({
+        success: true,
+        superiority,
+        weaknesses,
+        validation
+      });
+    } catch (error) {
+      console.error('Competitor analysis fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch competitor analysis'
+      });
+    }
+  });
+
+  // Get million-dollar revenue projections
+  app.get('/api/million-dollar/projections', requireAuth, async (req: any, res) => {
+    try {
+      const projections = millionDollarEngine.getMillionDollarProjections();
+      const profitEngine = millionDollarEngine.generateProfitOptimizationEngine();
+      const developerProfit = millionDollarEngine.generateDeveloperProfitEngine();
+      
+      res.json({
+        success: true,
+        projections,
+        profitEngine,
+        developerProfit
+      });
+    } catch (error) {
+      console.error('Revenue projections fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch revenue projections'
+      });
+    }
+  });
+
+  // Get competitor destruction plan
+  app.get('/api/million-dollar/destruction-plan', requireAuth, async (req: any, res) => {
+    try {
+      const destructionPlan = millionDollarEngine.getCompetitorDestructionPlan();
+      const supremacy = millionDollarEngine.validateIndustrySupremacy();
+      
+      res.json({
+        success: true,
+        destructionPlan,
+        supremacy
+      });
+    } catch (error) {
+      console.error('Destruction plan fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch destruction plan'
+      });
+    }
+  });
+
+  // Activate Million-Dollar Mode
+  app.post('/api/million-dollar/activate', requireAuth, async (req: any, res) => {
+    try {
+      const result = millionDollarEngine.activateMillionDollarMode();
+      
+      // Broadcast activation to all WebSocket clients
+      broadcastToAll({
+        type: 'MILLION_DOLLAR_ACTIVATION',
+        data: {
+          status: 'ACTIVATED',
+          message: 'Million-Dollar Engine now LIVE - SniperX achieves complete industry domination',
+          projectedRevenue: result.projectedRevenue,
+          competitorDefeat: millionDollarEngine.getIndustryBeatingSummary().competitorDefeat,
+          timestamp: Date.now()
+        }
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error('Million-Dollar activation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to activate Million-Dollar Mode'
+      });
+    }
+  });
+
+  // Get industry supremacy validation
+  app.get('/api/million-dollar/supremacy', requireAuth, async (req: any, res) => {
+    try {
+      const supremacy = millionDollarEngine.validateIndustrySupremacy();
+      const strategy = competitorAnalysis.getMillionDollarStrategy();
+      
+      res.json({
+        success: true,
+        supremacy,
+        strategy
+      });
+    } catch (error) {
+      console.error('Industry supremacy fetch error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch industry supremacy data'
       });
     }
   });

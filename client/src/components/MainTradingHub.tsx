@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, Activity, Zap, Target, DollarSign, Bot, Rocket } from 'lucide-react';
+import { TrendingUp, Activity, Zap, Target, DollarSign, Bot, Rocket, Crown } from 'lucide-react';
 import RealTimeMarketDashboard from '@/components/RealTimeMarketDashboard';
 // UltimateSuccessDashboard temporarily disabled to fix crash
 import { AITradingEngine } from '@/components/AITradingEngine';
@@ -20,6 +20,7 @@ import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
 import { MaximumProfitMode } from '@/components/MaximumProfitMode';
 import { SystemHealthDashboard } from '@/components/SystemHealthDashboard';
+import IndustryDominationDashboard from '@/components/IndustryDominationDashboard';
 
 interface MainTradingHubProps {
   onMaximizeProfit: () => void;
@@ -118,6 +119,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
               <Activity className="h-4 w-4 text-green-400" />
               <span className="text-green-400 font-bold">System Health</span>
             </TabsTrigger>
+            <TabsTrigger value="industry-domination" className="flex items-center space-x-2 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/30">
+              <Crown className="h-4 w-4 text-yellow-400" />
+              <span className="text-yellow-400 font-bold">Industry Domination</span>
+            </TabsTrigger>
             <TabsTrigger value="maximum-profit" className="flex items-center space-x-2 bg-gradient-to-r from-orange-600/20 to-red-600/20 border border-orange-500/30">
               <Rocket className="h-4 w-4 text-orange-400" />
               <span className="text-orange-400 font-bold">Maximum Profit</span>
@@ -185,6 +190,10 @@ export function MainTradingHub({ onMaximizeProfit }: MainTradingHubProps) {
             <div className="grid grid-cols-1 gap-6">
               <ProfitTracker />
             </div>
+          </TabsContent>
+
+          <TabsContent value="industry-domination" className="mt-6">
+            <IndustryDominationDashboard />
           </TabsContent>
 
           <TabsContent value="maximum-profit" className="mt-6">
