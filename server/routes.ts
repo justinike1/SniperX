@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import { simpleAuth } from "./services/simpleAuth";
+import { simpleAuth } from "./simpleAuth";
 import { solscanVerification } from "./services/solscanVerification";
 import { aiTradingEngine } from "./services/aiTradingEngine";
 import { realTimeMarketData } from "./services/realTimeMarketData";
@@ -1440,7 +1440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Performance metrics endpoint
-  app.get('/api/strategy/performance-metrics', simpleAuth.requireAuth, async (req: any, res) => {
+  app.get('/api/strategy/performance-metrics', requireAuth, async (req: any, res) => {
     try {
       const performanceMetrics = {
         totalTrades: 247,
@@ -3697,7 +3697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stop AI trading
-  app.post('/api/trading/stop-ai-trading', simpleAuth.requireAuth, async (req, res) => {
+  app.post('/api/trading/stop-ai-trading', requireAuth, async (req, res) => {
     try {
       const { userId } = req.user;
       
@@ -3733,7 +3733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Execute smart trade with confidence scoring
-  app.post('/api/trading/execute-smart', simpleAuth.requireAuth, async (req, res) => {
+  app.post('/api/trading/execute-smart', requireAuth, async (req, res) => {
     try {
       const { userId } = req.user;
       const { tokenAddress, confidence, settings } = req.body;
@@ -3807,7 +3807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get adaptive trading performance metrics
-  app.get('/api/trading/adaptive-performance', simpleAuth.requireAuth, async (req, res) => {
+  app.get('/api/trading/adaptive-performance', requireAuth, async (req, res) => {
     try {
       const { userId } = req.user;
       
