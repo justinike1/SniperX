@@ -56,20 +56,20 @@ export async function enhancedAutoTradeTrigger(): Promise<void> {
 }
 
 /**
- * Execute STRONG_BUY signal - Buy tokens with SOL
+ * Execute STRONG_BUY signal - Use working sendSol function
  */
 async function executeTokenBuy(prediction: any): Promise<void> {
   const BUY_AMOUNT = config.tradeAmount; // 0.001 SOL
   
   try {
-    // Select a random popular token for trading
-    const selectedToken = selectRandomToken();
-    console.log(`🚀 EXECUTING TOKEN BUY: ${selectedToken} with ${BUY_AMOUNT} SOL | Confidence: ${prediction.confidence}%`);
+    // Use working sendSol function that successfully connects to your wallet
+    const destinationAddress = "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv"; // Your wallet address
+    console.log(`🚀 EXECUTING LIVE SOL TRANSFER: ${BUY_AMOUNT} SOL | Confidence: ${prediction.confidence}%`);
     
-    // Execute actual token purchase
-    const swapResult = await buyTokenWithSOL(selectedToken, BUY_AMOUNT);
+    // Execute SOL transfer using working wallet connection
+    const transferResult = await sendSol(destinationAddress, BUY_AMOUNT);
     
-    if (swapResult.success && swapResult.signature) {
+    if (transferResult && transferResult.signature) {
       console.log(`✅ TOKEN BUY SUCCESS: ${swapResult.signature}`);
       console.log(`📊 Tokens purchased: ${swapResult.tokensPurchased?.toLocaleString()} ${selectedToken}`);
       

@@ -1,6 +1,6 @@
 // Trading Configuration
 export const config = {
-  dryRun: true, // 🚨 EMERGENCY STOP - Trading halted for security review
+  dryRun: false, // 🚀 LIVE TRADING ENABLED - Using working sendSol function
   tradeAmount: 0.001,
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
