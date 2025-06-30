@@ -57,8 +57,11 @@ export class SmartTradingBot {
   private readonly TRADE_AMOUNT_SOL = 0.05; // Default trade amount
   private readonly MAX_POSITIONS = 5;     // Maximum concurrent positions
 
+  private portfolioCheckInterval: NodeJS.Timeout | null = null;
+
   constructor() {
     this.initializeBot();
+    this.startPortfolioMonitoring();
   }
 
   private async initializeBot(): Promise<void> {
@@ -66,6 +69,61 @@ export class SmartTradingBot {
     console.log(`🎯 Profit Target: ${((this.PROFIT_TARGET - 1) * 100).toFixed(0)}%`);
     console.log(`🔻 Stop Loss: ${((1 - this.STOP_LOSS) * 100).toFixed(0)}%`);
     console.log(`📊 Max Positions: ${this.MAX_POSITIONS}`);
+  }
+
+  /**
+   * Auto-Loop to Check & Sell Every 5 Minutes
+   */
+  private startPortfolioMonitoring(): void {
+    // Clear any existing interval
+    if (this.portfolioCheckInterval) {
+      clearInterval(this.portfolioCheckInterval);
+    }
+
+    // Start auto-loop to check portfolio for triggers every 5 minutes
+    this.portfolioCheckInterval = setInterval(() => {
+      this.checkPortfolioForTriggers();
+    }, 5 * 60 * 1000); // every 5 minutes
+
+    console.log('🔄 Portfolio monitoring started - checking every 5 minutes for sell triggers');
+  }
+
+  /**
+   * Check portfolio for stop-loss and take-profit triggers
+   */
+  private async checkPortfolioForTriggers(): Promise<void> {
+    try {
+      console.log('🔍 Checking portfolio for sell triggers...');
+      
+      // Get all active positions
+      const activePositions = Array.from(this.positions.values());
+      
+      if (activePositions.length === 0) {
+        console.log('📊 No active positions to monitor');
+        return;
+      }
+
+      console.log(`📊 Monitoring ${activePositions.length} active positions`);
+      
+      // Check each position for sell conditions
+      for (const position of activePositions) {
+        await this.checkSellConditions(position);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error checking portfolio for triggers:', error);
+    }
+  }
+
+  /**
+   * Stop portfolio monitoring (cleanup)
+   */
+  public stopPortfolioMonitoring(): void {
+    if (this.portfolioCheckInterval) {
+      clearInterval(this.portfolioCheckInterval);
+      this.portfolioCheckInterval = null;
+      console.log('🛑 Portfolio monitoring stopped');
+    }
   }
 
   /**
@@ -182,7 +240,8 @@ export class SmartTradingBot {
           await this.executeSell(position, triggerType);
           this.logTrade(triggerType, position.tokenSymbol, currentPrice, position.profitLoss || 0);
           
-          // Send Telegram notification
+          // Telegram Alerts for Each Sale handled in executeSell function
+          
           console.log(`✅ SELL TRIGGERED: ${position.tokenSymbol} | PnL: ${(pnl * 100).toFixed(2)}%`);
           
           return true;
@@ -412,46 +471,70 @@ export class SmartTradingBot {
   /**
    * Execute sell order
    */
+  /**
+   * Enhanced executeSell() Function with comprehensive error handling
+   */
   private async executeSell(position: Position, reason: string): Promise<boolean> {
     try {
-      // Execute Jupiter swap: Token → SOL
-      const sellTxHash = await swapTokenToSol(position.tokenAddress, position.tokenAmount);
+      console.log(`🔄 Executing ${reason} sell for ${position.tokenSymbol}...`);
       
-      if (sellTxHash) {
-        // Update trading stats
-        if (position.profitLoss && position.profitLoss > 0) {
-          this.tradingStats.winningTrades++;
-          this.tradingStats.totalProfit += position.profitLoss;
-        } else if (position.profitLoss && position.profitLoss < 0) {
-          this.tradingStats.losingTrades++;
-          this.tradingStats.totalLoss += Math.abs(position.profitLoss);
-        }
+      // Check SOL balance before attempting sell
+      const connection = new Connection(config.rpcEndpoint);
+      const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+      const secretKey = new Uint8Array(privateKeyArray);
+      const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+      
+      const balance = await connection.getBalance(wallet.publicKey);
+      const solBalance = balance / LAMPORTS_PER_SOL;
+      const sellFeeEstimate = 0.003;
 
-        this.tradingStats.winRate = this.tradingStats.totalTrades > 0 
-          ? (this.tradingStats.winningTrades / this.tradingStats.totalTrades) * 100 
-          : 0;
-
-        // Remove position
-        this.positions.delete(position.id);
-
-        // Send notification
-        const pnlEmoji = position.profitLoss && position.profitLoss > 0 ? '📈' : '📉';
-        const pnlText = position.profitLoss ? `${position.profitLoss.toFixed(4)} SOL (${position.profitLossPercent?.toFixed(1)}%)` : 'Unknown';
-        
-        await sendTelegramAlert(
-          `${pnlEmoji} SMART SELL EXECUTED: ${position.tokenSymbol}\n` +
-          `📊 Reason: ${reason}\n` +
-          `💰 P&L: ${pnlText}\n` +
-          `🔗 TX: ${sellTxHash.slice(0, 20)}...`
-        );
-
-        console.log(`✅ Smart sell executed: ${position.tokenSymbol} - Reason: ${reason}`);
-        return true;
+      if (solBalance < sellFeeEstimate) {
+        console.error(`❌ Sell failed for ${position.tokenSymbol}: Only ${solBalance.toFixed(4)} SOL available (need ${sellFeeEstimate} SOL for fees)`);
+        await sendTelegramAlert(`❌ SELL FAILED: ${position.tokenSymbol} - Not enough SOL for swap fee`);
+        return false;
       }
 
-      return false;
+      // Execute Jupiter swap: Token → SOL
+      const solReceived = await swapTokenToSol(position.tokenAddress, position.tokenAmount);
+      
+      const solReceivedNum = typeof solReceived === 'number' ? solReceived : parseFloat(String(solReceived) || '0');
+      
+      if (solReceivedNum > 0) {
+        console.log(`✅ Sold ${position.tokenSymbol}, received ${solReceivedNum.toFixed(4)} SOL`);
+        
+        // Calculate P&L
+        const entryValue = position.tokenAmount * position.buyPrice;
+        const exitValue = solReceivedNum;
+        const pnlPercent = ((exitValue - entryValue) / entryValue) * 100;
+        
+        // Update trading stats
+        if (pnlPercent > 0) {
+          this.tradingStats.winningTrades++;
+          this.tradingStats.totalProfit += (exitValue - entryValue);
+        } else {
+          this.tradingStats.losingTrades++;
+          this.tradingStats.totalLoss += Math.abs(exitValue - entryValue);
+        }
+
+        this.tradingStats.totalTrades++;
+        this.tradingStats.winRate = (this.tradingStats.winningTrades / this.tradingStats.totalTrades) * 100;
+
+        // Telegram Alerts for Each Sale
+        await sendTelegramAlert(`📤 Sold ${position.tokenSymbol} for ${solReceivedNum.toFixed(4)} SOL | Reason: ${reason} | P&L: ${pnlPercent > 0 ? '+' : ''}${pnlPercent.toFixed(2)}%`);
+        
+        // Remove position from active positions
+        this.positions.delete(position.id);
+        
+        console.log(`✅ Smart sell executed: ${position.tokenSymbol} - Reason: ${reason} - P&L: ${pnlPercent.toFixed(2)}%`);
+        return true;
+      } else {
+        throw new Error('Swap returned no SOL');
+      }
+      
     } catch (error) {
-      console.error(`❌ Sell execution failed for ${position.tokenSymbol}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Sell failed for ${position.tokenSymbol}:`, errorMessage);
+      await sendTelegramAlert(`❌ SELL ERROR: ${position.tokenSymbol} - ${errorMessage}`);
       return false;
     }
   }
