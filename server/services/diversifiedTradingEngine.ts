@@ -4,6 +4,7 @@ import { sendTelegramAlert } from '../utils/telegramAlert';
 import { fundProtectionService } from '../utils/fundProtectionService';
 import { transactionReceiptLogger } from '../utils/transactionReceiptLogger';
 import { logTrade } from '../utils/tradeLogger';
+import { smartTokenSelector } from './smartTokenSelector';
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { config } from '../config';
 import fs from 'fs';
@@ -43,31 +44,7 @@ export class DiversifiedTradingEngine {
       minTradeAmount: 0.001,
       maxTradeAmount: 0.01,
       velocityMode: true,
-      diversificationTargets: [
-        // Major tokens with high liquidity
-        'So11111111111111111111111111111111111111112', // SOL
-        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-        'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
-        'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', // BONK
-        'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN', // JUP
-        'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // mSOL
-        'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1', // bSOL
-        'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof', // RND
-        '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU', // SAMO
-        'So11111111111111111111111111111111111111112', // Wrapped SOL
-        // Meme tokens with high velocity potential
-        'CATCHejFEtKayjupN1JBZX8LBFzKvJDDjqT8N34m6c1A', // CATCH
-        '27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4', // JLP
-        'SHDWyBxihqiCj6YekG2GUr7wqKLeLAMK1gHZck9pL6y', // SHDW
-        'HNHV3Rq2dYjkzz4vHh1B4vT3BYiMLzD5j2Kh9d8WzNwF', // HNT
-        'WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk', // WEN
-        // DeFi tokens
-        'CKfatsPMUf8SkiURsDXs7eK6GWb4Jsd6UDbs7twMCWxo', // RAY
-        'So11111111111111111111111111111111111111112', // Raydium
-        'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE', // ORCA
-        'MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac', // MNGO
-        'kinXdEcpDQeHPEuQnqmUgtYykqKGVFq6CeVX5iAHJq6', // KIN
-      ]
+      diversificationTargets: [] // Will be populated dynamically by smart token selector
     };
   }
 

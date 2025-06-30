@@ -830,6 +830,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Emotional Sentiment Visualizer API endpoints
+  app.get('/api/sentiment/current/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { emotionalSentimentAnalyzer } = await import('./services/emotionalSentimentAnalyzer');
+      const sentiment = await emotionalSentimentAnalyzer.getCurrentSentiment(token.toUpperCase());
+      
+      if (!sentiment) {
+        return res.status(404).json({ message: 'Sentiment data not found for token' });
+      }
+      
+      res.json(sentiment);
+    } catch (error) {
+      console.error('Error fetching current sentiment:', error);
+      res.status(500).json({ message: 'Failed to fetch sentiment data' });
+    }
+  });
+
+  app.get('/api/sentiment/visualization/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { emotionalSentimentAnalyzer } = await import('./services/emotionalSentimentAnalyzer');
+      const visualization = await emotionalSentimentAnalyzer.getVisualizationData(token.toUpperCase());
+      
+      if (!visualization) {
+        return res.status(404).json({ message: 'Visualization data not found for token' });
+      }
+      
+      res.json(visualization);
+    } catch (error) {
+      console.error('Error fetching visualization data:', error);
+      res.status(500).json({ message: 'Failed to fetch visualization data' });
+    }
+  });
+
+  app.get('/api/sentiment/history/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { hours = '24' } = req.query;
+      const { emotionalSentimentAnalyzer } = await import('./services/emotionalSentimentAnalyzer');
+      const history = await emotionalSentimentAnalyzer.getSentimentHistory(token.toUpperCase(), parseInt(hours as string));
+      
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching sentiment history:', error);
+      res.status(500).json({ message: 'Failed to fetch sentiment history' });
+    }
+  });
+
+  app.get('/api/sentiment/all', async (req, res) => {
+    try {
+      const { emotionalSentimentAnalyzer } = await import('./services/emotionalSentimentAnalyzer');
+      const allSentiments = await emotionalSentimentAnalyzer.getAllCurrentSentiments();
+      
+      res.json(allSentiments);
+    } catch (error) {
+      console.error('Error fetching all sentiments:', error);
+      res.status(500).json({ message: 'Failed to fetch sentiment data' });
+    }
+  });
+
   // 24/7 Autonomous Trading Endpoints
   app.get('/api/trading/autonomous-status', async (req, res) => {
     try {

@@ -401,6 +401,26 @@ class FundProtectionService {
   }
 
   /**
+   * Emergency remove position by token address (for BONK removal)
+   */
+  emergencyRemovePosition(tokenAddress: string): boolean {
+    try {
+      let removed = false;
+      for (const [id, position] of this.positions.entries()) {
+        if (position.tokenAddress === tokenAddress) {
+          this.positions.delete(id);
+          console.log(`🚨 Emergency removed position: ${position.tokenSymbol} (${id})`);
+          removed = true;
+        }
+      }
+      return removed;
+    } catch (error) {
+      console.error('Error in emergency position removal:', error);
+      return false;
+    }
+  }
+
+  /**
    * Manually close a position
    */
   async manualClosePosition(positionId: string): Promise<boolean> {

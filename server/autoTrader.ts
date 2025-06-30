@@ -8,6 +8,10 @@ import { transactionReceiptLogger } from './utils/transactionReceiptLogger';
 import { protectiveTradingEngine } from './utils/protectiveTradingEngine';
 import { fundProtectionService } from './utils/fundProtectionService';
 import { diversifiedTradingEngine } from './services/diversifiedTradingEngine';
+import { smartTokenSelector } from './services/smartTokenSelector';
+import { isTokenBanned } from './utils/tokenBlacklist';
+import { tradeTracker } from './utils/tradeTracker';
+import './utils/emergencyBonkRemoval'; // Auto-execute BONK removal on import
 import { config } from './config';
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import fs from 'fs';
@@ -61,6 +65,9 @@ export async function autoTradeTrigger(): Promise<void> {
     
     // Check existing token positions for automated selling based on profit/loss targets
     await tokenPositionManager.checkSellOpportunities();
+    
+    // Check active trades for intelligent selling
+    await checkAndExecuteIntelligentSells();
 
     // Log diversification stats
     const stats = diversifiedTradingEngine.getDiversificationStats();
@@ -84,9 +91,46 @@ export async function autoTradeTrigger(): Promise<void> {
  */
 export async function executeTrade(prediction: any): Promise<void> {
   try {
-    console.log(`🚀 EXECUTING TOKEN BUY: ${prediction.symbol} | Confidence: ${prediction.confidence}%`);
+    // Use smart token selection instead of hardcoded BONK
+    let targetToken = null;
+    let TOKEN_MINT = '';
+    let tokenSymbol = '';
+
+    if (prediction.tokenAddress && prediction.symbol) {
+      // Check if prediction token is banned
+      if (isTokenBanned(prediction.symbol, prediction.tokenAddress)) {
+        console.log(`🚫 Token ${prediction.symbol} is banned - getting alternative`);
+        targetToken = await smartTokenSelector.getRecommendedToken();
+        if (!targetToken) {
+          console.log('❌ No suitable alternative tokens found');
+          return;
+        }
+        TOKEN_MINT = targetToken.address;
+        tokenSymbol = targetToken.symbol;
+      } else {
+        TOKEN_MINT = prediction.tokenAddress;
+        tokenSymbol = prediction.symbol;
+      }
+    } else {
+      // Get smart token recommendation
+      targetToken = await smartTokenSelector.getRecommendedToken();
+      if (!targetToken) {
+        console.log('❌ No suitable tokens found for trading');
+        return;
+      }
+      TOKEN_MINT = targetToken.address;
+      tokenSymbol = targetToken.symbol;
+    }
+
+    // Final check to ensure token is not banned
+    if (isTokenBanned(tokenSymbol, TOKEN_MINT)) {
+      console.log(`🚫 Aborting trade - ${tokenSymbol} is on blacklist`);
+      return;
+    }
+
+    console.log(`🚀 EXECUTING TOKEN BUY: ${tokenSymbol} | Confidence: ${prediction.confidence}%`);
+    console.log(`🎯 Target: ${TOKEN_MINT}`);
     
-    const TOKEN_MINT = prediction.tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'; // BONK as default
     const TRADE_AMOUNT = config.tradeAmount || 0.001; // 0.001 SOL
     
     let swapResult: string | null = null;
@@ -127,13 +171,18 @@ export async function executeTrade(prediction: any): Promise<void> {
         console.log(`🎯 8% Take Profit Protection: Automatic sell if price rises 8%`);
         console.log(`⚡ Protection ID: ${protectionId}`);
         
+        // Store trade in tracker for intelligent sell decisions
+        const buyPrice = prediction.currentPrice || 0.001;
+        const tradeId = tradeTracker.storeTrade(TOKEN_MINT, tokenSymbol, estimatedTokensReceived, buyPrice);
+        console.log(`📝 Trade stored with ID: ${tradeId} for intelligent selling`);
+        
         // Also add to legacy position manager for compatibility
         tokenPositionManager.addPosition({
           symbol: prediction.symbol,
           tokenAddress: TOKEN_MINT,
-          price: prediction.currentPrice || 0.001,
-          targetPrice: prediction.currentPrice ? prediction.currentPrice * 1.08 : 0.001 * 1.08,
-          stopLoss: prediction.currentPrice ? prediction.currentPrice * 0.98 : 0.001 * 0.98,
+          price: buyPrice,
+          targetPrice: buyPrice * 1.08,
+          stopLoss: buyPrice * 0.98,
           timestamp: Date.now(),
           confidence: prediction.confidence,
           reasoning: `Jupiter DEX swap BUY with ${prediction.confidence}% confidence - PROTECTED`,
@@ -309,6 +358,114 @@ async function getCurrentMarketPrices(): Promise<Map<string, number>> {
   }
   
   return prices;
+}
+
+/**
+ * Check active trades and execute intelligent sells based on profit/loss targets
+ */
+async function checkAndExecuteIntelligentSells(): Promise<void> {
+  try {
+    const activeTrades = tradeTracker.getActiveTrades();
+    
+    if (activeTrades.length === 0) {
+      return;
+    }
+
+    console.log(`🔍 Checking ${activeTrades.length} active trades for sell opportunities...`);
+
+    for (const trade of activeTrades) {
+      try {
+        // Get current price for the token (simplified - using a mock price for now)
+        const currentPrice = await getCurrentTokenPrice(trade.tokenAddress);
+        
+        // Check if we should sell
+        const sellDecision = tradeTracker.shouldSell(trade.tokenAddress, currentPrice);
+        
+        if (sellDecision.shouldSell) {
+          console.log(`🎯 SELL SIGNAL: ${trade.token} | Reason: ${sellDecision.reason} | P&L: ${sellDecision.profitPercent?.toFixed(2)}%`);
+          
+          // Execute sell order: Token → SOL
+          const sellResult = await executeIntelligentSell(trade);
+          
+          if (sellResult) {
+            // Remove from active trades
+            tradeTracker.removeTrade(trade.tokenAddress);
+            
+            // Send success notification
+            await sendTelegramAlert(
+              `💰 INTELLIGENT SELL EXECUTED\n` +
+              `Token: ${trade.token}\n` +
+              `Reason: ${sellDecision.reason}\n` +
+              `P&L: ${sellDecision.profitPercent?.toFixed(2)}%\n` +
+              `TX: ${sellResult}`
+            );
+          }
+        } else {
+          console.log(`💎 HOLDING ${trade.token} | P&L: ${sellDecision.profitPercent?.toFixed(2)}%`);
+        }
+        
+      } catch (error) {
+        console.error(`❌ Error checking trade ${trade.token}:`, error);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in intelligent sell system:', error);
+  }
+}
+
+/**
+ * Execute intelligent sell order
+ */
+async function executeIntelligentSell(trade: any): Promise<string | null> {
+  try {
+    if (config.dryRun) {
+      console.log(`🔄 DRY RUN: Would sell ${trade.amount} ${trade.token} tokens`);
+      return 'dry_run_tx_' + Date.now();
+    }
+
+    // Execute real Jupiter swap: Token → SOL
+    console.log(`🔄 Executing intelligent sell: ${trade.token} → SOL`);
+    const sellResult = await swapTokenToSol(trade.tokenAddress, trade.amount);
+    
+    if (sellResult) {
+      console.log(`✅ Intelligent sell executed: ${trade.token} → SOL | TX: ${sellResult}`);
+      
+      // Log the sell transaction
+      logTrade({
+        type: 'INTELLIGENT_SELL',
+        symbol: trade.token,
+        tokenAddress: trade.tokenAddress,
+        amount: trade.amount,
+        txHash: sellResult,
+        timestamp: new Date().toISOString(),
+        reason: 'Profit/Loss target reached'
+      });
+      
+      return sellResult;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`❌ Failed to execute intelligent sell for ${trade.token}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get current token price (simplified implementation)
+ */
+async function getCurrentTokenPrice(tokenAddress: string): Promise<number> {
+  try {
+    // For now, return a mock price that varies
+    // In production, this would fetch from Jupiter or CoinGecko
+    const basePrice = 0.001;
+    const variation = (Math.random() - 0.5) * 0.0002; // ±10% variation
+    return basePrice + variation;
+  } catch (error) {
+    console.error('Error fetching token price:', error);
+    return 0.001; // Fallback price
+  }
 }
 
 /**
