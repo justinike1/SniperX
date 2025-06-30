@@ -21,6 +21,8 @@ import { smartPositionSizing } from "./services/smartPositionSizing";
 import { adaptiveTradingEngine } from "./services/adaptiveTradingEngine";
 import { realSolanaTrading } from "./services/realSolanaTrading";
 import { ultimateCompetitorAnalyzer } from "./services/ultimateCompetitorAnalyzer";
+import { tokenPositionManager } from "./services/tokenPositionManager";
+import { getAllTokenBalances, getTokenBalance } from "./utils/tokenBalanceChecker";
 
 // Import scheduled trading system - this will start the autonomous trading loop
 import "./scheduledTrader";
@@ -887,6 +889,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Bot configuration error:', error);
       res.status(500).json({ success: false, error: 'Failed to configure bot' });
+    }
+  });
+
+  // Token position tracking API endpoints
+  app.get('/api/positions/active', requireAuth, async (req, res) => {
+    try {
+      const positions = tokenPositionManager.getActivePositions();
+      res.json({ success: true, positions });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to fetch positions' });
+    }
+  });
+
+  app.get('/api/positions/stats', requireAuth, async (req, res) => {
+    try {
+      const stats = tokenPositionManager.getTradingStats();
+      res.json({ success: true, stats });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to fetch position stats' });
+    }
+  });
+
+  app.post('/api/positions/check-sells', requireAuth, async (req, res) => {
+    try {
+      await tokenPositionManager.checkSellOpportunities();
+      res.json({ success: true, message: 'Sell opportunities checked' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to check sell opportunities' });
+    }
+  });
+
+  // Token balance checker API endpoints
+  app.get('/api/wallet/token-balances', requireAuth, async (req, res) => {
+    try {
+      const balances = await getAllTokenBalances();
+      res.json({ success: true, balances });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to fetch token balances' });
+    }
+  });
+
+  app.get('/api/wallet/token-balance/:mint', requireAuth, async (req, res) => {
+    try {
+      const { mint } = req.params;
+      const balance = await getTokenBalance(mint);
+      res.json({ success: true, balance });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Failed to fetch token balance' });
     }
   });
 

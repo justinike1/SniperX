@@ -3,6 +3,7 @@ import { sendSol } from './utils/sendSol';
 import { logTrade } from './utils/tradeLogger';
 import { sendTelegramAlert } from './utils/telegramAlert';
 import { positionManager } from './services/positionManager';
+import { tokenPositionManager } from './services/tokenPositionManager';
 import { getBestRoute, executeSwap } from './utils/jupiterClient';
 import { config } from './config';
 import axios from 'axios';
@@ -14,10 +15,13 @@ export async function autoTradeTrigger(): Promise<void> {
   try {
     console.log('🔍 Analyzing market for trading opportunities...');
     
-    // First, check existing positions for sell opportunities
+    // Check token positions for automated selling based on profit/loss targets
+    await tokenPositionManager.checkSellOpportunities();
+    
+    // Check existing positions for sell opportunities (legacy)
     await checkAndExecuteSells();
     
-    // Then, look for new buy opportunities
+    // Look for new buy opportunities
     await checkAndExecuteBuys();
 
   } catch (error) {
@@ -232,6 +236,9 @@ async function executeTrade(prediction: any): Promise<void> {
     
     // Add position to position manager for tracking profit/loss
     positionManager.addPosition(completedTrade);
+    
+    // Add token position for automated selling
+    tokenPositionManager.addPosition(completedTrade);
     
     if (config.dryRun) {
       console.log(`✅ [DRY RUN] BUY logged: ${prediction.symbol} at ${prediction.currentPrice} SOL`);
