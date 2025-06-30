@@ -47,6 +47,7 @@ import Autonomous24x7Dashboard from '@/components/Autonomous24x7Dashboard';
 import SimpleWalletBackup from '@/components/SimpleWalletBackup';
 import { EmotionalSentimentVisualizer } from '@/components/EmotionalSentimentVisualizer';
 import PluginManager from '@/components/PluginManager';
+import { PluginDashboard } from '@/components/PluginDashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -352,6 +353,8 @@ export default function Dashboard() {
       <AdvancedSellEngine />
       
       <PluginManager />
+      
+      <PluginDashboard />
       
       <AITradingEngine 
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}

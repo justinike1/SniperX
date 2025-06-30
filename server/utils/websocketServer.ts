@@ -15,7 +15,7 @@ interface BroadcastMessage {
 class SniperXWebSocketServer {
   private wss: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
-  private port: number = 8080;
+  private port: number = 8081;
 
   constructor() {
     this.initialize();

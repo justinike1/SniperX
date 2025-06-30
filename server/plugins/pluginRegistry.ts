@@ -11,6 +11,7 @@ import { TradingLogPlugin } from './tradingLogPlugin';
 import { AIExplanationPlugin } from './aiExplanationPlugin';
 import { PortfolioManagerPlugin } from './portfolioManagerPlugin';
 import { RiskScannerPlugin } from './riskScannerPlugin';
+import { JupiterExecutorPlugin } from './jupiterExecutorPlugin';
 
 /**
  * Initialize and register all plugins
@@ -27,6 +28,7 @@ export async function initializePlugins(): Promise<void> {
     const aiExplanationPlugin = new AIExplanationPlugin();
     const portfolioManagerPlugin = new PortfolioManagerPlugin();
     const riskScannerPlugin = new RiskScannerPlugin();
+    const jupiterExecutorPlugin = new JupiterExecutorPlugin();
 
     pluginManager.registerPlugin(momentumPlugin);
     pluginManager.registerPlugin(arbitragePlugin);
@@ -35,6 +37,7 @@ export async function initializePlugins(): Promise<void> {
     pluginManager.registerPlugin(aiExplanationPlugin);
     pluginManager.registerPlugin(portfolioManagerPlugin);
     pluginManager.registerPlugin(riskScannerPlugin);
+    pluginManager.registerPlugin(jupiterExecutorPlugin);
 
     // Enable plugins by default
     await pluginManager.enablePlugin('MomentumTrading');
@@ -44,6 +47,7 @@ export async function initializePlugins(): Promise<void> {
     await pluginManager.enablePlugin('AIExplanation');
     await pluginManager.enablePlugin('PortfolioManager');
     await pluginManager.enablePlugin('RiskScanner');
+    await pluginManager.enablePlugin('JupiterExecutor');
 
     console.log(`✅ Plugin system initialized with ${pluginManager.getActivePluginsCount()} active plugins`);
   } catch (error) {
