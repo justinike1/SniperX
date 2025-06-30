@@ -22,7 +22,7 @@ const TRADE_AMOUNT = 0.01; // 0.01 SOL per trade
  */
 export async function autoTradeTrigger(): Promise<void> {
   try {
-    // Check wallet balance before executing any trades
+    // Check wallet balance and apply SOL reserve protection
     const connection = new Connection(config.rpcEndpoint);
     const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
     const secretKey = new Uint8Array(privateKeyArray);
@@ -30,12 +30,24 @@ export async function autoTradeTrigger(): Promise<void> {
     
     try {
       const balance = await connection.getBalance(wallet.publicKey);
-      if (balance < MIN_REQUIRED_SOL) {
-        await sendTelegramAlert(`❌ LOW BALANCE: Not enough SOL to trade. Current: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-        console.log(`⚠️ LOW BALANCE: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Minimum required: 0.02 SOL`);
+      const walletBalance = balance / LAMPORTS_PER_SOL;
+      
+      // SMART BUY LOGIC - Token with SOL (Preserve Sell Fees)
+      const MIN_SOL_FOR_FEES = 0.005; // Reserve to cover future sell fees
+      const MIN_BUY_AMOUNT = 0.001; // Minimum viable trade amount
+      const MAX_SPEND = walletBalance - MIN_SOL_FOR_FEES;
+      
+      if (MAX_SPEND > MIN_BUY_AMOUNT) {
+        const tradeAmount = Math.min(MAX_SPEND, 0.01); // Cap at 0.01 SOL per trade
+        console.log(`✅ Smart Buy Logic: Can spend ${tradeAmount.toFixed(4)} SOL, preserving ${MIN_SOL_FOR_FEES} SOL for fees`);
+        console.log(`✅ Remaining after buy: ${(walletBalance - tradeAmount).toFixed(4)} SOL >= ${MIN_SOL_FOR_FEES} SOL`);
+      } else {
+        console.log("❌ Not enough SOL to preserve fee reserve.");
+        console.log(`Balance: ${walletBalance.toFixed(4)} SOL - Reserve: ${MIN_SOL_FOR_FEES} SOL = ${MAX_SPEND.toFixed(4)} SOL (need ${MIN_BUY_AMOUNT} SOL min)`);
         return;
       }
-      console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Ready for trading`);
+      
+      console.log(`💰 Wallet balance: ${walletBalance.toFixed(4)} SOL - Ready for protected trading`);
     } catch (err) {
       await sendTelegramAlert("❌ ERROR fetching wallet balance: " + (err instanceof Error ? err.message : 'Unknown error'));
       console.log("❌ Failed to fetch wallet balance, skipping trading cycle");

@@ -297,7 +297,7 @@ export class SmartTradingBot {
   }
 
   /**
-   * Execute buy order
+   * Execute buy order with SOL reserve protection
    */
   private async executeBuy(signal: TradingSignal): Promise<boolean> {
     try {
@@ -308,13 +308,22 @@ export class SmartTradingBot {
       const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
       
       const balance = await connection.getBalance(wallet.publicKey);
-      const balanceInSOL = balance / LAMPORTS_PER_SOL;
+      const walletBalance = balance / LAMPORTS_PER_SOL;
       
-      // Calculate trade amount (5% of balance, max 0.01 SOL)
-      const tradeAmount = Math.min(balanceInSOL * 0.05, 0.01);
+      // SMART BUY LOGIC - Token with SOL (Preserve Sell Fees)
+      const MIN_SOL_FOR_FEES = 0.005; // Reserve to cover future sell fees
+      const MIN_BUY_AMOUNT = 0.001; // Minimum viable trade amount
+      const MAX_SPEND = walletBalance - MIN_SOL_FOR_FEES;
       
-      if (tradeAmount < 0.002) {
-        console.log(`⚠️ Insufficient balance for trade: ${balanceInSOL.toFixed(4)} SOL`);
+      let tradeAmount = 0;
+      
+      if (MAX_SPEND > MIN_BUY_AMOUNT) {
+        tradeAmount = Math.min(MAX_SPEND, this.TRADE_AMOUNT_SOL);
+        console.log(`✅ Smart Buy Logic: Spending ${tradeAmount.toFixed(4)} SOL, preserving ${MIN_SOL_FOR_FEES} SOL for fees`);
+        console.log(`✅ Remaining after buy: ${(walletBalance - tradeAmount).toFixed(4)} SOL >= ${MIN_SOL_FOR_FEES} SOL`);
+      } else {
+        console.log("❌ Not enough SOL to preserve fee reserve.");
+        console.log(`Balance: ${walletBalance.toFixed(4)} SOL - Reserve: ${MIN_SOL_FOR_FEES} SOL = ${MAX_SPEND.toFixed(4)} SOL (need ${MIN_BUY_AMOUNT} SOL min)`);
         return false;
       }
 

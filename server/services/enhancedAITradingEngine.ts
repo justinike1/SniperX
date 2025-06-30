@@ -3,6 +3,8 @@ import { WebSocketMessage } from '../routes';
 import { sendSol } from '../utils/sendSol';
 import { config } from '../config';
 import { logTrade } from '../utils/tradeLogger';
+import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import fs from 'fs';
 
 interface TechnicalIndicators {
   rsi: number;
@@ -571,7 +573,7 @@ export class EnhancedAITradingEngine {
           entryPrice: marketData.currentPrice,
           stopLoss: prices.stopLoss,
           takeProfit: prices.target,
-          positionSize: this.calculatePositionSize(confidence),
+          positionSize: 0.003, // Fixed for now, will be calculated with balance check
           riskReward: (prices.target - marketData.currentPrice) / (marketData.currentPrice - prices.stopLoss)
         }
       };
@@ -584,7 +586,30 @@ export class EnhancedAITradingEngine {
       // Execute real SOL transaction for high-confidence opportunities
       if (result.prediction === 'STRONG_BUY' && result.confidence > 85) {
         try {
-          const tradeAmount = await this.calculatePositionSize(result.confidence);
+          // Get wallet balance and apply SOL reserve protection
+          const connection = new Connection(config.rpcEndpoint);
+          const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+          const secretKey = new Uint8Array(privateKeyArray);
+          const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+          
+          const balance = await connection.getBalance(wallet.publicKey);
+          const walletBalance = balance / LAMPORTS_PER_SOL;
+          
+          // SMART BUY LOGIC - Token with SOL (Preserve Sell Fees)
+          const MIN_SOL_FOR_FEES = 0.005; // Reserve to cover future sell fees
+          const MIN_BUY_AMOUNT = 0.001; // Minimum viable trade amount
+          const MAX_SPEND = walletBalance - MIN_SOL_FOR_FEES;
+          
+          let tradeAmount = 0;
+          
+          if (MAX_SPEND > MIN_BUY_AMOUNT) {
+            tradeAmount = Math.min(MAX_SPEND, 0.01); // Cap at 0.01 SOL per trade
+            console.log(`✅ Smart Buy Logic: Spending ${tradeAmount.toFixed(4)} SOL, preserving ${MIN_SOL_FOR_FEES} SOL for fees`);
+            console.log(`✅ Remaining after buy: ${(walletBalance - tradeAmount).toFixed(4)} SOL >= ${MIN_SOL_FOR_FEES} SOL`);
+          } else {
+            console.log("❌ Not enough SOL to preserve fee reserve.");
+            console.log(`Balance: ${walletBalance.toFixed(4)} SOL - Reserve: ${MIN_SOL_FOR_FEES} SOL = ${MAX_SPEND.toFixed(4)} SOL (need ${MIN_BUY_AMOUNT} SOL min)`);
+          }
           
           // Skip if no safe trade amount available
           if (tradeAmount <= 0) {

@@ -3,10 +3,12 @@
  * Critical system to prevent money loss with automatic stop-loss and take-profit execution
  */
 
+import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { swapTokenToSol } from './jupiterClient';
 import { transactionReceiptLogger } from './transactionReceiptLogger';
 import { sendTelegramAlert } from './telegramAlert';
 import { config } from '../config';
+import fs from 'fs';
 
 interface ProtectedPosition {
   id: string;
@@ -21,6 +23,8 @@ interface ProtectedPosition {
   currentPrice?: number;
   isActive: boolean;
   lastPriceCheck?: number;
+  lastSellAttempt?: number;
+  sellAttempts?: number;
 }
 
 interface FundProtectionSettings {
@@ -225,22 +229,34 @@ class FundProtectionService {
 
       // Check SOL balance before attempting swap
       const connection = new Connection(config.rpcEndpoint);
-      const balance = await connection.getBalance(this.wallet.publicKey);
+      
+      // Load wallet for balance checking
+      const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+      const secretKey = new Uint8Array(privateKeyArray);
+      const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+      
+      const balance = await connection.getBalance(wallet.publicKey);
       const balanceInSOL = balance / LAMPORTS_PER_SOL;
       
-      // Jupiter swaps need minimum 0.003 SOL for fees
-      if (balanceInSOL < 0.003) {
-        console.log(`⚠️ Cannot execute ${reason}: Only ${balanceInSOL.toFixed(4)} SOL available (need 0.003+ for fees)`);
+      // SOL RESERVE PROTECTION - Prevent selling without adequate fees
+      const MIN_SOL_FOR_SWAP = 0.003; // Minimum SOL needed for Jupiter swap fees
+      
+      if (balanceInSOL < MIN_SOL_FOR_SWAP) {
+        console.log(`⚠️ Cannot execute ${reason}: Only ${balanceInSOL.toFixed(4)} SOL available (need ${MIN_SOL_FOR_SWAP}+ for fees)`);
         
-        // Send urgent funding alert
+        // Send urgent funding alert with specific amount needed
         await sendTelegramAlert(
-          `🚨 URGENT: Cannot sell ${position.tokenSymbol}!\n` +
-          `💰 Wallet Balance: ${balanceInSOL.toFixed(4)} SOL\n` +
-          `📊 Need: 0.003+ SOL for swap fees\n` +
-          `⚠️ ADD SOL NOW to protect your ${position.tokenSymbol} position!`
+          `🚨 CRITICAL: Cannot sell ${position.tokenSymbol}!\n` +
+          `💰 Current Balance: ${balanceInSOL.toFixed(4)} SOL\n` +
+          `📊 Required: ${MIN_SOL_FOR_SWAP} SOL for swap fees\n` +
+          `🎯 Add: ${(MIN_SOL_FOR_SWAP - balanceInSOL).toFixed(4)} SOL to wallet\n` +
+          `⚠️ Wallet: 7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv`
         );
         
-        // Don't remove position - keep trying until SOL is added
+        // Mark position as pending sell - don't remove, keep trying
+        position.lastSellAttempt = Date.now();
+        position.sellAttempts = (position.sellAttempts || 0) + 1;
+        this.positions.set(position.id, position);
         return;
       }
 
