@@ -8,6 +8,9 @@ import { MomentumTradingPlugin } from './momentumTradingPlugin';
 import { ArbitragePlugin } from './arbitragePlugin';
 import { EnhancedTokenSelectorPlugin } from './enhancedTokenSelector';
 import { TradingLogPlugin } from './tradingLogPlugin';
+import { AIExplanationPlugin } from './aiExplanationPlugin';
+import { PortfolioManagerPlugin } from './portfolioManagerPlugin';
+import { RiskScannerPlugin } from './riskScannerPlugin';
 
 /**
  * Initialize and register all plugins
@@ -21,17 +24,26 @@ export async function initializePlugins(): Promise<void> {
     const arbitragePlugin = new ArbitragePlugin();
     const tokenSelectorPlugin = new EnhancedTokenSelectorPlugin();
     const tradingLogPlugin = new TradingLogPlugin();
+    const aiExplanationPlugin = new AIExplanationPlugin();
+    const portfolioManagerPlugin = new PortfolioManagerPlugin();
+    const riskScannerPlugin = new RiskScannerPlugin();
 
     pluginManager.registerPlugin(momentumPlugin);
     pluginManager.registerPlugin(arbitragePlugin);
     pluginManager.registerPlugin(tokenSelectorPlugin);
     pluginManager.registerPlugin(tradingLogPlugin);
+    pluginManager.registerPlugin(aiExplanationPlugin);
+    pluginManager.registerPlugin(portfolioManagerPlugin);
+    pluginManager.registerPlugin(riskScannerPlugin);
 
     // Enable plugins by default
     await pluginManager.enablePlugin('MomentumTrading');
     await pluginManager.enablePlugin('Arbitrage');
     await pluginManager.enablePlugin('EnhancedTokenSelector');
     await pluginManager.enablePlugin('TradingLog');
+    await pluginManager.enablePlugin('AIExplanation');
+    await pluginManager.enablePlugin('PortfolioManager');
+    await pluginManager.enablePlugin('RiskScanner');
 
     console.log(`✅ Plugin system initialized with ${pluginManager.getActivePluginsCount()} active plugins`);
   } catch (error) {
