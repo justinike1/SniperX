@@ -1,0 +1,28 @@
+[
+  {
+    "id": "trade_1751296988774_fez1aaihb",
+    "timestamp": "2025-06-30T15:23:08.774Z",
+    "plugin": "TradingLog",
+    "type": "CONTEXT_ANALYSIS",
+    "walletBalance": 0.002283583,
+    "walletAddress": "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
+    "marketPrices": {
+      "SOL": 142.5,
+      "JUP": 0.95,
+      "RAY": 4.2,
+      "ORCA": 3.8,
+      "BONK": 0.000025
+    },
+    "marketVolume": {
+      "SOL": 45000000,
+      "JUP": 12000000,
+      "RAY": 8500000,
+      "ORCA": 6200000,
+      "BONK": 95000000
+    },
+    "config": {
+      "maxPositionSize": 0.2,
+      "riskLevel": "moderate"
+    }
+  }
+]

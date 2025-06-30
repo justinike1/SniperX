@@ -4,7 +4,7 @@
  */
 
 import { TradingPlugin, TradingContext, TradingResult } from './pluginManager';
-import axios from 'axios';
+import { jupiterSwap, getJupiterQuote } from '../utils/jupiterSwapExecutor';
 import { config } from '../config';
 
 export class JupiterExecutorPlugin implements TradingPlugin {
@@ -20,18 +20,54 @@ export class JupiterExecutorPlugin implements TradingPlugin {
   }
 
   async execute(context: TradingContext): Promise<TradingResult> {
-    try {
-      // This plugin focuses on execution, not analysis
+    if (!this.enabled) {
       return {
-        success: true,
-        action: 'READY',
-        confidence: 100,
-        reason: 'Jupiter executor ready for trade execution'
+        action: "SKIP",
+        confidence: 0,
+        explanation: "Jupiter Executor disabled"
       };
-    } catch (error) {
+    }
+
+    try {
+      // Determine trade parameters
+      const fromMint = context.action === 'BUY' ? 'So11111111111111111111111111111111111111112' : context.tokenAddress; // SOL
+      const toMint = context.action === 'BUY' ? context.tokenAddress : 'So11111111111111111111111111111111111111112'; // Target token or SOL
+      const amount = Math.floor((context.tradeAmount || 0.01) * 1000000000); // Convert to lamports
+
+      if (context.action === 'BUY') {
+        console.log(`🔥 Jupiter Executor: Buying ${context.symbol} with ${context.tradeAmount} SOL`);
+        
+        // Execute Jupiter swap using the new function
+        const txId = await jupiterSwap(fromMint, toMint, amount);
+        
+        if (txId) {
+          return {
+            action: "BUY",
+            confidence: 0.95,
+            explanation: `Successfully executed Jupiter buy for ${context.symbol}`,
+            metadata: { txId, amount: context.tradeAmount, exchange: 'Jupiter' }
+          };
+        } else {
+          return {
+            action: "SKIP",
+            confidence: 0,
+            explanation: "Jupiter buy execution failed"
+          };
+        }
+      }
+
       return {
-        success: false,
-        reason: `Jupiter executor error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        action: "SKIP",
+        confidence: 0,
+        explanation: "No action needed by Jupiter Executor"
+      };
+
+    } catch (error) {
+      console.error('❌ Jupiter Executor error:', error);
+      return {
+        action: "SKIP",
+        confidence: 0,
+        explanation: `Jupiter execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }

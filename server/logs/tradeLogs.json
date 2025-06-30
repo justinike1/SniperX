@@ -16888,5 +16888,10 @@
       "Phantom wallet integration active"
     ],
     "timestamp": "2025-06-30T14:22:30.874Z"
+  },
+  {
+    "type": "ERROR",
+    "error": "tradeTracker.addTrade is not a function",
+    "timestamp": "2025-06-30T15:23:08.973Z"
   }
 ]

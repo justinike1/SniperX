@@ -38,9 +38,9 @@ export async function autoTradeTrigger(): Promise<void> {
       const balance = await connection.getBalance(wallet.publicKey);
       const walletBalance = balance / LAMPORTS_PER_SOL;
       
-      // SMART BUY LOGIC - Token with SOL (Preserve Sell Fees)
-      const MIN_SOL_FOR_FEES = 0.005; // Reserve to cover future sell fees
-      const MIN_BUY_AMOUNT = 0.001; // Minimum viable trade amount
+      // SMART BUY LOGIC - Token with SOL (Preserve Sell Fees) - LOWERED FOR TESTING
+      const MIN_SOL_FOR_FEES = 0.0002; // Reserve to cover future sell fees (reduced for testing)
+      const MIN_BUY_AMOUNT = 0.0005; // Minimum viable trade amount (reduced for testing)
       const MAX_SPEND = walletBalance - MIN_SOL_FOR_FEES;
       
       if (MAX_SPEND > MIN_BUY_AMOUNT) {
