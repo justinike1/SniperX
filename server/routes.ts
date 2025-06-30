@@ -467,6 +467,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Multi-Environment Deployment endpoints
+  app.get('/api/deployment/multi-env/status', async (req, res) => {
+    try {
+      const { multiEnvDeploymentManager } = await import('./multiEnvDeployment');
+      const status = multiEnvDeploymentManager.getEnvironmentStatus();
+      res.json({ success: true, ...status });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post('/api/deployment/multi-env/deploy', async (req, res) => {
+    try {
+      const { environment } = req.body;
+      const { multiEnvDeploymentManager } = await import('./multiEnvDeployment');
+      await multiEnvDeploymentManager.deployToEnvironment(environment);
+      res.json({ success: true, message: `Deployed to ${environment} successfully` });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post('/api/deployment/multi-env/switch', async (req, res) => {
+    try {
+      const { environment } = req.body;
+      const { multiEnvDeploymentManager } = await import('./multiEnvDeployment');
+      const result = await multiEnvDeploymentManager.switchEnvironment(environment);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post('/api/deployment/multi-env/deploy-all', async (req, res) => {
+    try {
+      const { multiEnvDeploymentManager } = await import('./multiEnvDeployment');
+      const results = await multiEnvDeploymentManager.deployToAll();
+      res.json({ success: true, results });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post('/api/deployment/multi-env/promote', async (req, res) => {
+    try {
+      const { multiEnvDeploymentManager } = await import('./multiEnvDeployment');
+      const result = await multiEnvDeploymentManager.promoteToProduction();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   

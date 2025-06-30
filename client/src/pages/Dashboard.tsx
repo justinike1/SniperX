@@ -39,6 +39,7 @@ import { GPTPerformanceDashboard } from '@/components/GPTPerformanceDashboard';
 import AdvancedSellEngine from '@/components/AdvancedSellEngine';
 import MaximumBotDashboard from '@/components/MaximumBotDashboard';
 import FinalDeploymentDashboard from '@/components/FinalDeploymentDashboard';
+import MultiEnvDeploymentDashboard from '@/components/MultiEnvDeploymentDashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -279,6 +280,10 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <FinalDeploymentDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <MultiEnvDeploymentDashboard />
       </div>
       
       {/* LiveActionChart temporarily disabled to fix infinite loop */}
