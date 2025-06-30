@@ -589,9 +589,41 @@ export class EnhancedAITradingEngine {
           // Use configured destination wallet from config
           const destinationAddress = config.destinationWallet;
           
+          let signature: string = '';
+          
           if (!config.dryRun) {
-            const signature = await sendSol(destinationAddress, tradeAmount);
-            console.log(`🚀 LIVE TRADE EXECUTED: ${tradeAmount} SOL | Signal: ${result.prediction} | Confidence: ${result.confidence}% | TX: ${signature}`);
+            try {
+              // Execute Jupiter swap: SOL → Target Token
+              const { performJupiterSwap } = await import('../utils/jupiterClient');
+              const { Connection, PublicKey, Keypair } = await import('@solana/web3.js');
+              const fs = await import('fs');
+              
+              // Setup connection and wallet
+              const connection = new Connection('https://api.mainnet-beta.solana.com');
+              const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+              const secretKey = new Uint8Array(privateKeyArray);
+              const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+              
+              // Define token mints
+              const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112");
+              const TARGET_TOKEN = new PublicKey("DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"); // BONK
+              const amountInLamports = Math.floor(tradeAmount * 1e9); // Convert SOL to lamports
+              
+              signature = await performJupiterSwap(
+                connection,
+                wallet,
+                SOL_MINT,
+                TARGET_TOKEN,
+                amountInLamports
+              );
+              console.log(`🚀 JUPITER SWAP EXECUTED: ${tradeAmount} SOL → ${result.symbol} | Signal: ${result.prediction} | Confidence: ${result.confidence}% | TX: ${signature}`);
+            } catch (swapError) {
+              console.error('❌ Jupiter swap failed, falling back to simple transfer:', swapError instanceof Error ? swapError.message : 'Unknown error');
+              
+              // Fallback to simple SOL transfer
+              signature = await sendSol(destinationAddress, tradeAmount);
+              console.log(`🚀 LIVE TRADE EXECUTED: ${tradeAmount} SOL | Signal: ${result.prediction} | Confidence: ${result.confidence}% | TX: ${signature}`);
+            }
             
             // Log the trade
             logTrade({

@@ -1,15 +1,16 @@
 import { enhancedAITradingEngine } from './services/enhancedAITradingEngine';
-import { sendSol } from './utils/sendSol';
 import { logTrade } from './utils/tradeLogger';
 import { sendTelegramAlert } from './utils/telegramAlert';
 import { tokenPositionManager } from './services/tokenPositionManager';
-import { getBestRoute, executeSwap, swapSolToToken, swapTokenToSol } from './utils/jupiterClient';
+import { getBestRoute, executeSwap, swapSolToToken, swapTokenToSol, performJupiterSwap } from './utils/jupiterClient';
 import { buyTokenWithSOL, sellTokenForSOL, selectRandomToken, getWalletBalance } from './utils/alternativeJupiter';
 import { transactionReceiptLogger } from './utils/transactionReceiptLogger';
 import { protectiveTradingEngine } from './utils/protectiveTradingEngine';
 import { fundProtectionService } from './utils/fundProtectionService';
 import { diversifiedTradingEngine } from './services/diversifiedTradingEngine';
 import { config } from './config';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import fs from 'fs';
 
 /**
  * Auto Trade Trigger - Main function called by scheduled trading
@@ -52,10 +53,12 @@ export async function executeTrade(prediction: any): Promise<void> {
     const TOKEN_MINT = prediction.tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'; // BONK as default
     const TRADE_AMOUNT = config.tradeAmount || 0.001; // 0.001 SOL
     
+    let swapResult: string | null = null;
+    
     if (!config.dryRun) {
       // Execute real Jupiter swap: SOL → Token
       console.log(`🔄 Executing Jupiter swap: ${TRADE_AMOUNT} SOL → ${prediction.symbol}`);
-      const swapResult = await swapSolToToken(TOKEN_MINT, TRADE_AMOUNT);
+      swapResult = await swapSolToToken(TOKEN_MINT, TRADE_AMOUNT);
       
       if (swapResult) {
         // Calculate tokens received (estimate for logging)
@@ -137,16 +140,16 @@ export async function executeTrade(prediction: any): Promise<void> {
         symbol: prediction.symbol,
         amount: TRADE_AMOUNT,
         price: prediction.currentPrice,
-        txHash: typeof swapResult === 'string' ? swapResult : 'unknown',
+        txHash: swapResult || 'unknown',
         status: 'SUCCESS',
         confidence: prediction.confidence,
         timestamp: new Date().toISOString()
       });
       
       // Send Telegram alert
-      await sendTelegramAlert(`🟢 BUY EXECUTED\n${prediction.symbol}: ${TRADE_AMOUNT} SOL\nConfidence: ${prediction.confidence}%\nTX: ${typeof swapResult === 'string' ? swapResult : 'success'}`);
+      await sendTelegramAlert(`🟢 BUY EXECUTED\n${prediction.symbol}: ${TRADE_AMOUNT} SOL\nConfidence: ${prediction.confidence}%\nTX: ${swapResult || 'success'}`);
       
-      console.log(`✅ BUY SUCCESS: ${typeof swapResult === 'string' ? swapResult : 'completed'}`);
+      console.log(`✅ BUY SUCCESS: ${swapResult || 'completed'}`);
     }
     
   } catch (error) {

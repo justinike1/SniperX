@@ -2,6 +2,81 @@ import { Connection, Keypair, PublicKey, VersionedTransaction } from '@solana/we
 import { config } from '../config';
 import fs from 'fs';
 
+export async function performJupiterSwap(
+  connection: Connection,
+  wallet: Keypair,
+  inputMint: PublicKey,
+  outputMint: PublicKey,
+  amountInLamports: number,
+  slippageBps: number = 100 // 1% slippage
+): Promise<string> {
+  try {
+    // Get quote from Jupiter API v6
+    const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint.toString()}&outputMint=${outputMint.toString()}&amount=${amountInLamports}&slippageBps=${slippageBps}`;
+    
+    const quoteResponse = await fetch(quoteUrl);
+    const quoteData = await quoteResponse.json();
+    
+    if (!quoteResponse.ok) {
+      throw new Error(`Quote failed: ${quoteData.error || 'Unknown error'}`);
+    }
+
+    // Get swap transaction
+    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        quoteResponse: quoteData,
+        userPublicKey: wallet.publicKey.toString(),
+        wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        prioritizationFeeLamports: 'auto'
+      })
+    });
+
+    const swapData = await swapResponse.json();
+    
+    if (!swapResponse.ok) {
+      throw new Error(`Swap preparation failed: ${swapData.error || 'Unknown error'}`);
+    }
+
+    // Deserialize and sign transaction
+    const swapTransactionBuf = Buffer.from(swapData.swapTransaction, 'base64');
+    const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
+    transaction.sign([wallet]);
+
+    // Send transaction
+    const signature = await connection.sendTransaction(transaction, {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed'
+    });
+
+    // Confirm transaction
+    await connection.confirmTransaction(signature, 'confirmed');
+
+    console.log("✅ Jupiter swap successful");
+    console.log("💰 Input Amount:", amountInLamports);
+    console.log("💰 Expected Output:", quoteData.outAmount);
+    console.log("🔗 Tx Hash:", signature);
+
+    // Send Telegram notification
+    try {
+      const { sendTelegramAlert } = await import('../utils/telegramAlert');
+      await sendTelegramAlert(`✅ Swap successful:
+- Token: ${outputMint.toString()}
+- Amount: ${quoteData.outAmount}
+- Tx: https://solscan.io/tx/${signature}`);
+    } catch (error) {
+      console.log("📱 Telegram notification failed:", error);
+    }
+
+    return signature;
+  } catch (error) {
+    console.error("❌ Jupiter swap failed:", error);
+    throw error;
+  }
+}
+
 const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`);
 
 // Load wallet using the same method as other parts of the system
