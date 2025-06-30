@@ -3,7 +3,8 @@ import { sendSol } from './utils/sendSol';
 import { logTrade } from './utils/tradeLogger';
 import { sendTelegramAlert } from './utils/telegramAlert';
 import { tokenPositionManager } from './services/tokenPositionManager';
-import { buyTokenWithSOL, sellTokenForSOL, selectRandomToken, getWalletBalance } from './utils/alternativeJupiter';
+import { buyTokenWithSOL, sellTokenForSOL, selectRandomToken } from './utils/alternativeJupiter';
+import { getSolBalance } from './utils/sendSol';
 import { config } from './config';
 import { logBuy, logSell } from './utils/pnlLogger';
 import { sendPositionOpened, sendPositionClosed } from './utils/telegramCommands';
@@ -29,7 +30,7 @@ export async function enhancedAutoTradeTrigger(): Promise<void> {
     console.log('🔍 Enhanced AI analyzing market for trading opportunities...');
     
     // Check wallet balance first
-    const balance = await getWalletBalance();
+    const balance = await getSolBalance();
     console.log(`💰 Current wallet balance: ${balance.toFixed(4)} SOL`);
     
     if (balance < config.tradeAmount) {

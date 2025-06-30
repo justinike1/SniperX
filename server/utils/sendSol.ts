@@ -21,18 +21,28 @@ try {
   // Load directly from phantom_key.json for reliability
   if (fs.existsSync('./phantom_key.json')) {
     const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
-    const secretKey = new Uint8Array(phantomData.privateKey);
     
-    // Use fromSeed for 32-byte keys, fromSecretKey for 64-byte keys
-    if (secretKey.length === 32) {
-      walletKeypair = Keypair.fromSeed(secretKey);
-    } else if (secretKey.length === 64) {
-      walletKeypair = Keypair.fromSecretKey(secretKey);
+    // Check if we have a private key or just an address
+    if (phantomData.privateKey && Array.isArray(phantomData.privateKey)) {
+      const secretKey = new Uint8Array(phantomData.privateKey);
+      
+      // Use fromSeed for 32-byte keys, fromSecretKey for 64-byte keys
+      if (secretKey.length === 32) {
+        walletKeypair = Keypair.fromSeed(secretKey);
+      } else if (secretKey.length === 64) {
+        walletKeypair = Keypair.fromSecretKey(secretKey);
+      } else {
+        throw new Error(`Invalid secret key length: ${secretKey.length}`);
+      }
+      
+      console.log(`🔗 Phantom wallet loaded successfully: ${walletKeypair.publicKey.toString()}`);
     } else {
-      throw new Error(`Invalid secret key length: ${secretKey.length}`);
+      // Read-only mode - use address for balance checking only
+      console.log(`🔗 Read-only wallet mode: ${phantomData.address}`);
+      console.log(`⚠️ Private key needed for live trading`);
+      // Create a dummy keypair for non-trading operations
+      walletKeypair = Keypair.generate();
     }
-    
-    console.log(`🔗 Phantom wallet loaded successfully: ${walletKeypair.publicKey.toString()}`);
   } else if (process.env.PHANTOM_PRIVATE_KEY) {
     // Backup: Load from environment variable
     const secretKey = JSON.parse(process.env.PHANTOM_PRIVATE_KEY);
@@ -51,14 +61,17 @@ try {
 }
 
 // Your real wallet address: 7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv
-export const REAL_WALLET_ADDRESS = walletKeypair.publicKey.toString();
+// Use actual funded wallet address for balance checking
+export const REAL_WALLET_ADDRESS = "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv";
 
 /**
  * Get SOL balance for your real wallet
  */
 export async function getSolBalance(): Promise<number> {
   try {
-    const balance = await connection.getBalance(walletKeypair.publicKey);
+    // Use actual funded wallet address for balance checking
+    const publicKey = new PublicKey(REAL_WALLET_ADDRESS);
+    const balance = await connection.getBalance(publicKey);
     return balance / LAMPORTS_PER_SOL;
   } catch (error) {
     console.error('Error fetching SOL balance:', error);

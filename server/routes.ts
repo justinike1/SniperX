@@ -169,14 +169,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get wallet balance
   app.get('/api/wallet/balance', requireAuth, async (req: any, res) => {
     try {
-      const balance = 0; // Real balance would come from blockchain
+      const { getSolBalance } = await import('./utils/sendSol');
+      const balance = await getSolBalance();
       const solPrice = await getRealSolanaPrice();
       
       res.json({
         success: true,
         balance: balance,
         usdValue: balance * solPrice,
-        solPrice: solPrice
+        solPrice: solPrice,
+        address: '7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv'
       });
     } catch (error) {
       console.error('Wallet balance error:', error);
