@@ -25,6 +25,9 @@ export const config = {
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit
   
+  // OpenAI Configuration
+  openaiKey: process.env.OPENAI_API_KEY || '',
+  
   // Telegram notifications (temporarily disabled until credentials verified)
   enableTelegram: false,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',

@@ -7,6 +7,8 @@ import { buyTokenWithSOL, sellTokenForSOL, selectRandomToken, getWalletBalance }
 import { config } from './config';
 import { logBuy, logSell } from './utils/pnlLogger';
 import { sendPositionOpened, sendPositionClosed } from './utils/telegramCommands';
+import { generateTradeInsight } from './utils/gptReasoning';
+import { broadcastTrade, broadcastInsight, broadcastAlert } from './utils/websocketServer';
 
 // Track active positions for intelligent selling
 const activePositions = new Map<string, {
@@ -68,6 +70,26 @@ async function executeTokenBuy(prediction: any): Promise<void> {
     if (swapResult.success && swapResult.signature) {
       console.log(`✅ TOKEN BUY SUCCESS: ${swapResult.signature}`);
       console.log(`📊 Tokens purchased: ${swapResult.tokensPurchased?.toLocaleString()} ${selectedToken}`);
+      
+      // Generate GPT insights for this trade
+      try {
+        const insight = await generateTradeInsight(
+          selectedToken,
+          'BUY',
+          BUY_AMOUNT,
+          [`AI prediction: ${prediction.prediction}`, `Confidence: ${prediction.confidence}%`, `Market analysis detected opportunity`]
+        );
+        console.log('🧠 GPT Insight:', insight.reasoning);
+        console.log(`📊 Confidence: ${insight.confidence}%`);
+        console.log(`⚠️ Risk factors: ${insight.riskFactors.join(', ')}`);
+        
+        // Broadcast trade with insight via WebSocket
+        const walletBalance = await getWalletBalance();
+        broadcastTrade(selectedToken, BUY_AMOUNT, 'BUY', walletBalance, insight);
+        broadcastInsight(insight);
+      } catch (error) {
+        console.log('🧠 Insight:', `${selectedToken} purchase at ${BUY_AMOUNT} SOL`);
+      }
       
       // Add to active positions for tracking
       activePositions.set(selectedToken, {

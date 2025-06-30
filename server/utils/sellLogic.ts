@@ -1,5 +1,7 @@
 import { getOpenPositions, logSell } from './pnlLogger';
-import { sendPositionClosed } from './telegramCommands';
+import { sendTelegramAlert } from './telegramAlert';
+import { logToGoogleSheets } from './googleSheetsLogger';
+import { dynamicStopLoss } from './dynamicStopLoss';
 // Using Jupiter DEX for token swapping - will be integrated with existing swap functions
 
 interface SellCondition {
@@ -42,13 +44,28 @@ export async function checkSellConditions(): Promise<void> {
 
     console.log(`🔍 Checking sell conditions for ${openPositions.length} open positions...`);
 
+    // Run rug pull monitoring first for all positions
+    await monitorRugPulls();
+
     for (const position of openPositions) {
       try {
         const currentPrice = await getCurrentTokenPrice(position.tokenAddress);
         const buyPrice = position.buyPrice;
         const profitLossPercent = ((currentPrice - buyPrice) / buyPrice) * 100;
+        const timeHeld = Date.now() - new Date(position.buyTimestamp).getTime();
+        const positionSize = parseFloat(position.buyAmount);
         
         console.log(`📊 ${position.symbol}: Buy: $${buyPrice.toFixed(6)} | Current: $${currentPrice.toFixed(6)} | P&L: ${profitLossPercent.toFixed(2)}%`);
+
+        // Calculate dynamic stop-loss using advanced AI
+        const dynamicStopLossResult = dynamicStopLoss.calculateDynamicStopLoss(
+          position.tokenAddress,
+          buyPrice,
+          positionSize,
+          timeHeld
+        );
+        
+        console.log(`🧠 Dynamic stop-loss for ${position.symbol}: ${dynamicStopLossResult.percentage.toFixed(2)}% (Confidence: ${dynamicStopLossResult.confidence}%)`);
 
         let shouldSell = false;
         let sellReason = '';
@@ -57,20 +74,50 @@ export async function checkSellConditions(): Promise<void> {
         if (profitLossPercent >= (DEFAULT_SELL_CONDITIONS.profitTarget * 100)) {
           shouldSell = true;
           sellReason = `Profit target reached: +${profitLossPercent.toFixed(2)}%`;
+          
+          // Update token memory with successful trade
+          dynamicStopLoss.updateTokenMemory(
+            position.tokenAddress,
+            position.symbol,
+            'WIN',
+            buyPrice,
+            currentPrice,
+            timeHeld
+          );
         }
         
-        // Check stop loss (2% loss)
-        else if (profitLossPercent <= -(DEFAULT_SELL_CONDITIONS.stopLoss * 100)) {
+        // Check dynamic stop loss instead of fixed 2%
+        else if (profitLossPercent <= -dynamicStopLossResult.percentage) {
           shouldSell = true;
-          sellReason = `Stop loss triggered: ${profitLossPercent.toFixed(2)}%`;
+          sellReason = `Dynamic stop loss triggered: ${profitLossPercent.toFixed(2)}% (Threshold: ${dynamicStopLossResult.percentage.toFixed(2)}%)`;
+          
+          // Update token memory with losing trade
+          dynamicStopLoss.updateTokenMemory(
+            position.tokenAddress,
+            position.symbol,
+            'LOSS',
+            buyPrice,
+            currentPrice,
+            timeHeld
+          );
         }
         
         // Check time-based sell (24 hours)
         else if (DEFAULT_SELL_CONDITIONS.timeBasedSell) {
-          const hoursHeld = (Date.now() - new Date(position.buyTimestamp).getTime()) / (1000 * 60 * 60);
+          const hoursHeld = timeHeld / (1000 * 60 * 60);
           if (hoursHeld >= DEFAULT_SELL_CONDITIONS.timeBasedSell) {
             shouldSell = true;
             sellReason = `Time-based sell: held for ${hoursHeld.toFixed(1)} hours`;
+            
+            // Update token memory with time-based exit
+            dynamicStopLoss.updateTokenMemory(
+              position.tokenAddress,
+              position.symbol,
+              profitLossPercent > 0 ? 'WIN' : 'LOSS',
+              buyPrice,
+              currentPrice,
+              timeHeld
+            );
           }
         }
 
@@ -83,9 +130,25 @@ export async function checkSellConditions(): Promise<void> {
         console.error(`❌ Error checking position ${position.symbol}:`, error);
       }
     }
+    
+    // Cleanup token memory periodically
+    dynamicStopLoss.cleanupTokenMemory();
 
   } catch (error) {
     console.error('❌ Error in checkSellConditions:', error);
+  }
+}
+
+// Export function for rug pull monitoring integration
+async function monitorRugPulls(): Promise<void> {
+  try {
+    // Import and start rug pull monitoring
+    const { rugPullMonitor } = await import('./rugPullMonitor');
+    if (!rugPullMonitor.getMonitoringStatus().isActive) {
+      rugPullMonitor.start();
+    }
+  } catch (error) {
+    console.error('Rug pull monitoring error:', error);
   }
 }
 
