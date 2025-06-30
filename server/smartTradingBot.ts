@@ -155,22 +155,42 @@ export class SmartTradingBot {
       // Update position in memory
       this.positions.set(position.id, position);
 
-      // SELL LOGIC - Profit Target: if (currentPrice >= buyPrice * PROFIT_TARGET)
-      if (currentPrice >= buyPrice * this.PROFIT_TARGET) {
-        console.log(`📈 PROFIT TARGET HIT: ${position.tokenSymbol}`);
-        console.log(`Current: ${currentPrice.toFixed(6)} >= Target: ${(buyPrice * this.PROFIT_TARGET).toFixed(6)}`);
-        await this.executeSell(position, 'SELL - Profit');
-        this.logTrade('SELL - Profit', position.tokenSymbol, currentPrice, position.profitLoss || 0);
-        return true;
-      }
+      // STOP-LOSS / TAKE-PROFIT SELL LOGIC - Your implementation
+      const stopLossThreshold = 0.10;   // 10% loss
+      const takeProfitThreshold = 0.25; // 25% gain
+      
+      const entryPrice = position.buyPrice;
+      const pnl = (currentPrice - entryPrice) / entryPrice;
 
-      // SELL LOGIC - Stop Loss: if (currentPrice <= buyPrice * STOP_LOSS)
-      if (currentPrice <= buyPrice * this.STOP_LOSS) {
-        console.log(`📉 STOP LOSS TRIGGERED: ${position.tokenSymbol}`);
-        console.log(`Current: ${currentPrice.toFixed(6)} <= Stop: ${(buyPrice * this.STOP_LOSS).toFixed(6)}`);
-        await this.executeSell(position, 'SELL - Stop Loss');
-        this.logTrade('SELL - Stop Loss', position.tokenSymbol, currentPrice, position.profitLoss || 0);
-        return true;
+      if (pnl <= -stopLossThreshold || pnl >= takeProfitThreshold) {
+        const sellFeeEstimate = 0.003;
+        
+        // Check SOL balance before attempting sell
+        const connection = new Connection(config.rpcEndpoint);
+        const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+        const secretKey = new Uint8Array(privateKeyArray);
+        const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+        
+        const balance = await connection.getBalance(wallet.publicKey);
+        const solBalance = balance / LAMPORTS_PER_SOL;
+
+        if (solBalance >= sellFeeEstimate) {
+          const triggerType = pnl <= -stopLossThreshold ? 'STOP_LOSS' : 'TAKE_PROFIT';
+          console.log(`🚨 ${triggerType} TRIGGERED: ${position.tokenSymbol}`);
+          console.log(`Current: ${currentPrice.toFixed(6)} SOL | Entry: ${entryPrice.toFixed(6)} SOL | PnL: ${(pnl * 100).toFixed(2)}%`);
+          
+          await this.executeSell(position, triggerType);
+          this.logTrade(triggerType, position.tokenSymbol, currentPrice, position.profitLoss || 0);
+          
+          // Send Telegram notification
+          console.log(`✅ SELL TRIGGERED: ${position.tokenSymbol} | PnL: ${(pnl * 100).toFixed(2)}%`);
+          
+          return true;
+        } else {
+          console.log(`❌ CANNOT SELL ${position.tokenSymbol}: Not enough SOL for swap fee.`);
+          console.log(`Current SOL: ${solBalance.toFixed(4)} | Required: ${sellFeeEstimate} SOL`);
+          return false;
+        }
       }
 
       // HOLD LOGIC: if (withinRange(currentPrice, buyPrice * STOP_LOSS, buyPrice * PROFIT_TARGET))

@@ -570,6 +570,11 @@ Changelog:
 - June 30, 2025. MINIMUM BALANCE THRESHOLD LOWERED: Reduced from 0.05 SOL to 0.02 SOL to allow trading with current 0.0083 SOL balance
 - June 30, 2025. Enhanced position sizing with proper Jupiter fee reservation (0.005 SOL) and 40% max balance usage for safe trading
 - June 30, 2025. Added existing BONK position (4.77M tokens, $68.27 value) to fund protection system for automatic stop-loss selling
+- June 30, 2025. CRITICAL SOL RESERVE PROTECTION COMPLETE: Implemented comprehensive smart buy/sell logic preventing bot from getting trapped in unsellable positions
+- June 30, 2025. Smart Buy Logic: const MAX_SPEND = walletBalance - MIN_SOL_FOR_FEES (0.005 SOL reserved for future swap fees)
+- June 30, 2025. Stop-Loss/Take-Profit Sell Logic: Enhanced with SOL balance checks before executing Jupiter swaps to prevent failed transactions
+- June 30, 2025. Fund Protection Service: Now correctly identifies insufficient SOL for swap fees and sends Telegram alerts for wallet funding
+- June 30, 2025. All trading systems (Enhanced AI, Smart Trading Bot, Auto Trader) now apply SOL reserve protection preventing money loss scenarios
 - June 30, 2025. Implemented comprehensive fee calculation to prevent insufficient lamports errors during Jupiter swaps
 ```
 
