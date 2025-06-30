@@ -390,7 +390,7 @@ export class SmartTradingBot {
       const walletBalance = balance / LAMPORTS_PER_SOL;
       
       // SMART BUY LOGIC - Token with SOL (Preserve Sell Fees)
-      const MIN_SOL_FOR_FEES = 0.005; // Reserve to cover future sell fees
+      const MIN_SOL_FOR_FEES = 0.0002; // Reserve to cover future sell fees
       const MIN_BUY_AMOUNT = 0.001; // Minimum viable trade amount
       const MAX_SPEND = walletBalance - MIN_SOL_FOR_FEES;
       
