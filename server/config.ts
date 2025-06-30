@@ -1,6 +1,6 @@
 // Trading Configuration
 export const config = {
-  dryRun: true, // DISABLED - Stop all live trading to prevent rate limiting
+  dryRun: false, // ENABLED - Live trading mode activated
   tradeAmount: 0.001,
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
@@ -26,7 +26,7 @@ export const config = {
   ],
     
   // Trading bot settings
-  enableAutomaticTrading: false, // DISABLED to prevent rate limiting
+  enableAutomaticTrading: true, // ENABLED for autonomous bot trading
   minConfidenceLevel: 85, // Minimum confidence for automatic trades
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit

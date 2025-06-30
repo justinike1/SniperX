@@ -12992,5 +12992,201 @@
     "symbol": "UNKNOWN",
     "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 3798z2EPzwGkcZNriuNRzGy9nb9VesCWAqyPmGgw33486f1gvMZ9qD422SVnvHUMn1QNJ6NBDuhG7WFY3Rd9NtRd using the Solana Explorer or CLI tools.",
     "timestamp": "2025-06-30T08:00:09.969Z"
+  },
+  {
+    "id": "analysis_1751270517168_8nu35d4wi",
+    "symbol": "SOL",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 346.29188026592,
+    "confidence": 30.128846565046665,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 348.66899483244094,
+    "stopLoss": 339.04471209296406,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:01:57.171Z"
+  },
+  {
+    "id": "analysis_1751270517196_hwc8my9ik",
+    "symbol": "BTC",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 249.9779114884958,
+    "confidence": 36.66575065570689,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 252.16099706973102,
+    "stopLoss": 244.66019983165165,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:01:57.199Z"
+  },
+  {
+    "id": "analysis_1751270517227_xm5rnt5ft",
+    "symbol": "ETH",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 92.53335987424167,
+    "confidence": 33.00990644443713,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 93.22503214091417,
+    "stopLoss": 90.60113255851292,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:01:57.229Z"
+  },
+  {
+    "id": "analysis_1751270517250_mkgq1g0i3",
+    "symbol": "BONK",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 273.7793764679876,
+    "confidence": 36.67422116855343,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 276.83143479639926,
+    "stopLoss": 267.3549578393309,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:01:57.252Z"
+  },
+  {
+    "id": "analysis_1751270517280_8bq6es2bo",
+    "symbol": "JUP",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 388.62577745462244,
+    "confidence": 34.43540969120368,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 392.2714715868603,
+    "stopLoss": 379.91508366759945,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:01:57.282Z"
+  },
+  {
+    "id": "analysis_1751270577166_0d6zmqkos",
+    "symbol": "SOL",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 153.30032515182074,
+    "confidence": 32.04157803834984,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 154.55953857661902,
+    "stopLoss": 149.9463422387423,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:02:57.168Z"
+  },
+  {
+    "id": "analysis_1751270577193_ve4oq3xcu",
+    "symbol": "BTC",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 81.57614734353899,
+    "confidence": 23.52187324361237,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 82.24172893880231,
+    "stopLoss": 79.5452559268172,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:02:57.194Z"
+  },
+  {
+    "id": "analysis_1751270577215_9rzuu5465",
+    "symbol": "ETH",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 113.74299355896652,
+    "confidence": 28.55855396462055,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 115.08888438154811,
+    "stopLoss": 110.65550648040843,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:02:57.217Z"
+  },
+  {
+    "id": "analysis_1751270577237_eb3s16gl4",
+    "symbol": "BONK",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 220.93581782847716,
+    "confidence": 33.880879031558855,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 222.45158784669985,
+    "stopLoss": 216.49873312252262,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:02:57.240Z"
+  },
+  {
+    "id": "analysis_1751270577261_g8qdh6wsq",
+    "symbol": "JUP",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 462.96139209428657,
+    "confidence": 26.67538970327877,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 465.9242405979875,
+    "stopLoss": 453.0862239933002,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:02:57.264Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 2aSFwdkNBzsF5o7Zgw2FLEjHiduRG9hb8V9FQhLGEACDxnEPytk4GeViPhWZjJfsMymK9JgJEsSAyaMMmgeTVxeH using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T08:04:28.358Z"
   }
 ]

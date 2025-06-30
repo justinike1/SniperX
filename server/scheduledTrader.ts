@@ -13,16 +13,16 @@ console.log(`🛡️ Safety mode: ${config.dryRun ? 'DRY RUN' : 'LIVE TRADING'}`
 //   await sendSystemStartupAlert();
 // }, 3000); // Wait 3 seconds for system initialization
 
-// DISABLED - Start scheduled trading with enhanced token trading
-// setInterval(() => {
-//   console.log("🚀 Running enhanced SniperX token trading...");
-//   enhancedAutoTradeTrigger();
-// }, config.tradeIntervalMs);
+// Start scheduled trading with enhanced token trading
+setInterval(() => {
+  console.log("🚀 Running enhanced SniperX token trading...");
+  enhancedAutoTradeTrigger();
+}, config.tradeIntervalMs);
 
-// DISABLED - Initial trade check on startup
-// setTimeout(() => {
-//   console.log("🔍 Running initial SniperX trade analysis...");
-//   autoTradeTrigger();
-// }, 5000); // Wait 5 seconds after startup
+// Initial trade check on startup
+setTimeout(() => {
+  console.log("🔍 Running initial SniperX trade analysis...");
+  autoTradeTrigger();
+}, 5000); // Wait 5 seconds after startup
 
 export { autoTradeTrigger };
