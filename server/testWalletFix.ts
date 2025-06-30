@@ -18,8 +18,9 @@ async function testWalletFix() {
   try {
     const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
     
-    if (phantomData.privateKey && Array.isArray(phantomData.privateKey) && phantomData.privateKey.length === 64) {
-      console.log('✅ Wallet format: Valid 64-byte private key array');
+    if (phantomData.privateKey && Array.isArray(phantomData.privateKey) && 
+        (phantomData.privateKey.length === 32 || phantomData.privateKey.length === 64)) {
+      console.log(`✅ Wallet format: Valid ${phantomData.privateKey.length}-byte private key array`);
       console.log(`   Address: ${phantomData.address}`);
       testsPassed++;
     } else {
@@ -36,7 +37,15 @@ async function testWalletFix() {
   try {
     const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
     const secretKey = new Uint8Array(phantomData.privateKey);
-    const wallet = Keypair.fromSecretKey(secretKey);
+    
+    let wallet: Keypair;
+    if (secretKey.length === 32) {
+      wallet = Keypair.fromSeed(secretKey);
+    } else if (secretKey.length === 64) {
+      wallet = Keypair.fromSecretKey(secretKey);
+    } else {
+      throw new Error(`Invalid secret key length: ${secretKey.length}`);
+    }
     
     console.log('✅ Wallet loading: Success');
     console.log(`   Public key: ${wallet.publicKey.toString()}`);
@@ -59,7 +68,16 @@ async function testWalletFix() {
   try {
     const connection = new Connection('https://api.mainnet-beta.solana.com');
     const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
-    const wallet = Keypair.fromSecretKey(new Uint8Array(phantomData.privateKey));
+    const secretKey = new Uint8Array(phantomData.privateKey);
+    
+    let wallet: Keypair;
+    if (secretKey.length === 32) {
+      wallet = Keypair.fromSeed(secretKey);
+    } else if (secretKey.length === 64) {
+      wallet = Keypair.fromSecretKey(secretKey);
+    } else {
+      throw new Error(`Invalid secret key length: ${secretKey.length}`);
+    }
     
     const balance = await connection.getBalance(wallet.publicKey);
     const solBalance = balance / LAMPORTS_PER_SOL;

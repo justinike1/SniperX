@@ -10,9 +10,8 @@ import {
 import fs from 'fs';
 import { config } from '../config';
 
-// Solana RPC connection - using mainnet-beta as user specified
-import { clusterApiUrl } from '@solana/web3.js';
-const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
+// Solana RPC connection - using Helius for accurate balance detection
+const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`, "confirmed");
 
 // Load keypair from wallet file - YOUR REAL WALLET
 const walletFilePath = process.env.WALLET_FILE_PATH || './secret.json';
@@ -22,7 +21,17 @@ try {
   // Load directly from phantom_key.json for reliability
   if (fs.existsSync('./phantom_key.json')) {
     const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
-    walletKeypair = Keypair.fromSecretKey(new Uint8Array(phantomData.privateKey));
+    const secretKey = new Uint8Array(phantomData.privateKey);
+    
+    // Use fromSeed for 32-byte keys, fromSecretKey for 64-byte keys
+    if (secretKey.length === 32) {
+      walletKeypair = Keypair.fromSeed(secretKey);
+    } else if (secretKey.length === 64) {
+      walletKeypair = Keypair.fromSecretKey(secretKey);
+    } else {
+      throw new Error(`Invalid secret key length: ${secretKey.length}`);
+    }
+    
     console.log(`🔗 Phantom wallet loaded successfully: ${walletKeypair.publicKey.toString()}`);
   } else if (process.env.PHANTOM_PRIVATE_KEY) {
     // Backup: Load from environment variable
