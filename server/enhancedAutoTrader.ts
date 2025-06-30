@@ -164,7 +164,7 @@ async function executeTokenBuy(prediction: any): Promise<void> {
     
     // Fallback to SOL transfer to maintain trading activity
     try {
-      const txHash = await sendSol(BUY_AMOUNT, config.destinationWallet);
+      const txHash = await sendSol(config.destinationWallet, BUY_AMOUNT);
       console.log(`🚀 LIVE TRADE EXECUTED: ${BUY_AMOUNT} SOL | Signal: ${prediction.prediction} | Confidence: ${prediction.confidence}% | TX: ${txHash}`);
       
       logTrade({

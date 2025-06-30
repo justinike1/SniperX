@@ -2,7 +2,7 @@
 export const config = {
   dryRun: false, // 🚀 LIVE TRADING ENABLED - Using working sendSol function
   tradeAmount: 0.001,
-  destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
+  destinationWallet: "F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2",
   logFilePath: "./server/logs/tradeLogs.json",
   tradeIntervalMs: 3000, // MAXIMUM BOT PACKAGE: Run every 3 seconds for ultra-aggressive trading
   
@@ -12,12 +12,18 @@ export const config = {
   requireConfirmation: true, // Require explicit confirmation for trades
   
   // Wallet settings
-  userWalletAddress: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
+  userWalletAddress: "F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2",
   
-  // API settings
-  rpcEndpoint: process.env.HELIUS_API_KEY 
-    ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
-    : 'https://api.mainnet-beta.solana.com',
+  // API settings - Using public RPC to bypass API key permission issues
+  rpcEndpoint: 'https://api.mainnet-beta.solana.com',
+  
+  // Backup RPC endpoints for redundancy
+  backupRpcEndpoints: [
+    'https://api.mainnet-beta.solana.com',
+    'https://solana-api.projectserum.com',
+    'https://rpc.ankr.com/solana',
+    'https://solana.publicnode.com'
+  ],
     
   // Trading bot settings
   enableAutomaticTrading: true,

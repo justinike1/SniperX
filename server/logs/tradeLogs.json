@@ -12818,5 +12818,35 @@
     "symbol": "UNKNOWN",
     "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 4bNScwjKZPa8Qs1wqAL9WQZiYvTLTPMGo65V63MYhVxQW7E5WE5Vtba6vSyRs79L1UmBnfftZmSTWeQqe1DH2UvS using the Solana Explorer or CLI tools.",
     "timestamp": "2025-06-30T07:24:26.240Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature h2pdBXBGwQQ1oZACBiKM9i8XAwSgFxXLnSeDbqo9EeZrT1U8yt7GsBN2Gre4Rr4fmLzKaYYdptdyPcpnN7LMJX9 using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:25:40.007Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 59kkSnhvdqGmbLvFLcnC1V4hLFamyTb5VkMtEHaBej8nW2SYSCboka4YYxSr1evbQwcT7oLUeP68ExvAsyC42GpA using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:27:07.241Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 4LHuZgzYhhfmXiGyiAL1YJN7WBjnh4hheMLZbwZN212KYUY5PeYenkENVm3np76xpFPWN8t4ToRzwmR5seBmnRwf using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:32:34.952Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 4nBCe9iAd6H1vzUdpt9EytTJXu4sRfYJFmzQqra9j7SyQh4kLifbLWc7mQnYRkCzheLLUFtqVihd8BAFf6JRQyvg using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:33:46.678Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 4Seti3hcea9t1xvL9oJJyEGCoV5yHYjACA5Ct34PDtPSAkhSvnN3wePJB4k7eM92KzQvZi7JvbnHvvtMJVj1EeY9 using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:37:23.870Z"
   }
 ]

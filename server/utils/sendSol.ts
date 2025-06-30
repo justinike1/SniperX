@@ -10,8 +10,18 @@ import {
 import fs from 'fs';
 import { config } from '../config';
 
-// Solana RPC connection - using Helius for accurate balance detection
-const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`, "confirmed");
+// Solana RPC connection - using multiple endpoints to avoid rate limiting
+const rpcEndpoints = [
+  'https://api.mainnet-beta.solana.com',
+  'https://rpc.ankr.com/solana',
+  'https://solana-api.projectserum.com',
+  `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+];
+
+function getConnection() {
+  const endpoint = rpcEndpoints[Math.floor(Math.random() * rpcEndpoints.length)];
+  return new Connection(endpoint, "confirmed");
+}
 
 // Load keypair from wallet file - YOUR REAL WALLET
 const walletFilePath = process.env.WALLET_FILE_PATH || './secret.json';
@@ -62,14 +72,15 @@ try {
 
 // Your real wallet address: 7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv
 // Use actual funded wallet address for balance checking
-export const REAL_WALLET_ADDRESS = "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv";
+export const REAL_WALLET_ADDRESS = "F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2";
 
 /**
  * Get SOL balance for your real wallet
  */
 export async function getSolBalance(): Promise<number> {
   try {
-    // Use actual funded wallet address for balance checking
+    // Use randomized RPC endpoint to avoid rate limiting
+    const connection = getConnection();
     const publicKey = new PublicKey(REAL_WALLET_ADDRESS);
     const balance = await connection.getBalance(publicKey);
     return balance / LAMPORTS_PER_SOL;
@@ -84,6 +95,15 @@ export async function getSolBalance(): Promise<number> {
  * Main function used by AI trading bot
  */
 export async function sendSol(destinationAddress: string, amountSol: number): Promise<string> {
+  // Parameter validation to prevent NaN errors
+  if (typeof destinationAddress !== 'string' || destinationAddress.length < 32) {
+    throw new Error(`Invalid destination address: ${destinationAddress} (type: ${typeof destinationAddress})`);
+  }
+  
+  if (typeof amountSol !== 'number' || isNaN(amountSol) || amountSol <= 0) {
+    throw new Error(`Invalid amount: ${amountSol} (type: ${typeof amountSol})`);
+  }
+
   // Safety check: Dry run mode
   if (config.dryRun) {
     console.log(`[DRY RUN] Would send ${amountSol} SOL to ${destinationAddress}`);
@@ -96,14 +116,23 @@ export async function sendSol(destinationAddress: string, amountSol: number): Pr
   }
 
   try {
+    // Additional debug logging to catch parameter order issues
+    console.log(`🔍 DEBUG: destinationAddress=${destinationAddress} (type: ${typeof destinationAddress})`);
+    console.log(`🔍 DEBUG: amountSol=${amountSol} (type: ${typeof amountSol})`);
     console.log(`Sending ${amountSol} SOL to ${destinationAddress}`);
     
+    // Use randomized RPC endpoint to avoid rate limiting
+    const connection = getConnection();
+    
     const toPubkey = new PublicKey(destinationAddress);
+    const lamportsAmount = Math.floor(amountSol * LAMPORTS_PER_SOL);
+    console.log(`🔍 DEBUG: lamportsAmount=${lamportsAmount}`);
+    
     const transaction = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: walletKeypair.publicKey,
         toPubkey,
-        lamports: amountSol * LAMPORTS_PER_SOL,
+        lamports: lamportsAmount,
       })
     );
 

@@ -1,51 +1,84 @@
-import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import fs from 'fs';
-import { Keypair } from '@solana/web3.js';
+/**
+ * COMPREHENSIVE WALLET BALANCE CHECKER
+ * Checks all wallet addresses and provides funding guidance
+ */
+
+import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+
+// Multiple RPC endpoints for reliability
+const RPC_ENDPOINTS = [
+  'https://api.mainnet-beta.solana.com',
+  'https://rpc.ankr.com/solana',
+  'https://solana-api.projectserum.com',
+  'https://api.metaplex.solana.com',
+];
 
 async function checkCurrentBalance() {
-  console.log('💰 Checking current wallet balance...');
+  console.log('🔍 COMPREHENSIVE WALLET BALANCE CHECK');
+  console.log('=====================================');
   
-  try {
-    // Load wallet from phantom_key.json
-    const phantomData = JSON.parse(fs.readFileSync('phantom_key.json', 'utf8'));
-    const keypair = Keypair.fromSecretKey(Uint8Array.from(phantomData.privateKey));
+  const walletsToCheck = [
+    { name: 'Primary Trading Wallet', address: '7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv' },
+    { name: 'Alternative Wallet', address: 'F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2' },
+  ];
+
+  for (const wallet of walletsToCheck) {
+    console.log(`\n📍 Checking ${wallet.name}:`);
+    console.log(`   Address: ${wallet.address}`);
     
-    // Connect to mainnet
-    const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
+    let balance = 0;
+    let success = false;
     
-    console.log('📍 Wallet address:', keypair.publicKey.toBase58());
-    
-    // Check balance
-    const balance = await connection.getBalance(keypair.publicKey);
-    const solBalance = balance / LAMPORTS_PER_SOL;
-    
-    console.log(`💰 Current balance: ${solBalance} SOL`);
-    
-    if (solBalance > 0) {
-      console.log('✅ FUNDS AVAILABLE - Autonomous trading should be executing!');
-      console.log(`💡 With ${solBalance} SOL, you can execute ${Math.floor(solBalance / 0.001)} trades at 0.001 SOL each`);
-    } else {
-      console.log('❌ No funds detected - trading system waiting for deposit');
+    // Try multiple RPC endpoints
+    for (const rpc of RPC_ENDPOINTS) {
+      try {
+        const connection = new Connection(rpc, 'confirmed');
+        const publicKey = new PublicKey(wallet.address);
+        const lamports = await connection.getBalance(publicKey);
+        balance = lamports / LAMPORTS_PER_SOL;
+        
+        console.log(`   ✅ Balance: ${balance.toFixed(6)} SOL (via ${rpc})`);
+        success = true;
+        break;
+      } catch (error) {
+        console.log(`   ❌ Failed via ${rpc}: ${error.message}`);
+      }
     }
     
-    return { balance: solBalance, address: keypair.publicKey.toBase58() };
-    
-  } catch (error) {
-    console.error('❌ Error checking balance:', error);
-    return null;
+    if (!success) {
+      console.log(`   ⚠️  Could not fetch balance for ${wallet.name}`);
+    } else {
+      // Analyze balance status
+      if (balance === 0) {
+        console.log(`   🚨 CRITICAL: ${wallet.name} has ZERO balance - needs funding immediately`);
+        console.log(`   📝 To fund this wallet:`);
+        console.log(`      1. Open Phantom wallet`);
+        console.log(`      2. Send SOL to: ${wallet.address}`);
+        console.log(`      3. Minimum recommended: 0.1 SOL for testing`);
+        console.log(`      4. For live trading: 1-5 SOL recommended`);
+      } else if (balance < 0.01) {
+        console.log(`   ⚠️  LOW BALANCE: ${wallet.name} has insufficient funds for trading`);
+        console.log(`   💡 Need at least 0.01 SOL for basic transactions`);
+      } else if (balance < 0.1) {
+        console.log(`   ⚠️  MINIMAL BALANCE: ${wallet.name} can execute limited transactions`);
+        console.log(`   💡 Recommended to add more SOL for continuous trading`);
+      } else {
+        console.log(`   ✅ SUFFICIENT BALANCE: ${wallet.name} ready for live trading`);
+        console.log(`   💰 Can execute approximately ${Math.floor(balance / 0.001)} trades at 0.001 SOL each`);
+      }
+    }
   }
+  
+  console.log('\n🎯 NEXT STEPS:');
+  console.log('1. Fund the primary wallet with SOL from your exchange (Phantom, Coinbase, etc.)');
+  console.log('2. Verify balance appears in checks above');
+  console.log('3. Platform will automatically resume live trading once funded');
+  console.log('4. Monitor Telegram alerts for trade execution confirmations');
 }
 
-checkCurrentBalance().then((result) => {
-  if (result) {
-    console.log('\n🚀 AUTONOMOUS TRADING STATUS:');
-    console.log('- AI signals: 99.9% confidence STRONG_BUY every 60 seconds');
-    console.log('- Trade amount: 0.001 SOL per trade');
-    console.log('- Live trading: ENABLED');
-    console.log('- Wallet integration: ACTIVE');
-    
-    if (result.balance > 0) {
-      console.log('\n✅ SYSTEM READY FOR PROFIT GENERATION');
-    }
-  }
-});
+// Self-executing check (ES module compatible)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  checkCurrentBalance().catch(console.error);
+}
+
+export { checkCurrentBalance };
