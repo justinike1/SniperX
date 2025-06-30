@@ -14899,5 +14899,25 @@
       "Phantom wallet integration active"
     ],
     "timestamp": "2025-06-30T12:32:37.551Z"
+  },
+  {
+    "id": "analysis_1751286755399_4184asbko",
+    "symbol": "UNKNOWN",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 156.92726599888,
+    "confidence": 99.9,
+    "prediction": "STRONG_BUY",
+    "status": "EXECUTED",
+    "txHash": "4SzadFsvPVD2vzTwA5KtbyNHh1yHExvAB4T9vDVVycntJrcx8rjW4ou1aaYVecmNaKhKbrN6qcqKt513RgEMeWEX",
+    "targetPrice": 158.43865023502627,
+    "stopLoss": 152.95375892342685,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T12:32:44.532Z"
   }
 ]
