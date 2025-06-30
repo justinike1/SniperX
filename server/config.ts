@@ -25,10 +25,10 @@ export const config = {
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit
   
-  // Telegram notifications
-  enableTelegram: true,
-  telegramBotToken: '7891487420:AAE5m0BofKVS6HF77eyK0Uj0FAo5aLJ-_hs',
-  telegramChatId: '7521280236'
+  // Telegram notifications (temporarily disabled until credentials verified)
+  enableTelegram: false,
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  telegramChatId: process.env.TELEGRAM_CHAT_ID || ''
 };
 
 // Environment-based overrides

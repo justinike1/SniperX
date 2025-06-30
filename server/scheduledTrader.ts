@@ -1,4 +1,5 @@
 import { autoTradeTrigger } from "./autoTrader";
+import { enhancedAutoTradeTrigger } from "./enhancedAutoTrader";
 import { sendSystemStartupAlert } from "./utils/telegramAlert";
 import { config } from "./config";
 
@@ -12,10 +13,10 @@ setTimeout(async () => {
   await sendSystemStartupAlert();
 }, 3000); // Wait 3 seconds for system initialization
 
-// Start scheduled trading
+// Start scheduled trading with enhanced token trading
 setInterval(() => {
-  console.log("🚀 Running scheduled SniperX trade check...");
-  autoTradeTrigger();
+  console.log("🚀 Running enhanced SniperX token trading...");
+  enhancedAutoTradeTrigger();
 }, config.tradeIntervalMs);
 
 // Initial trade check on startup

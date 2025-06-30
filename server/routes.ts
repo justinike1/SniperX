@@ -4419,6 +4419,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // P&L TRACKING ENDPOINTS
+  
+  // Get P&L summary
+  app.get('/api/pnl/summary', requireAuth, async (req: any, res) => {
+    try {
+      const { getPnLSummary } = await import('./utils/pnlLogger');
+      const summary = getPnLSummary();
+      res.json({
+        success: true,
+        summary
+      });
+    } catch (error) {
+      console.error('P&L summary error:', error);
+      res.status(500).json({ error: 'Failed to get P&L summary' });
+    }
+  });
+
+  // Get open and closed positions
+  app.get('/api/pnl/positions', requireAuth, async (req: any, res) => {
+    try {
+      const { getOpenPositions, getClosedPositions } = await import('./utils/pnlLogger');
+      const openPositions = getOpenPositions();
+      const closedPositions = getClosedPositions();
+      
+      res.json({
+        success: true,
+        open: openPositions,
+        closed: closedPositions
+      });
+    } catch (error) {
+      console.error('P&L positions error:', error);
+      res.status(500).json({ error: 'Failed to get positions' });
+    }
+  });
+
+  // Send daily P&L summary via Telegram
+  app.post('/api/telegram/daily-summary', requireAuth, async (req: any, res) => {
+    try {
+      const { sendDailySummary } = await import('./utils/telegramCommands');
+      await sendDailySummary();
+      res.json({
+        success: true,
+        message: 'Daily summary sent to Telegram'
+      });
+    } catch (error) {
+      console.error('Telegram daily summary error:', error);
+      res.status(500).json({ error: 'Failed to send daily summary' });
+    }
+  });
+
+  // Send weekly P&L summary via Telegram
+  app.post('/api/telegram/weekly-summary', requireAuth, async (req: any, res) => {
+    try {
+      const { sendWeeklySummary } = await import('./utils/telegramCommands');
+      await sendWeeklySummary();
+      res.json({
+        success: true,
+        message: 'Weekly summary sent to Telegram'
+      });
+    } catch (error) {
+      console.error('Telegram weekly summary error:', error);
+      res.status(500).json({ error: 'Failed to send weekly summary' });
+    }
+  });
+
   // Start continuous optimization for ultimate success
   ultimateSuccessEngine.runContinuousOptimization();
 
