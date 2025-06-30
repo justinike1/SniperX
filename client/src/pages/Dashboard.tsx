@@ -36,6 +36,7 @@ import { MainTradingHub } from '@/components/MainTradingHub';
 import { WalletBalanceSlider } from '@/components/WalletBalanceSlider';
 import { RealMoneyBanner } from '@/components/RealMoneyBanner';
 import { GPTPerformanceDashboard } from '@/components/GPTPerformanceDashboard';
+import AdvancedSellEngine from '@/components/AdvancedSellEngine';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -303,6 +304,8 @@ export default function Dashboard() {
       <AutomatedLightTrading />
       
       <UltimateSuccessDashboard />
+      
+      <AdvancedSellEngine />
       
       <AITradingEngine 
         tokenAddress={liveTokens?.length > 0 ? liveTokens[0].address : undefined}

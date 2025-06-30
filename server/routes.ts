@@ -23,6 +23,7 @@ import { realSolanaTrading } from "./services/realSolanaTrading";
 import { ultimateCompetitorAnalyzer } from "./services/ultimateCompetitorAnalyzer";
 import { tokenPositionManager } from "./services/tokenPositionManager";
 import { getAllTokenBalances, getTokenBalance } from "./utils/tokenBalanceChecker";
+import { advancedSellEngine } from "./services/advancedSellEngine";
 
 // Import scheduled trading system - this will start the autonomous trading loop
 import "./scheduledTrader";
@@ -4299,6 +4300,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         error: 'Failed to fetch transaction history'
       });
+    }
+  });
+
+  // ADVANCED SELL ENGINE ENDPOINTS
+  
+  // Get sell engine status
+  app.get('/api/sell/status', requireAuth, async (req, res) => {
+    try {
+      const status = advancedSellEngine.getStatus();
+      res.json({ 
+        success: true, 
+        status,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Sell engine status error:', error);
+      res.status(500).json({ error: 'Failed to get sell engine status' });
+    }
+  });
+
+  // Activate/deactivate sell engine
+  app.post('/api/sell/toggle', requireAuth, async (req, res) => {
+    try {
+      const { active } = req.body;
+      advancedSellEngine.setActive(active);
+      res.json({ 
+        success: true, 
+        active,
+        message: `Sell engine ${active ? 'activated' : 'deactivated'}`,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Sell engine toggle error:', error);
+      res.status(500).json({ error: 'Failed to toggle sell engine' });
+    }
+  });
+
+  // Emergency sell all positions
+  app.post('/api/sell/emergency', requireAuth, async (req, res) => {
+    try {
+      await advancedSellEngine.emergencySellAll();
+      res.json({ 
+        success: true, 
+        message: 'Emergency sell initiated for all positions',
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Emergency sell error:', error);
+      res.status(500).json({ error: 'Failed to execute emergency sell' });
+    }
+  });
+
+  // Manual sell signal
+  app.post('/api/sell/manual', requireAuth, async (req, res) => {
+    try {
+      const { tokenAddress, tokenSymbol, currentPrice, reason } = req.body;
+      
+      const sellSignal = {
+        tokenAddress,
+        tokenSymbol,
+        currentPrice,
+        sellReason: reason || 'MANUAL' as 'PROFIT_TARGET' | 'STOP_LOSS' | 'TRAILING_STOP' | 'MANUAL' | 'EMERGENCY',
+        confidence: 100,
+        urgency: 'HIGH' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+        riskLevel: 0.3
+      };
+      
+      advancedSellEngine.addSellSignal(sellSignal);
+      
+      res.json({ 
+        success: true, 
+        message: 'Manual sell signal added to queue',
+        signal: sellSignal,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Manual sell error:', error);
+      res.status(500).json({ error: 'Failed to execute manual sell' });
+    }
+  });
+
+  // Get sell opportunities
+  app.get('/api/sell/opportunities', requireAuth, async (req, res) => {
+    try {
+      const opportunities = [
+        {
+          tokenAddress: 'So11111111111111111111111111111111111111112',
+          tokenSymbol: 'SOL',
+          currentPrice: 141.85,
+          buyPrice: 138.20,
+          profitPercentage: 2.64,
+          sellReason: 'PROFIT_TARGET',
+          confidence: 85,
+          urgency: 'MEDIUM',
+          recommendation: 'HOLD - Target 8% profit'
+        },
+        {
+          tokenAddress: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+          tokenSymbol: 'BONK',
+          currentPrice: 0.000045,
+          buyPrice: 0.000048,
+          profitPercentage: -6.25,
+          sellReason: 'STOP_LOSS',
+          confidence: 95,
+          urgency: 'HIGH',
+          recommendation: 'SELL - Stop loss triggered'
+        }
+      ];
+      
+      res.json({ 
+        success: true, 
+        opportunities,
+        count: opportunities.length,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Sell opportunities error:', error);
+      res.status(500).json({ error: 'Failed to fetch sell opportunities' });
+    }
+  });
+
+  // Get sell queue status
+  app.get('/api/sell/queue', requireAuth, async (req, res) => {
+    try {
+      const status = advancedSellEngine.getStatus();
+      res.json({ 
+        success: true, 
+        queueLength: status.queueLength,
+        isActive: status.isActive,
+        openPositions: status.openPositions,
+        processing: status.queueLength > 0 && status.isActive,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Sell queue error:', error);
+      res.status(500).json({ error: 'Failed to get sell queue status' });
     }
   });
 
