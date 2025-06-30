@@ -223,6 +223,27 @@ class FundProtectionService {
         return;
       }
 
+      // Check SOL balance before attempting swap
+      const connection = new Connection(config.rpcEndpoint);
+      const balance = await connection.getBalance(this.wallet.publicKey);
+      const balanceInSOL = balance / LAMPORTS_PER_SOL;
+      
+      // Jupiter swaps need minimum 0.003 SOL for fees
+      if (balanceInSOL < 0.003) {
+        console.log(`⚠️ Cannot execute ${reason}: Only ${balanceInSOL.toFixed(4)} SOL available (need 0.003+ for fees)`);
+        
+        // Send urgent funding alert
+        await sendTelegramAlert(
+          `🚨 URGENT: Cannot sell ${position.tokenSymbol}!\n` +
+          `💰 Wallet Balance: ${balanceInSOL.toFixed(4)} SOL\n` +
+          `📊 Need: 0.003+ SOL for swap fees\n` +
+          `⚠️ ADD SOL NOW to protect your ${position.tokenSymbol} position!`
+        );
+        
+        // Don't remove position - keep trying until SOL is added
+        return;
+      }
+
       // Execute real Jupiter swap: Token → SOL  
       const sellTxHash = await swapTokenToSol(position.tokenAddress, position.tokenAmount);
       
