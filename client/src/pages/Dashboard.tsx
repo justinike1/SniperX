@@ -35,6 +35,7 @@ import { SupremeTradingBot } from '@/components/SupremeTradingBot';
 import { MainTradingHub } from '@/components/MainTradingHub';
 import { WalletBalanceSlider } from '@/components/WalletBalanceSlider';
 import { RealMoneyBanner } from '@/components/RealMoneyBanner';
+import { GPTPerformanceDashboard } from '@/components/GPTPerformanceDashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -267,6 +268,10 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <RealTimeMarketDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <GPTPerformanceDashboard />
       </div>
       
       {/* LiveActionChart temporarily disabled to fix infinite loop */}

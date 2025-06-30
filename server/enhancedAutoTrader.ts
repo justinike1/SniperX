@@ -9,6 +9,7 @@ import { logBuy, logSell } from './utils/pnlLogger';
 import { sendPositionOpened, sendPositionClosed } from './utils/telegramCommands';
 import { generateTradeInsight } from './utils/gptReasoning';
 import { broadcastTrade, broadcastInsight, broadcastAlert } from './utils/websocketServer';
+import { recordGPTInsight, recordTradeExecution } from './systemStatus';
 
 // Track active positions for intelligent selling
 const activePositions = new Map<string, {
@@ -83,6 +84,9 @@ async function executeTokenBuy(prediction: any): Promise<void> {
         console.log(`📊 Confidence: ${insight.confidence}%`);
         console.log(`⚠️ Risk factors: ${insight.riskFactors.join(', ')}`);
         
+        // Record GPT insight generation for system monitoring
+        recordGPTInsight();
+        
         // Broadcast trade with insight via WebSocket
         const walletBalance = await getWalletBalance();
         broadcastTrade(selectedToken, BUY_AMOUNT, 'BUY', walletBalance, insight);
@@ -100,6 +104,9 @@ async function executeTokenBuy(prediction: any): Promise<void> {
         targetPrice: BUY_AMOUNT * 1.08, // 8% profit target
         stopLoss: BUY_AMOUNT * 0.98 // 2% stop loss
       });
+      
+      // Record successful trade execution for system monitoring
+      recordTradeExecution(true);
       
       // Log successful trade
       logTrade({

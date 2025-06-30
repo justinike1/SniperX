@@ -45,6 +45,10 @@ export const getSolBalance = async (): Promise<number> => {
   }
 };
 
+export const getWalletBalance = async (): Promise<number> => {
+  return await getSolBalance();
+};
+
 export const getConnection = () => connection;
 
 export const sendSol = async (destination: string, amountSol: number, fromKeypair?: Keypair): Promise<string> => {
