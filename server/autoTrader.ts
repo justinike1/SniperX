@@ -9,8 +9,12 @@ import { protectiveTradingEngine } from './utils/protectiveTradingEngine';
 import { fundProtectionService } from './utils/fundProtectionService';
 import { diversifiedTradingEngine } from './services/diversifiedTradingEngine';
 import { config } from './config';
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import fs from 'fs';
+
+// Safety constants
+const MIN_REQUIRED_SOL = 0.05 * LAMPORTS_PER_SOL; // 0.05 SOL minimum for safety
+const TRADE_AMOUNT = 0.01; // 0.01 SOL per trade
 
 /**
  * Auto Trade Trigger - Main function called by scheduled trading
@@ -18,6 +22,26 @@ import fs from 'fs';
  */
 export async function autoTradeTrigger(): Promise<void> {
   try {
+    // Check wallet balance before executing any trades
+    const connection = new Connection(config.rpcEndpoint);
+    const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+    const secretKey = new Uint8Array(privateKeyArray);
+    const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+    
+    try {
+      const balance = await connection.getBalance(wallet.publicKey);
+      if (balance < MIN_REQUIRED_SOL) {
+        await sendTelegramAlert(`❌ LOW BALANCE: Not enough SOL to trade. Current: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+        console.log(`⚠️ LOW BALANCE: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Minimum required: 0.05 SOL`);
+        return;
+      }
+      console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Ready for trading`);
+    } catch (err) {
+      await sendTelegramAlert("❌ ERROR fetching wallet balance: " + (err instanceof Error ? err.message : 'Unknown error'));
+      console.log("❌ Failed to fetch wallet balance, skipping trading cycle");
+      return;
+    }
+    
     console.log('🔍 DIVERSIFIED TRADING: Analyzing multiple markets for maximum velocity...');
     
     // Execute diversified trading across multiple tokens for velocity

@@ -584,7 +584,13 @@ export class EnhancedAITradingEngine {
       // Execute real SOL transaction for high-confidence opportunities
       if (result.prediction === 'STRONG_BUY' && result.confidence > 85) {
         try {
-          const tradeAmount = this.calculatePositionSize(result.confidence);
+          const tradeAmount = await this.calculatePositionSize(result.confidence);
+          
+          // Skip if no safe trade amount available
+          if (tradeAmount <= 0) {
+            console.log('⚠️ Skipping trade - insufficient balance');
+            return result;
+          }
           
           // Use configured destination wallet from config
           const destinationAddress = config.destinationWallet;
@@ -749,11 +755,39 @@ export class EnhancedAITradingEngine {
     return Math.max(0, Math.min(100, baseRisk + volatilityRisk + volumeRisk));
   }
 
-  private calculatePositionSize(confidence: number): number {
-    // Conservative position sizing: 1-5% based on confidence
-    const baseSize = 0.01; // 1%
-    const confidenceMultiplier = Math.min(5, confidence / 20);
-    return baseSize * confidenceMultiplier;
+  private async calculatePositionSize(confidence: number): Promise<number> {
+    try {
+      // Get current wallet balance dynamically
+      const { Connection, Keypair, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
+      const fs = await import('fs');
+      
+      const connection = new Connection('https://api.mainnet-beta.solana.com');
+      const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+      const secretKey = new Uint8Array(privateKeyArray);
+      const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
+      
+      const balance = await connection.getBalance(wallet.publicKey);
+      const balanceInSOL = balance / LAMPORTS_PER_SOL;
+      
+      // Safety checks
+      const MIN_REQUIRED_SOL = 0.05;
+      if (balanceInSOL < MIN_REQUIRED_SOL) {
+        console.log(`⚠️ Insufficient balance: ${balanceInSOL.toFixed(4)} SOL`);
+        return 0;
+      }
+      
+      // Calculate safe trade amount (max 25% of balance or 0.01 SOL, whichever is smaller)
+      const maxSafeAmount = Math.min(balanceInSOL * 0.25, 0.01);
+      const confidenceMultiplier = Math.min(2, confidence / 50); // Conservative scaling
+      const safeTradeAmount = Math.min(maxSafeAmount * confidenceMultiplier, 0.01);
+      
+      console.log(`💰 Balance: ${balanceInSOL.toFixed(4)} SOL | Safe trade: ${safeTradeAmount.toFixed(4)} SOL`);
+      return safeTradeAmount;
+      
+    } catch (error) {
+      console.error('❌ Error calculating position size:', error);
+      return 0.005; // Fallback to very small amount
+    }
   }
 
   private generateDetailedReasoning(technicalIndicators: TechnicalIndicators, aiAnalysis: AIAnalysis, prediction: string): string[] {

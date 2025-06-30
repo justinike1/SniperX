@@ -4,8 +4,9 @@ import { sendTelegramAlert } from '../utils/telegramAlert';
 import { fundProtectionService } from '../utils/fundProtectionService';
 import { transactionReceiptLogger } from '../utils/transactionReceiptLogger';
 import { logTrade } from '../utils/tradeLogger';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { config } from '../config';
+import fs from 'fs';
 
 interface TokenOpportunity {
   symbol: string;
@@ -237,59 +238,85 @@ export class DiversifiedTradingEngine {
    */
   private async executeTokenBuy(opportunity: TokenOpportunity, tradeAmount: number): Promise<void> {
     try {
-      console.log(`💎 BUYING ${opportunity.symbol}: ${tradeAmount} SOL (${opportunity.confidence}% confidence)`);
+      // Check wallet balance before trading
+      const connection = new Connection(config.rpcEndpoint);
+      const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+      const secretKey = new Uint8Array(privateKeyArray);
+      const wallet = secretKey.length === 32 ? Keypair.fromSeed(secretKey) : Keypair.fromSecretKey(secretKey);
       
-      // Get Jupiter quote and route
-      const quote = await getBestRoute(
-        'So11111111111111111111111111111111111111112', // SOL
-        opportunity.address,
-        tradeAmount * 1e9 // Convert to lamports
-      );
-      
-      if (!quote) {
-        throw new Error(`No route found for ${opportunity.symbol}`);
-      }
-      
-      // Execute swap
-      const swapResult = await executeSwap(quote);
-      
-      if (swapResult && typeof swapResult === 'string') {
-        // Calculate estimated tokens received
-        const estimatedTokensReceived = parseInt(quote.outAmount) / 1e9;
+      try {
+        const balance = await connection.getBalance(wallet.publicKey);
+        const MIN_REQUIRED_SOL = 0.05 * LAMPORTS_PER_SOL;
         
-        // Add fund protection
-        const protectionId = fundProtectionService.addProtectedPosition(
-          opportunity.symbol,
+        if (balance < MIN_REQUIRED_SOL) {
+          await sendTelegramAlert(`❌ LOW BALANCE: Not enough SOL to trade. Current: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+          return;
+        }
+        
+        // Calculate safe trade amount (max 25% of balance or 0.1 SOL, whichever is smaller)
+        const maxSafeAmount = Math.min(balance * 0.25, 0.1 * LAMPORTS_PER_SOL);
+        const safeLamports = Math.min(tradeAmount * LAMPORTS_PER_SOL, maxSafeAmount);
+        const safeTradeAmount = safeLamports / LAMPORTS_PER_SOL;
+        
+        console.log(`💎 BUYING ${opportunity.symbol}: ${safeTradeAmount.toFixed(4)} SOL (${opportunity.confidence}% confidence)`);
+        
+        // Get Jupiter quote and route
+        const quote = await getBestRoute(
+          'So11111111111111111111111111111111111111112', // SOL
           opportunity.address,
-          estimatedTokensReceived,
-          tradeAmount,
-          swapResult
+          safeLamports // Use safe lamports amount
         );
+      
+        if (!quote) {
+          throw new Error(`No route found for ${opportunity.symbol}`);
+        }
         
-        // Log transaction
-        await transactionReceiptLogger.logBuyTransaction({
-          tokenSymbol: opportunity.symbol,
-          tokenAddress: opportunity.address,
-          solAmount: tradeAmount,
-          tokenAmount: estimatedTokensReceived,
-          txHash: swapResult,
-          confidence: opportunity.confidence,
-          priceImpact: parseFloat(quote.priceImpactPct || '0')
-        });
+        // Execute swap
+        const swapResult = await executeSwap(quote);
         
-        // Send alert
-        await sendTelegramAlert(
-          `🚀 DIVERSIFIED BUY: ${opportunity.symbol}\n` +
-          `💰 Amount: ${tradeAmount} SOL\n` +
-          `📊 Confidence: ${opportunity.confidence}%\n` +
-          `🛡️ Fund Protection: Active\n` +
-          `🔗 TX: ${swapResult.slice(0, 20)}...`
-        );
+        if (swapResult && typeof swapResult === 'string') {
+          // Calculate estimated tokens received
+          const estimatedTokensReceived = parseInt(quote.outAmount) / 1e9;
+          
+          // Add fund protection
+          const protectionId = fundProtectionService.addProtectedPosition(
+            opportunity.symbol,
+            opportunity.address,
+            estimatedTokensReceived,
+            safeTradeAmount,
+            swapResult
+          );
+          
+          // Log transaction
+          logTrade({
+            type: 'BUY',
+            symbol: opportunity.symbol,
+            amount: safeTradeAmount,
+            price: estimatedTokensReceived,
+            txHash: swapResult,
+            status: 'SUCCESS',
+            confidence: opportunity.confidence,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Send alert
+          await sendTelegramAlert(
+            `🚀 DIVERSIFIED BUY: ${opportunity.symbol}\n` +
+            `💰 Amount: ${safeTradeAmount} SOL\n` +
+            `📊 Confidence: ${opportunity.confidence}%\n` +
+            `🛡️ Fund Protection: Active\n` +
+            `🔗 TX: ${swapResult.slice(0, 20)}...`
+          );
+          
+          console.log(`✅ ${opportunity.symbol} BUY COMPLETED: ${swapResult}`);
+          
+        } else {
+          throw new Error(`Swap failed for ${opportunity.symbol}`);
+        }
         
-        console.log(`✅ ${opportunity.symbol} BUY COMPLETED: ${swapResult}`);
-        
-      } else {
-        throw new Error(`Swap failed for ${opportunity.symbol}`);
+      } catch (balanceError) {
+        await sendTelegramAlert("❌ ERROR fetching wallet balance: " + (balanceError instanceof Error ? balanceError.message : 'Unknown error'));
+        return;
       }
       
     } catch (error) {
