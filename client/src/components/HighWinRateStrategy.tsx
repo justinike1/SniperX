@@ -112,7 +112,7 @@ export default function HighWinRateStrategy() {
         if (result.success) {
           toast({
             title: "Trade Simulation Complete",
-            description: `Expected profit: $${trade.expectedGain.toFixed(2)} in ${trade.timeframe}`,
+            description: `Expected profit: $${trade.expectedGain?.toFixed(2) || '0.00'} in ${trade.timeframe || 'Unknown timeframe'}`,
           });
         }
       }
@@ -275,7 +275,7 @@ export default function HighWinRateStrategy() {
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-bold text-green-600">
-                        +${trade.expectedGain.toFixed(2)}
+                        +${trade.expectedGain?.toFixed(2) || '0.00'}
                       </div>
                       <div className="text-sm text-gray-500">
                         Expected in {trade.timeframe}
@@ -301,7 +301,7 @@ export default function HighWinRateStrategy() {
                   <div className="mb-3">
                     <div className="text-sm font-medium mb-1">Trading Signals:</div>
                     <div className="flex flex-wrap gap-1">
-                      {trade.signals.map((signal, index) => (
+                      {(trade.signals || []).map((signal, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {signal}
                         </Badge>

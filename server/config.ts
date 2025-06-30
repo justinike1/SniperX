@@ -4,7 +4,7 @@ export const config = {
   tradeAmount: 0.001,
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
-  tradeIntervalMs: 10000, // Run every 10 seconds for immediate trading
+  tradeIntervalMs: 3000, // MAXIMUM BOT PACKAGE: Run every 3 seconds for ultra-aggressive trading
   
   // Safety settings
   maxTradeAmount: 0.1, // Maximum SOL per trade

@@ -37,6 +37,7 @@ import { WalletBalanceSlider } from '@/components/WalletBalanceSlider';
 import { RealMoneyBanner } from '@/components/RealMoneyBanner';
 import { GPTPerformanceDashboard } from '@/components/GPTPerformanceDashboard';
 import AdvancedSellEngine from '@/components/AdvancedSellEngine';
+import MaximumBotDashboard from '@/components/MaximumBotDashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -304,6 +305,8 @@ export default function Dashboard() {
       <AutomatedLightTrading />
       
       <UltimateSuccessDashboard />
+      
+      <MaximumBotDashboard />
       
       <AdvancedSellEngine />
       
