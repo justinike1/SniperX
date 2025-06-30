@@ -415,6 +415,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Final Deployment API endpoints
+  app.post('/api/deployment/activate-final', requireAuth, async (req, res) => {
+    try {
+      const { finalDeploymentManager } = require('./finalDeployment');
+      await finalDeploymentManager.activateFinalDeployment();
+      res.json({
+        success: true,
+        message: 'Final deployment activated successfully'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to activate final deployment'
+      });
+    }
+  });
+
+  app.get('/api/deployment/status', (req, res) => {
+    try {
+      const { finalDeploymentManager } = require('./finalDeployment');
+      const status = finalDeploymentManager.getDeploymentStatus();
+      res.json({
+        success: true,
+        ...status
+      });
+    } catch (error) {
+      res.json({
+        success: true,
+        isOptimized: false,
+        uptime: 0,
+        metrics: {},
+        readyForDeployment: false
+      });
+    }
+  });
+
+  app.get('/api/deployment/report', (req, res) => {
+    try {
+      const { finalDeploymentManager } = require('./finalDeployment');
+      const report = finalDeploymentManager.generateDeploymentReport();
+      res.json({
+        success: true,
+        report
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate deployment report'
+      });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   
