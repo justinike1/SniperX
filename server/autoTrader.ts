@@ -3,6 +3,7 @@ import { sendSol } from './utils/sendSol';
 import { logTrade } from './utils/tradeLogger';
 import { sendTelegramAlert } from './utils/telegramAlert';
 import { positionManager } from './services/positionManager';
+import { getBestRoute, executeSwap } from './utils/jupiterClient';
 import { config } from './config';
 import axios from 'axios';
 
@@ -38,8 +39,17 @@ async function executeSellSignal(prediction: any): Promise<void> {
   try {
     console.log(`🔻 Selling ${prediction.symbol} at ${prediction.currentPrice} SOL`);
     
-    // Execute the sell via sendSol (placeholder for token swap logic)
-    const tx = await sendSol(config.destinationWallet, config.tradeAmount);
+    // Execute the sell via Jupiter DEX swap
+    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const TOKEN_MINT = prediction.tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'; // Default to BONK if no token address
+    
+    // Get the estimated token balance to sell (placeholder - in production would query actual token balance)
+    const tokenBalanceAmount = config.tradeAmount; // Using SOL amount as proxy for now
+    
+    const sellRoute = await getBestRoute(TOKEN_MINT, SOL_MINT, tokenBalanceAmount);
+    if (!sellRoute) throw new Error('No sell route found');
+
+    const tx = await executeSwap(sellRoute);
 
     const sellTrade = {
       id: prediction.id,
@@ -197,8 +207,14 @@ async function executeTrade(prediction: any): Promise<void> {
       timestamp: new Date().toISOString()
     };
 
-    // Execute the trade via sendSol
-    const txSignature = await sendSol(config.destinationWallet, config.tradeAmount);
+    // Execute Jupiter DEX swap for token purchase
+    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const TOKEN_MINT = prediction.tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'; // Default to BONK if no token address
+    
+    const route = await getBestRoute(SOL_MINT, TOKEN_MINT, config.tradeAmount);
+    if (!route) throw new Error('No valid swap route');
+
+    const txSignature = await executeSwap(route);
     
     // Send Telegram notification
     await sendTelegramAlert(`🚀 BUY executed:\nSymbol: ${prediction.symbol}\nAmount: ${config.tradeAmount} SOL\nConfidence: ${prediction.confidence}%\nTarget: ${prediction.targetPrice}`);
