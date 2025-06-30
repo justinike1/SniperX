@@ -12,6 +12,8 @@ import { smartTokenSelector } from './services/smartTokenSelector';
 import { isTokenBanned } from './utils/tokenBlacklist';
 import { tradeTracker } from './utils/tradeTracker';
 import './utils/emergencyBonkRemoval'; // Auto-execute BONK removal on import
+import { pluginManager } from './plugins/pluginManager';
+import { createTradingContext } from './plugins/pluginRegistry';
 import { config } from './config';
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import fs from 'fs';
@@ -58,7 +60,35 @@ export async function autoTradeTrigger(): Promise<void> {
       return;
     }
     
-    console.log('🔍 DIVERSIFIED TRADING: Analyzing multiple markets for maximum velocity...');
+    console.log('🔍 ENHANCED TRADING: Using plugin system for intelligent market analysis...');
+    
+    // Create trading context for plugins
+    const balance = await connection.getBalance(wallet.publicKey);
+    const walletBalance = balance / LAMPORTS_PER_SOL;
+    const tradingContext = createTradingContext(wallet.publicKey.toString(), walletBalance);
+    
+    // Execute plugin-based trading strategies
+    const pluginResults = await pluginManager.executePlugins(tradingContext);
+    
+    // Process plugin recommendations
+    for (const result of pluginResults) {
+      if (result.success && result.action === 'BUY' && result.token && result.confidence && result.confidence > 80) {
+        console.log(`📦 Plugin Strategy: ${result.reason}`);
+        console.log(`🎯 Confidence: ${result.confidence}% - Token: ${result.token}`);
+        
+        // Check if token is banned before executing
+        if (!isTokenBanned(result.token, '')) {
+          // Log the plugin-recommended trade
+          await tradeTracker.addTrade({
+            token: result.token,
+            amount: result.amount || 0.01,
+            type: 'BUY',
+            strategy: result.reason || 'Plugin Strategy',
+            confidence: result.confidence
+          });
+        }
+      }
+    }
     
     // Execute diversified trading across multiple tokens for velocity
     await diversifiedTradingEngine.executeDiversifiedTrading();
@@ -69,10 +99,12 @@ export async function autoTradeTrigger(): Promise<void> {
     // Check active trades for intelligent selling
     await checkAndExecuteIntelligentSells();
 
-    // Log diversification stats
+    // Log combined stats
     const stats = diversifiedTradingEngine.getDiversificationStats();
+    const pluginCount = pluginManager.getActivePluginsCount();
     console.log(`📊 PORTFOLIO: ${stats.totalPositions} positions across ${stats.uniqueTokens} tokens`);
     console.log(`🎯 DIVERSIFICATION: ${(stats.diversificationRatio * 100).toFixed(1)}% token coverage`);
+    console.log(`🔧 PLUGINS: ${pluginCount} active trading strategies`);
 
   } catch (error) {
     console.error('❌ Diversified trading error:', error);

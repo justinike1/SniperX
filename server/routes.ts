@@ -1218,5 +1218,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Plugin Management Routes
+  app.get('/api/plugins/status', async (req, res) => {
+    try {
+      const { pluginManager } = await import('./plugins/pluginManager');
+      const status = pluginManager.getPluginStatus();
+      const activeCount = pluginManager.getActivePluginsCount();
+      
+      res.json({
+        success: true,
+        plugins: status,
+        activeCount,
+        totalCount: status.length
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to get plugin status'
+      });
+    }
+  });
+
+  app.post('/api/plugins/:pluginName/enable', async (req, res) => {
+    try {
+      const { pluginName } = req.params;
+      const { pluginManager } = await import('./plugins/pluginManager');
+      
+      const success = await pluginManager.enablePlugin(pluginName);
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: `Plugin ${pluginName} enabled successfully`
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: `Failed to enable plugin ${pluginName}`
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Plugin enable failed'
+      });
+    }
+  });
+
+  app.post('/api/plugins/:pluginName/disable', async (req, res) => {
+    try {
+      const { pluginName } = req.params;
+      const { pluginManager } = await import('./plugins/pluginManager');
+      
+      const success = await pluginManager.disablePlugin(pluginName);
+      
+      if (success) {
+        res.json({
+          success: true,
+          message: `Plugin ${pluginName} disabled successfully`
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: `Failed to disable plugin ${pluginName}`
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Plugin disable failed'
+      });
+    }
+  });
+
   return httpServer;
 }

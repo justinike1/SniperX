@@ -18,6 +18,9 @@ import { fundProtectionService } from "./utils/fundProtectionService";
 // AUTONOMOUS 24/7 TRADING: Initialize continuous trading engine
 import { autonomous24x7TradingEngine } from "./services/autonomous24x7TradingEngine";
 
+// PLUGIN SYSTEM: Initialize modular trading strategies
+import { initializePlugins } from "./plugins/pluginRegistry";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -100,6 +103,17 @@ app.use((req, res, next) => {
   }
 
   scheduleDailySummary();
+
+  // INITIALIZE PLUGIN SYSTEM - Start before trading engines
+  setTimeout(async () => {
+    try {
+      console.log('🔧 INITIALIZING PLUGIN SYSTEM...');
+      await initializePlugins();
+      console.log('✅ PLUGIN SYSTEM READY - Enhanced trading strategies loaded');
+    } catch (error) {
+      console.error('❌ Failed to initialize plugins:', error);
+    }
+  }, 2000);
 
   // ACTIVATE 24/7 AUTONOMOUS TRADING - Start after 5 seconds to ensure all services are ready
   setTimeout(async () => {
