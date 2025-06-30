@@ -2,7 +2,7 @@
 export const config = {
   dryRun: false, // 🚀 LIVE TRADING ENABLED - Using working sendSol function
   tradeAmount: 0.001,
-  destinationWallet: "F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2",
+  destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
   tradeIntervalMs: 3000, // MAXIMUM BOT PACKAGE: Run every 3 seconds for ultra-aggressive trading
   
@@ -12,7 +12,7 @@ export const config = {
   requireConfirmation: true, // Require explicit confirmation for trades
   
   // Wallet settings
-  userWalletAddress: "F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2",
+  userWalletAddress: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   
   // API settings - Using public RPC to bypass API key permission issues
   rpcEndpoint: 'https://api.mainnet-beta.solana.com',

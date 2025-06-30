@@ -12848,5 +12848,17 @@
     "symbol": "UNKNOWN",
     "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 4Seti3hcea9t1xvL9oJJyEGCoV5yHYjACA5Ct34PDtPSAkhSvnN3wePJB4k7eM92KzQvZi7JvbnHvvtMJVj1EeY9 using the Solana Explorer or CLI tools.",
     "timestamp": "2025-06-30T07:37:23.870Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 246HgkHFrpBbSYoANQBdQp4EeLa5vB1KEDRKa6uVwnfQ3N7N9dmxEpauqNVEbKJASqLNWaF5GqTuxdZC7NwVW5UJ using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:44:29.197Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 22f6oWFcsRTpB6HZrdEMY6QoZ4qUk5qUXzTAsFGCaGoabBVgfeEu2WzSo8qXUjM9QZZYdT6kGt7UmvHnKBkJ5EU9 using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:48:01.396Z"
   }
 ]

@@ -10,12 +10,12 @@ import {
 import fs from 'fs';
 import { config } from '../config';
 
-// Solana RPC connection - using multiple endpoints to avoid rate limiting
+// Solana RPC connection - using public endpoints to avoid API key issues
 const rpcEndpoints = [
   'https://api.mainnet-beta.solana.com',
   'https://rpc.ankr.com/solana',
   'https://solana-api.projectserum.com',
-  `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`
+  'https://solana.public-rpc.com'
 ];
 
 function getConnection() {
@@ -72,7 +72,7 @@ try {
 
 // Your real wallet address: 7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv
 // Use actual funded wallet address for balance checking
-export const REAL_WALLET_ADDRESS = "F9J32TiWS7Ltrf6CFYtjoiCwZbST8GjuKrbKqSUfNtG2";
+export const REAL_WALLET_ADDRESS = "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv";
 
 /**
  * Get SOL balance for your real wallet
