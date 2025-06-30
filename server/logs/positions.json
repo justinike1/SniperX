@@ -1,0 +1,14 @@
+[
+  {
+    "symbol": "TEST",
+    "tokenAddress": "TestTokenAddress123",
+    "buyPrice": 0.001,
+    "buyAmount": "test_tx_buy_123",
+    "buyTimestamp": 1751260969741,
+    "status": "CLOSED",
+    "sellPrice": 0.0012,
+    "sellTimestamp": 1751260969742,
+    "pnl": null,
+    "pnlPercentage": 19.999999999999986
+  }
+]

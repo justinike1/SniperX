@@ -94,6 +94,22 @@ async function executeTokenBuy(prediction: any): Promise<void> {
       // Log buy for P&L tracking
       logBuy(selectedToken, 'live_token_address', BUY_AMOUNT, BUY_AMOUNT);
       
+      // Log to Google Sheets
+      try {
+        const { logTradeToSheet } = await import('./utils/googleSheetsLogger');
+        await logTradeToSheet({
+          timestamp: new Date().toISOString(),
+          type: 'BUY',
+          symbol: selectedToken,
+          tokenAddress: 'live_token_address',
+          amount: BUY_AMOUNT,
+          price: swapResult.amountSpent || BUY_AMOUNT,
+          txHash: swapResult.signature
+        });
+      } catch (error) {
+        console.log('Google Sheets logging skipped:', error.message);
+      }
+      
       // Send position opened alert
       await sendPositionOpened(selectedToken, BUY_AMOUNT, BUY_AMOUNT);
       

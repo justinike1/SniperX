@@ -157,6 +157,17 @@ export function getOpenPositions(): TradePosition[] {
   return positions.filter(pos => pos.status === 'OPEN');
 }
 
+// Get position statistics (alias for getPnLSummary for compatibility)
+export function getPositionStats() {
+  const summary = getPnLSummary();
+  return {
+    totalTrades: summary.totalTrades,
+    profitableTrades: summary.closedPositions > 0 ? Math.round((summary.winRate / 100) * summary.closedPositions) : 0,
+    totalPnL: summary.totalPnL,
+    winRate: summary.winRate
+  };
+}
+
 // Get closed positions
 export function getClosedPositions(): TradePosition[] {
   const positions = loadPositions();

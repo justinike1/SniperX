@@ -6,6 +6,12 @@ import "./continuousTrading"; // Auto-start continuous live trading
 import "./scheduledTrader"; // Auto-start scheduled trading with autoTradeTrigger
 import { initializeDatabase } from "./initDatabase";
 
+// Start automated sell monitoring system
+import { startSellConditionMonitoring } from "./utils/sellLogic";
+
+// Schedule daily P&L summary
+import { sendDailySummary } from "./utils/telegramCommands";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -46,6 +52,34 @@ app.use((req, res, next) => {
   await initializeDatabase();
   
   const server = await registerRoutes(app);
+
+  // Start automated sell monitoring system
+  startSellConditionMonitoring();
+
+  // Schedule daily P&L summary at 8 AM UTC
+  function scheduleDailySummary() {
+    const now = new Date();
+    const nextSummary = new Date();
+    nextSummary.setUTCHours(8, 0, 0, 0);
+    
+    if (nextSummary <= now) {
+      nextSummary.setUTCDate(nextSummary.getUTCDate() + 1);
+    }
+    
+    const timeUntilNext = nextSummary.getTime() - now.getTime();
+    
+    setTimeout(() => {
+      sendDailySummary().catch(console.error);
+      // Schedule next summary in 24 hours
+      setInterval(() => {
+        sendDailySummary().catch(console.error);
+      }, 24 * 60 * 60 * 1000);
+    }, timeUntilNext);
+    
+    console.log(`📊 Daily P&L summary scheduled for ${nextSummary.toUTCString()}`);
+  }
+
+  scheduleDailySummary();
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
