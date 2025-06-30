@@ -74,6 +74,8 @@ export async function sendSol(destinationAddress: string, amountSol: number): Pr
   }
 
   try {
+    console.log(`Sending ${amountSol} SOL to ${destinationAddress}`);
+    
     const toPubkey = new PublicKey(destinationAddress);
     const transaction = new Transaction().add(
       SystemProgram.transfer({

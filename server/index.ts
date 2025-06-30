@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import "./continuousTrading"; // Auto-start continuous live trading
+import "./scheduledTrader"; // Auto-start scheduled trading with autoTradeTrigger
 import { initializeDatabase } from "./initDatabase";
 
 const app = express();
