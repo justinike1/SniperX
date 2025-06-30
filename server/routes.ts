@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { simpleAuth } from "./simpleAuth";
 import { aiTradingEngine } from "./services/aiTradingEngine";
 import { realTimeMarketData } from "./services/realTimeMarketData";
-import { advancedSellEngine } from "./services/advancedSellEngine";
+import { lightningFastSellEngine } from "./services/lightningFastSellEngine";
 
 // Import scheduled trading system
 import "./scheduledTrader";
@@ -1288,6 +1288,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false,
         message: error instanceof Error ? error.message : 'Plugin disable failed'
       });
+    }
+  });
+
+  // Lightning Fast Sell Engine Endpoints
+  app.get('/api/trading/sell-positions', async (req, res) => {
+    try {
+      const positions = lightningFastSellEngine.getPositionsSummary();
+      res.json({ success: true, positions });
+    } catch (error) {
+      console.error('Error fetching sell positions:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch sell positions' });
+    }
+  });
+
+  app.post('/api/trading/sell-engine-stop', async (req, res) => {
+    try {
+      lightningFastSellEngine.emergencyStop();
+      res.json({ success: true, message: 'Lightning Fast Sell Engine stopped' });
+    } catch (error) {
+      console.error('Error stopping sell engine:', error);
+      res.status(500).json({ success: false, message: 'Failed to stop sell engine' });
+    }
+  });
+
+  app.post('/api/trading/sell-engine-resume', async (req, res) => {
+    try {
+      lightningFastSellEngine.resume();
+      res.json({ success: true, message: 'Lightning Fast Sell Engine resumed' });
+    } catch (error) {
+      console.error('Error resuming sell engine:', error);
+      res.status(500).json({ success: false, message: 'Failed to resume sell engine' });
     }
   });
 

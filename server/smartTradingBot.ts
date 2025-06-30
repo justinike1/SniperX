@@ -7,6 +7,7 @@ import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.j
 import { getBestRoute, executeSwap, swapTokenToSol } from './utils/jupiterClient';
 import { sendTelegramAlert } from './utils/telegramAlert';
 import { fundProtectionService } from './utils/fundProtectionService';
+import { lightningFastSellEngine } from './services/lightningFastSellEngine';
 import { config } from './config';
 import fs from 'fs';
 
@@ -445,6 +446,14 @@ export class SmartTradingBot {
           estimatedTokensReceived,
           tradeAmount,
           swapResult
+        );
+
+        // Add to lightning-fast sell engine for automated selling
+        lightningFastSellEngine.addPosition(
+          signal.tokenAddress,
+          signal.tokenSymbol,
+          signal.price || 1.0, // Use signal price or default
+          tradeAmount
         );
 
         // Send notification
