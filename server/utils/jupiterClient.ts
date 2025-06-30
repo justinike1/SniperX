@@ -95,17 +95,33 @@ export async function executeSwap(quote: JupiterQuote): Promise<string> {
     // Sign the transaction
     transaction.sign([wallet]);
     
-    // Execute the transaction
+    // Execute the transaction with enhanced confirmation
     const rawTransaction = transaction.serialize();
     const txid = await connection.sendRawTransaction(rawTransaction, {
-      skipPreflight: true,
-      maxRetries: 2,
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+      maxRetries: 3,
     });
     
-    await connection.confirmTransaction(txid);
-    console.log(`✅ Jupiter swap executed: ${txid}`);
+    console.log("📤 Jupiter swap transaction submitted:", txid);
     
-    return txid;
+    // Enhanced confirmation with timeout handling
+    try {
+      const confirmation = await connection.confirmTransaction(txid, 'confirmed');
+      if (confirmation.value.err) {
+        throw new Error(`Jupiter swap failed: ${confirmation.value.err}`);
+      }
+      console.log(`✅ Jupiter swap executed: ${txid}`);
+      return txid;
+    } catch (confirmError) {
+      // Check if transaction actually succeeded
+      const status = await connection.getSignatureStatus(txid);
+      if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
+        console.log("✅ Jupiter swap succeeded despite timeout | Tx ID:", txid);
+        return txid;
+      }
+      throw confirmError;
+    }
     
   } catch (error) {
     console.error('❌ Jupiter swap execution error:', error);

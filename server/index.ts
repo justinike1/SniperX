@@ -12,6 +12,9 @@ import { initializeDatabase } from "./initDatabase";
 // Schedule daily P&L summary
 import { sendDailySummary } from "./utils/telegramCommands";
 
+// CRITICAL: Initialize Fund Protection Service for automatic stop-loss and take-profit
+import { fundProtectionService } from "./utils/fundProtectionService";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

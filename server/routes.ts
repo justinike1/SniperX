@@ -628,5 +628,272 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Transaction Receipt and Jupiter Testing Endpoints
+  app.get('/api/trading/receipts', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const receipts = transactionReceiptLogger.getAllReceipts();
+      res.json({ success: true, receipts });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch receipts' });
+    }
+  });
+
+  app.get('/api/trading/pnl-tracker', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const pnl = transactionReceiptLogger.getPnLTracker();
+      res.json({ success: true, pnl });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch P&L data' });
+    }
+  });
+
+  app.post('/api/trading/test-jupiter-swap', async (req, res) => {
+    try {
+      const { swapSolToToken } = await import('./utils/jupiterClient');
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const { tokenAddress, amount, dryRun } = req.body;
+      
+      console.log('🧪 Testing Jupiter swap:', { tokenAddress, amount, dryRun });
+      
+      if (dryRun || config.dryRun) {
+        // Simulate successful swap for testing
+        const receipt = await transactionReceiptLogger.logTokenPurchase(
+          'TEST_TOKEN',
+          tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+          amount || 0.001,
+          (amount || 0.001) * 1000,
+          'DRY_RUN_TEST_TX',
+          95.5,
+          0.002
+        );
+        
+        res.json({ 
+          success: true, 
+          message: 'Dry run swap simulation completed',
+          receipt,
+          txHash: 'DRY_RUN_TEST_TX',
+          solscanLink: 'https://solscan.io/tx/DRY_RUN_TEST_TX'
+        });
+      } else {
+        const swapResult = await swapSolToToken(
+          tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+          amount || 0.001
+        );
+        
+        if (swapResult) {
+          const receipt = await transactionReceiptLogger.logTokenPurchase(
+            'JUPITER_TEST',
+            tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+            amount || 0.001,
+            (amount || 0.001) * 1000,
+            swapResult,
+            98.5,
+            0.001
+          );
+          
+          res.json({ 
+            success: true, 
+            message: 'Jupiter swap executed successfully',
+            receipt,
+            txHash: swapResult,
+            solscanLink: `https://solscan.io/tx/${swapResult}`
+          });
+        } else {
+          throw new Error('Jupiter swap failed');
+        }
+      }
+    } catch (error) {
+      console.error('Jupiter swap test failed:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Jupiter swap test failed',
+        error: error.message 
+      });
+    }
+  });
+
+  app.post('/api/trading/generate-daily-summary', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const summary = await transactionReceiptLogger.generateDailySummary();
+      res.json({ success: true, summary });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to generate summary' });
+    }
+  });
+
+  // Enhanced Auto Trading Status with Receipt Integration
+  app.get('/api/trading/enhanced-status', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const receipts = transactionReceiptLogger.getAllReceipts();
+      const pnl = transactionReceiptLogger.getPnLTracker();
+      const recentReceipts = receipts.slice(-10); // Last 10 trades
+      
+      res.json({
+        success: true,
+        status: {
+          isRunning: !config.dryRun,
+          mode: config.dryRun ? 'DRY_RUN' : 'LIVE_TRADING',
+          totalTrades: receipts.length,
+          todayTrades: receipts.filter(r => 
+            new Date(r.timestamp).toDateString() === new Date().toDateString()
+          ).length,
+          pnl,
+          recentTrades: recentReceipts
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to fetch enhanced status' });
+    }
+  });
+
+  // Protective Trading Engine Endpoints
+  app.get('/api/trading/receipts', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const receipts = transactionReceiptLogger.getAllReceipts();
+      res.json({ success: true, receipts });
+    } catch (error) {
+      console.error('Error fetching receipts:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch receipts' });
+    }
+  });
+
+  app.get('/api/trading/pnl-tracker', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const pnl = transactionReceiptLogger.getPnLTracker();
+      res.json({ success: true, pnl });
+    } catch (error) {
+      console.error('Error fetching P&L tracker:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch P&L data' });
+    }
+  });
+
+  app.get('/api/trading/protected-positions', async (req, res) => {
+    try {
+      const { fundProtectionService } = await import('./utils/fundProtectionService');
+      const positions = fundProtectionService.getActivePositions();
+      res.json({ success: true, positions });
+    } catch (error) {
+      console.error('Error fetching protected positions:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch positions' });
+    }
+  });
+
+  app.get('/api/trading/protection-stats', async (req, res) => {
+    try {
+      const { fundProtectionService } = await import('./utils/fundProtectionService');
+      const stats = fundProtectionService.getProtectionStats();
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error('Error fetching protection stats:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch protection stats' });
+    }
+  });
+
+  app.post('/api/trading/close-position', async (req, res) => {
+    try {
+      const { protectiveTradingEngine } = await import('./utils/protectiveTradingEngine');
+      const { positionId } = req.body;
+      const result = await protectiveTradingEngine.manualClosePosition(positionId);
+      
+      if (result) {
+        res.json({ success: true, message: 'Position closed successfully' });
+      } else {
+        res.status(400).json({ success: false, message: 'Failed to close position' });
+      }
+    } catch (error) {
+      console.error('Error closing position:', error);
+      res.status(500).json({ success: false, message: 'Failed to close position' });
+    }
+  });
+
+  app.post('/api/trading/emergency-stop', async (req, res) => {
+    try {
+      const { protectiveTradingEngine } = await import('./utils/protectiveTradingEngine');
+      await protectiveTradingEngine.emergencyStopAll();
+      res.json({ success: true, message: 'Emergency stop executed - all positions closed' });
+    } catch (error) {
+      console.error('Emergency stop error:', error);
+      res.status(500).json({ success: false, message: 'Emergency stop failed' });
+    }
+  });
+
+  app.post('/api/trading/test-jupiter-swap', async (req, res) => {
+    try {
+      const { transactionReceiptLogger } = await import('./utils/transactionReceiptLogger');
+      const { protectiveTradingEngine } = await import('./utils/protectiveTradingEngine');
+      const { swapSolToToken } = await import('./utils/jupiterClient');
+      
+      const { tokenAddress, amount, dryRun } = req.body;
+      
+      const testTokenAddress = tokenAddress || 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'; // BONK
+      const testAmount = amount || 0.001;
+      
+      if (dryRun) {
+        console.log(`[TEST] Simulating Jupiter swap: ${testAmount} SOL → tokens`);
+        
+        await transactionReceiptLogger.logTokenPurchase(
+          'TEST_TOKEN',
+          testTokenAddress,
+          testAmount,
+          testAmount * 1000,
+          'TEST_DRY_RUN_' + Date.now(),
+          95.0,
+          0.001
+        );
+        
+        res.json({ 
+          success: true, 
+          message: 'Dry run test completed',
+          txHash: 'DRY_RUN_SIMULATION'
+        });
+      } else {
+        console.log(`[TEST] Executing real Jupiter swap: ${testAmount} SOL → tokens`);
+        
+        const txHash = await swapSolToToken(testTokenAddress, testAmount);
+        
+        if (txHash) {
+          await transactionReceiptLogger.logTokenPurchase(
+            'TEST_TOKEN',
+            testTokenAddress,
+            testAmount,
+            testAmount * 1000,
+            txHash,
+            95.0,
+            0.001
+          );
+          
+          // Add protective monitoring
+          protectiveTradingEngine.addProtectedPosition(
+            'TEST_TOKEN',
+            testTokenAddress,
+            testAmount * 1000,
+            testAmount,
+            txHash
+          );
+          
+          res.json({ 
+            success: true, 
+            message: 'Live test swap executed with protection',
+            txHash 
+          });
+        } else {
+          throw new Error('Swap failed');
+        }
+      }
+    } catch (error) {
+      console.error('Test Jupiter swap error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message 
+      });
+    }
+  });
+
   return httpServer;
 }

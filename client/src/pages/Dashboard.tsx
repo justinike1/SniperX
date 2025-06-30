@@ -40,6 +40,8 @@ import AdvancedSellEngine from '@/components/AdvancedSellEngine';
 import MaximumBotDashboard from '@/components/MaximumBotDashboard';
 import FinalDeploymentDashboard from '@/components/FinalDeploymentDashboard';
 import MultiEnvDeploymentDashboard from '@/components/MultiEnvDeploymentDashboard';
+import JupiterPnLDashboard from '@/components/JupiterPnLDashboard';
+import FundProtectionDashboard from '@/components/FundProtectionDashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -276,6 +278,14 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <GPTPerformanceDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <JupiterPnLDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <FundProtectionDashboard />
       </div>
       
       <div className="smooth-update">
