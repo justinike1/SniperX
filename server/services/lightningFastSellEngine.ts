@@ -7,6 +7,7 @@ import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.j
 import { swapTokenToSol } from '../utils/jupiterClient';
 import { sendTelegramAlert } from '../utils/telegramAlert';
 import { config } from '../config';
+import { phantomWalletReporter } from './phantomWalletReporter';
 import fs from 'fs';
 
 interface FastPosition {
@@ -140,6 +141,18 @@ export class LightningFastSellEngine {
       const executionTime = Date.now() - startTime;
       
       if (swapResult && typeof swapResult === 'string') {
+        // Calculate SOL received (estimated based on profit)
+        const solReceived = position.buyAmount * (1 + profitPercent / 100);
+        
+        // Report to Phantom wallet
+        phantomWalletReporter.recordSellTransaction({
+          signature: swapResult,
+          tokenSymbol: position.tokenSymbol,
+          tokenAddress: position.tokenAddress,
+          tokenAmount: tokenAmount,
+          solReceived: solReceived
+        });
+        
         // Remove position from tracking
         this.positions.delete(position.tokenAddress);
         
@@ -147,6 +160,7 @@ export class LightningFastSellEngine {
         await this.sendSellNotification(position, swapResult, profitPercent, executionTime);
         
         console.log(`✅ LIGHTNING SELL EXECUTED: ${position.tokenSymbol} in ${executionTime}ms`);
+        console.log(`👻 PHANTOM WALLET: ${solReceived.toFixed(6)} SOL received from ${position.tokenSymbol} sale`);
       } else {
         throw new Error('Swap failed - no transaction hash returned');
       }

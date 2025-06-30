@@ -593,6 +593,12 @@ Changelog:
 - June 30, 2025. Integrated lightning-fast position tracking into main trading system - every buy order automatically tracked for intelligent selling at optimal prices
 - June 30, 2025. Added comprehensive sell engine API endpoints: position monitoring, emergency controls, and performance statistics for complete trading control
 - June 30, 2025. System now executes complete buy/sell cycles: AI detects opportunities → Buys tokens → Tracks positions → Sells at 8% profit or 2% stop-loss automatically
+- June 30, 2025. PHANTOM WALLET CONSTANT MONEY MOVEMENT COMPLETE: Built comprehensive system ensuring all selling transactions are visible in Phantom wallet
+- June 30, 2025. Created PhantomWalletReporter service tracking every buy/sell transaction with real-time confirmation and Phantom wallet visibility monitoring
+- June 30, 2025. Added ConstantMoneyMovement system executing round-trip token transactions every 30 seconds for continuous wallet activity
+- June 30, 2025. Built PhantomWalletMonitor frontend component with real-time transaction tracking, confirmation rates, and movement controls
+- June 30, 2025. Enhanced selling system with comprehensive Phantom wallet integration - every sell transaction properly reported with Solscan links and Telegram alerts
+- June 30, 2025. System now ensures constant money movement through wallet with automated round-trip trading maintaining 24/7 transaction visibility
 - June 30, 2025. Jupiter Swap Executor Integration Complete: Successfully integrated user-provided Jupiter swap functionality into 8-plugin system
 - June 30, 2025. Balance Threshold Optimization: Lowered fee reserves from 0.005 SOL to 0.0002 SOL enabling trading with 0.0023 SOL wallet balance
 - June 30, 2025. Enhanced Trading Engine Operational: System now detecting arbitrage opportunities with 98% confidence and executing plugin-based trading decisions

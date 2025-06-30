@@ -5,7 +5,7 @@ export const config = {
   minConfidenceLevel: 0.7, // Minimum AI confidence threshold
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
-  tradeIntervalMs: 300000, // 5 minutes to prevent rate limiting
+  tradeIntervalMs: 60000, // 60 seconds for constant money movement
   
   // Safety settings
   maxTradeAmount: 0.1, // Maximum SOL per trade

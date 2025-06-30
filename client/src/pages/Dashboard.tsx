@@ -45,6 +45,7 @@ import FundProtectionDashboard from '@/components/FundProtectionDashboard';
 import DiversifiedTradingDashboard from '@/components/DiversifiedTradingDashboard';
 import Autonomous24x7Dashboard from '@/components/Autonomous24x7Dashboard';
 import SimpleWalletBackup from '@/components/SimpleWalletBackup';
+import PhantomWalletMonitor from '@/components/PhantomWalletMonitor';
 import { EmotionalSentimentVisualizer } from '@/components/EmotionalSentimentVisualizer';
 import PluginManager from '@/components/PluginManager';
 import { PluginDashboard } from '@/components/PluginDashboard';
@@ -304,6 +305,10 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <SimpleWalletBackup />
+      </div>
+      
+      <div className="smooth-update">
+        <PhantomWalletMonitor />
       </div>
       
       <div className="smooth-update">

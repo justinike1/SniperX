@@ -6,6 +6,7 @@ import { simpleAuth } from "./simpleAuth";
 import { aiTradingEngine } from "./services/aiTradingEngine";
 import { realTimeMarketData } from "./services/realTimeMarketData";
 import { lightningFastSellEngine } from "./services/lightningFastSellEngine";
+import { constantMoneyMovement } from "./services/constantMoneyMovement";
 
 // Import scheduled trading system
 import "./scheduledTrader";
@@ -1319,6 +1320,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error resuming sell engine:', error);
       res.status(500).json({ success: false, message: 'Failed to resume sell engine' });
+    }
+  });
+
+  // Constant Money Movement Endpoints
+  app.post('/api/trading/start-money-movement', async (req, res) => {
+    try {
+      constantMoneyMovement.start();
+      res.json({ success: true, message: 'Constant money movement started' });
+    } catch (error) {
+      console.error('Error starting money movement:', error);
+      res.status(500).json({ success: false, message: 'Failed to start money movement' });
+    }
+  });
+
+  app.post('/api/trading/stop-money-movement', async (req, res) => {
+    try {
+      constantMoneyMovement.stop();
+      res.json({ success: true, message: 'Constant money movement stopped' });
+    } catch (error) {
+      console.error('Error stopping money movement:', error);
+      res.status(500).json({ success: false, message: 'Failed to stop money movement' });
+    }
+  });
+
+  app.get('/api/trading/money-movement-stats', async (req, res) => {
+    try {
+      const stats = constantMoneyMovement.getStats();
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error('Error fetching money movement stats:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch movement stats' });
     }
   });
 

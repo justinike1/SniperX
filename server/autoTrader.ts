@@ -16,6 +16,7 @@ import { pluginManager } from './plugins/pluginManager';
 import { createTradingContext } from './plugins/pluginRegistry';
 import { config } from './config';
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { phantomWalletReporter } from './services/phantomWalletReporter';
 import fs from 'fs';
 
 // Safety constants
