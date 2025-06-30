@@ -46,9 +46,48 @@ class FundProtectionService {
 
   constructor() {
     this.initializeMonitoring();
+    this.addExistingBonkPosition();
     console.log('🛡️ Fund Protection Service initialized');
     console.log(`🔻 Stop Loss: ${(this.settings.stopLossPercentage * 100).toFixed(1)}%`);
     console.log(`🎯 Take Profit: ${(this.settings.takeProfitPercentage * 100).toFixed(1)}%`);
+  }
+
+  /**
+   * Add existing BONK position to fund protection
+   */
+  private addExistingBonkPosition(): void {
+    const bonkAddress = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+    const currentBonkValueSOL = 0.048; // Approximate $68.27 / $1420 SOL price
+    const bonkAmount = 4770000; // 4.77M BONK tokens
+    
+    // Estimate original buy price assuming -2.49% loss
+    const estimatedBuyPrice = currentBonkValueSOL / 0.9749; // Reverse calculate from current loss
+    
+    const positionId = `existing_bonk_${Date.now()}`;
+    const stopLossPrice = estimatedBuyPrice * (1 - this.settings.stopLossPercentage);
+    const takeProfitPrice = estimatedBuyPrice * (1 + this.settings.takeProfitPercentage);
+    
+    const position: ProtectedPosition = {
+      id: positionId,
+      tokenSymbol: "BONK",
+      tokenAddress: bonkAddress,
+      tokenAmount: bonkAmount,
+      buyPrice: estimatedBuyPrice,
+      buyTimestamp: Date.now() - (24 * 60 * 60 * 1000), // 24 hours ago
+      buyTxHash: "existing_position",
+      stopLossPrice,
+      takeProfitPrice,
+      currentPrice: currentBonkValueSOL,
+      isActive: true,
+      lastPriceCheck: Date.now()
+    };
+
+    this.positions.set(positionId, position);
+    
+    console.log(`🛡️ EXISTING BONK POSITION ADDED TO PROTECTION`);
+    console.log(`💰 4.77M BONK tokens worth ~$68.27 now protected`);
+    console.log(`🔻 Stop Loss: ${stopLossPrice.toFixed(6)} SOL`);
+    console.log(`🎯 Take Profit: ${takeProfitPrice.toFixed(6)} SOL`);
   }
 
   /**
@@ -184,7 +223,7 @@ class FundProtectionService {
         return;
       }
 
-      // Execute real Jupiter swap: Token → SOL
+      // Execute real Jupiter swap: Token → SOL  
       const sellTxHash = await swapTokenToSol(position.tokenAddress, position.tokenAmount);
       
       if (sellTxHash) {

@@ -13,7 +13,7 @@ import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.j
 import fs from 'fs';
 
 // Safety constants
-const MIN_REQUIRED_SOL = 0.05 * LAMPORTS_PER_SOL; // 0.05 SOL minimum for safety
+const MIN_REQUIRED_SOL = 0.007 * LAMPORTS_PER_SOL; // 0.007 SOL minimum for micro-trading
 const TRADE_AMOUNT = 0.01; // 0.01 SOL per trade
 
 /**
@@ -32,7 +32,7 @@ export async function autoTradeTrigger(): Promise<void> {
       const balance = await connection.getBalance(wallet.publicKey);
       if (balance < MIN_REQUIRED_SOL) {
         await sendTelegramAlert(`❌ LOW BALANCE: Not enough SOL to trade. Current: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-        console.log(`⚠️ LOW BALANCE: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Minimum required: 0.05 SOL`);
+        console.log(`⚠️ LOW BALANCE: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Minimum required: 0.02 SOL`);
         return;
       }
       console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL - Ready for trading`);

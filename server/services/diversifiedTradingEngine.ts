@@ -246,17 +246,26 @@ export class DiversifiedTradingEngine {
       
       try {
         const balance = await connection.getBalance(wallet.publicKey);
-        const MIN_REQUIRED_SOL = 0.05 * LAMPORTS_PER_SOL;
+        const MIN_REQUIRED_SOL = 0.02 * LAMPORTS_PER_SOL;
         
         if (balance < MIN_REQUIRED_SOL) {
           await sendTelegramAlert(`❌ LOW BALANCE: Not enough SOL to trade. Current: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
           return;
         }
         
-        // Calculate safe trade amount (max 25% of balance or 0.1 SOL, whichever is smaller)
-        const maxSafeAmount = Math.min(balance * 0.25, 0.1 * LAMPORTS_PER_SOL);
+        // Reserve SOL for transaction fees (0.01 SOL for Jupiter swaps + account creation)
+        const reservedForFees = 0.01 * LAMPORTS_PER_SOL;
+        const availableForTrading = Math.max(0, balance - reservedForFees);
+        
+        // Calculate safe trade amount (max 50% of available balance or 0.01 SOL, whichever is smaller)
+        const maxSafeAmount = Math.min(availableForTrading * 0.5, 0.01 * LAMPORTS_PER_SOL);
         const safeLamports = Math.min(tradeAmount * LAMPORTS_PER_SOL, maxSafeAmount);
         const safeTradeAmount = safeLamports / LAMPORTS_PER_SOL;
+        
+        if (safeTradeAmount < 0.002) {
+          console.log(`💡 Trade amount too small: ${safeTradeAmount.toFixed(4)} SOL - skipping to preserve balance for fees`);
+          return;
+        }
         
         console.log(`💎 BUYING ${opportunity.symbol}: ${safeTradeAmount.toFixed(4)} SOL (${opportunity.confidence}% confidence)`);
         

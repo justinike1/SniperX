@@ -1,7 +1,7 @@
 // Trading Configuration
 export const config = {
   dryRun: false, // ENABLED - Live trading mode activated
-  tradeAmount: 0.01, // Adjusted for available balance of 0.032 SOL
+  tradeAmount: 0.003, // Adjusted for available balance of 0.0083 SOL
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
   tradeIntervalMs: 300000, // 5 minutes to prevent rate limiting

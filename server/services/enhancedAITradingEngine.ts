@@ -769,17 +769,21 @@ export class EnhancedAITradingEngine {
       const balance = await connection.getBalance(wallet.publicKey);
       const balanceInSOL = balance / LAMPORTS_PER_SOL;
       
-      // Safety checks
-      const MIN_REQUIRED_SOL = 0.05;
+      // Safety checks - allow very small trades with current balance
+      const MIN_REQUIRED_SOL = 0.007; // Lower threshold for micro-trading
       if (balanceInSOL < MIN_REQUIRED_SOL) {
         console.log(`⚠️ Insufficient balance: ${balanceInSOL.toFixed(4)} SOL`);
         return 0;
       }
       
-      // Calculate safe trade amount (max 25% of balance or 0.01 SOL, whichever is smaller)
-      const maxSafeAmount = Math.min(balanceInSOL * 0.25, 0.01);
-      const confidenceMultiplier = Math.min(2, confidence / 50); // Conservative scaling
-      const safeTradeAmount = Math.min(maxSafeAmount * confidenceMultiplier, 0.01);
+      // Reserve minimal SOL for transaction fees (reduced for micro-trading)
+      const reservedForFees = 0.003;
+      const availableForTrading = Math.max(0, balanceInSOL - reservedForFees);
+      
+      // Calculate safe trade amount for micro-trading with current balance
+      const maxSafeAmount = Math.min(availableForTrading * 0.50, 0.004);
+      const confidenceMultiplier = Math.max(0.8, confidence / 100);
+      const safeTradeAmount = Math.max(0.001, maxSafeAmount * confidenceMultiplier);
       
       console.log(`💰 Balance: ${balanceInSOL.toFixed(4)} SOL | Safe trade: ${safeTradeAmount.toFixed(4)} SOL`);
       return safeTradeAmount;
