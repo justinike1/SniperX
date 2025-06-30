@@ -1,6 +1,7 @@
 import { enhancedAITradingEngine } from './services/enhancedAITradingEngine';
 import { sendSol } from './utils/sendSol';
 import { logTrade } from './utils/tradeLogger';
+import { sendTelegramAlert } from './utils/telegramAlert';
 import { config } from './config';
 
 /**
@@ -75,6 +76,9 @@ async function executeTrade(prediction: any): Promise<void> {
     // Execute the trade via sendSol
     const txSignature = await sendSol(config.destinationWallet, config.tradeAmount);
     
+    // Send Telegram notification
+    await sendTelegramAlert(`🚀 Trade executed:\nSymbol: ${prediction.symbol}\nAmount: ${config.tradeAmount} SOL\nConfidence: ${prediction.confidence}%`);
+    
     // Log successful trade
     const completedTrade = {
       ...tradeDetails,
@@ -94,6 +98,9 @@ async function executeTrade(prediction: any): Promise<void> {
 
   } catch (error) {
     console.error('❌ Trade execution failed:', error);
+    
+    // Send Telegram alert for failed trade
+    await sendTelegramAlert(`❌ Trade FAILED:\nSymbol: ${prediction.symbol}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
     
     // Log failed trade
     logTrade({

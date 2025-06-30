@@ -1,5 +1,6 @@
 import { enhancedAITradingEngine } from './services/enhancedAITradingEngine';
 import { sendSol } from './utils/sendSol';
+import { sendTelegramAlert } from './utils/telegramAlert';
 import { config } from './config';
 
 /**
@@ -46,33 +47,25 @@ class ContinuousTrading {
       console.log('\n🎯 EXECUTING LIVE TRADE NOW');
       console.log('Time:', new Date().toISOString());
       
-      const result = await sendSol(config.destinationWallet, config.tradeAmount);
+      const txSignature = await sendSol(config.destinationWallet, config.tradeAmount);
       
-      if (result.success) {
-        console.log('✅ LIVE TRANSACTION EXECUTED');
-        console.log('TX ID:', result.signature);
-        console.log('Amount: 0.001 SOL');
-        console.log('Solscan:', `https://solscan.io/tx/${result.signature}`);
-        console.log('Status: Transaction broadcast to Solana mainnet');
-        
-        // Log to file
-        const tradeLog = {
-          timestamp: new Date().toISOString(),
-          type: 'CONTINUOUS_LIVE_TRADE',
-          amount: config.tradeAmount,
-          signature: result.signature,
-          status: 'SUCCESS',
-          walletAddress: config.destinationWallet
-        };
-        
-        console.log('📝 Trade logged successfully');
-        
-      } else {
-        console.log('❌ Trade execution failed:', result.error);
-      }
+      console.log('✅ LIVE TRANSACTION EXECUTED');
+      console.log('TX ID:', txSignature);
+      console.log('Amount:', config.tradeAmount, 'SOL');
+      console.log('Solscan:', `https://solscan.io/tx/${txSignature}`);
+      console.log('Status: Transaction broadcast to Solana mainnet');
+      
+      // Send Telegram notification for successful trade
+      await sendTelegramAlert(`✅ CONTINUOUS TRADE SUCCESS:\nAmount: ${config.tradeAmount} SOL\nTX: ${txSignature}\nWallet: ${config.destinationWallet}`);
+      
+      console.log('📝 Trade logged successfully');
       
     } catch (error) {
-      console.log('💥 TRADE ERROR:', error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log('💥 TRADE ERROR:', errorMessage);
+      
+      // Send Telegram notification for failed trade
+      await sendTelegramAlert(`❌ CONTINUOUS TRADE FAILED:\nError: ${errorMessage}\nTime: ${new Date().toISOString()}`);
     }
   }
 

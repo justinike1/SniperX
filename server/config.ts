@@ -24,6 +24,11 @@ export const config = {
   minConfidenceLevel: 85, // Minimum confidence for automatic trades
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit
+  
+  // Telegram notifications
+  enableTelegram: true,
+  telegramBotToken: '7891487420:AAE5m0BofKVS6HF77eyK0Uj0FAo5aLJ-_hs',
+  telegramChatId: '7521280236'
 };
 
 // Environment-based overrides
