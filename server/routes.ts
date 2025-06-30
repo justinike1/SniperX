@@ -864,6 +864,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Wallet Backup and Recovery Endpoints
+  app.post('/api/wallet/backup/create', async (req, res) => {
+    try {
+      const { mnemonic, password } = req.body;
+      
+      if (!mnemonic || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Mnemonic and password are required' 
+        });
+      }
+
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const backupData = await walletBackupService.createBackup(mnemonic, password);
+      
+      res.json({ 
+        success: true, 
+        backup: backupData,
+        message: 'Backup created successfully' 
+      });
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to create backup: ${error.message}` 
+      });
+    }
+  });
+
+  app.post('/api/wallet/backup/download', async (req, res) => {
+    try {
+      const { mnemonic, password } = req.body;
+      
+      if (!mnemonic || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Mnemonic and password are required' 
+        });
+      }
+
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const { filename, data } = await walletBackupService.createBackupFile(mnemonic, password);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(data);
+    } catch (error) {
+      console.error('Error creating backup file:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to create backup file: ${error.message}` 
+      });
+    }
+  });
+
+  app.post('/api/wallet/backup/validate', async (req, res) => {
+    try {
+      const { backupData } = req.body;
+      
+      if (!backupData) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Backup data is required' 
+        });
+      }
+
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const validation = walletBackupService.validateBackup(backupData);
+      
+      res.json({ 
+        success: true, 
+        validation,
+        message: validation.isValid ? 'Backup is valid' : 'Backup validation failed'
+      });
+    } catch (error) {
+      console.error('Error validating backup:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to validate backup: ${error.message}` 
+      });
+    }
+  });
+
+  app.post('/api/wallet/recovery/from-backup', async (req, res) => {
+    try {
+      const { backupData, password } = req.body;
+      
+      if (!backupData || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Backup data and password are required' 
+        });
+      }
+
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const result = await walletBackupService.recoverFromBackup(backupData, password);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          walletAddress: result.walletAddress,
+          message: 'Wallet recovered successfully from backup' 
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.error 
+        });
+      }
+    } catch (error) {
+      console.error('Error recovering from backup:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to recover from backup: ${error.message}` 
+      });
+    }
+  });
+
+  app.post('/api/wallet/recovery/from-mnemonic', async (req, res) => {
+    try {
+      const { mnemonic } = req.body;
+      
+      if (!mnemonic) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Mnemonic phrase is required' 
+        });
+      }
+
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const result = await walletBackupService.recoverFromMnemonic(mnemonic);
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          walletAddress: result.walletAddress,
+          message: 'Wallet recovered successfully from mnemonic' 
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.error 
+        });
+      }
+    } catch (error) {
+      console.error('Error recovering from mnemonic:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to recover from mnemonic: ${error.message}` 
+      });
+    }
+  });
+
+  app.get('/api/wallet/generate-recovery-phrase', async (req, res) => {
+    try {
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const mnemonic = walletBackupService.generateRecoveryPhrase();
+      
+      res.json({ 
+        success: true, 
+        mnemonic,
+        message: 'Recovery phrase generated successfully' 
+      });
+    } catch (error) {
+      console.error('Error generating recovery phrase:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Failed to generate recovery phrase: ${(error as Error).message}` 
+      });
+    }
+  });
+
+  // Simple health check endpoint for wallet backup service
+  app.get('/api/wallet/backup/test', async (req, res) => {
+    try {
+      const { walletBackupService } = await import('./services/walletBackupService');
+      const testMnemonic = walletBackupService.generateRecoveryPhrase();
+      
+      res.json({ 
+        success: true, 
+        message: 'Wallet backup service is operational',
+        testGenerated: !!testMnemonic,
+        wordCount: testMnemonic.split(' ').length
+      });
+    } catch (error) {
+      console.error('Error testing wallet backup service:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: `Wallet backup service error: ${(error as Error).message}` 
+      });
+    }
+  });
+
   app.post('/api/trading/close-position', async (req, res) => {
     try {
       const { protectiveTradingEngine } = await import('./utils/protectiveTradingEngine');

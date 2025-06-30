@@ -1,195 +1,348 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Shield, 
+  Download, 
+  Eye, 
+  EyeOff, 
+  Copy, 
+  Check, 
+  AlertTriangle, 
+  ArrowRight, 
+  ArrowLeft,
+  FileText,
+  Key,
+  Lock,
+  Unlock,
+  RefreshCw
+} from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Download, Eye, EyeOff, Shield, AlertTriangle, CheckCircle, FileText, Key, Lock } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
 
-interface WalletBackupData {
-  mnemonic: string;
-  privateKey: string;
-  publicKey: string;
-  address: string;
-  timestamp: string;
+interface BackupData {
+  encryptedSeed: string;
+  walletAddress: string;
+  createdAt: string;
+  derivationPath: string;
+  checksum: string;
 }
 
-interface BackupWizardProps {
-  onComplete: () => void;
-  onCancel: () => void;
-}
-
-export const WalletBackupWizard: React.FC<BackupWizardProps> = ({ onComplete, onCancel }) => {
-  const { toast } = useToast();
+export default function WalletBackupWizard() {
+  const [activeTab, setActiveTab] = useState('backup');
   const [currentStep, setCurrentStep] = useState(1);
-  const [backupData, setBackupData] = useState<WalletBackupData | null>(null);
-  const [showPrivateData, setShowPrivateData] = useState(false);
-  const [verificationWords, setVerificationWords] = useState<{index: number, word: string}[]>([]);
-  const [userInputWords, setUserInputWords] = useState<string[]>([]);
-  const [securityConfirmations, setSecurityConfirmations] = useState({
-    understand: false,
-    stored: false,
-    responsible: false,
-    noScreenshot: false
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [showMnemonic, setShowMnemonic] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedMnemonic, setCopiedMnemonic] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  
+  // Backup form state
+  const [mnemonic, setMnemonic] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [backupData, setBackupData] = useState<BackupData | null>(null);
+  
+  // Recovery form state
+  const [recoveryMnemonic, setRecoveryMnemonic] = useState('');
+  const [recoveryPassword, setRecoveryPassword] = useState('');
+  const [recoveryFile, setRecoveryFile] = useState<string>('');
+  const [recoveredAddress, setRecoveredAddress] = useState('');
 
-  const totalSteps = 5;
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (currentStep === 1) {
-      generateBackupData();
-    }
-  }, []);
-
-  const generateBackupData = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/wallet/backup/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) throw new Error('Failed to generate backup');
-      
-      const data = await response.json();
-      if (data.success) {
-        setBackupData(data.backup);
-        // Select random words for verification
-        const words = data.backup.mnemonic.split(' ');
-        const randomIndices = [2, 5, 8].sort(() => Math.random() - 0.5);
-        setVerificationWords(randomIndices.map(i => ({ index: i, word: words[i] })));
-        setUserInputWords(new Array(3).fill(''));
-      }
-    } catch (error) {
+  // Generate new mnemonic phrase
+  const generateMnemonic = useMutation({
+    mutationFn: () => apiRequest('GET', '/api/wallet/generate-recovery-phrase'),
+    onSuccess: (data) => {
+      setMnemonic(data.mnemonic);
       toast({
-        title: "Backup Generation Failed",
-        description: "Unable to generate wallet backup. Please try again.",
-        variant: "destructive"
+        title: "Recovery Phrase Generated",
+        description: "New 12-word recovery phrase created successfully",
       });
-    } finally {
-      setIsLoading(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create backup
+  const createBackup = useMutation({
+    mutationFn: (data: { mnemonic: string; password: string }) => 
+      apiRequest('POST', '/api/wallet/backup/create', data),
+    onSuccess: (data) => {
+      setBackupData(data.backup);
+      setCurrentStep(3);
+      toast({
+        title: "Backup Created",
+        description: "Your wallet backup has been created successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Backup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Download backup file
+  const downloadBackup = useMutation({
+    mutationFn: (data: { mnemonic: string; password: string }) => 
+      apiRequest('POST', '/api/wallet/backup/download', data),
+    onSuccess: (data, variables) => {
+      // Create and download file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sniperx-wallet-backup-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Backup Downloaded",
+        description: "Backup file saved to your downloads folder",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Download Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Recover from mnemonic
+  const recoverFromMnemonic = useMutation({
+    mutationFn: (data: { mnemonic: string }) => 
+      apiRequest('POST', '/api/wallet/recovery/from-mnemonic', data),
+    onSuccess: (data) => {
+      setRecoveredAddress(data.walletAddress);
+      toast({
+        title: "Wallet Recovered",
+        description: "Your wallet has been successfully recovered from mnemonic",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Recovery Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Recover from backup file
+  const recoverFromBackup = useMutation({
+    mutationFn: (data: { backupData: any; password: string }) => 
+      apiRequest('POST', '/api/wallet/recovery/from-backup', data),
+    onSuccess: (data) => {
+      setRecoveredAddress(data.walletAddress);
+      toast({
+        title: "Wallet Recovered",
+        description: "Your wallet has been successfully recovered from backup file",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Recovery Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          JSON.parse(content); // Validate JSON
+          setRecoveryFile(content);
+          toast({
+            title: "File Loaded",
+            description: "Backup file loaded successfully",
+          });
+        } catch (error) {
+          toast({
+            title: "Invalid File",
+            description: "Please select a valid SniperX backup file",
+            variant: "destructive",
+          });
+        }
+      };
+      reader.readAsText(file);
     }
   };
 
-  const copyToClipboard = async (text: string, type: string) => {
+  const copyToClipboard = async (text: string, type: 'mnemonic' | 'address') => {
     try {
       await navigator.clipboard.writeText(text);
+      if (type === 'mnemonic') {
+        setCopiedMnemonic(true);
+        setTimeout(() => setCopiedMnemonic(false), 2000);
+      } else {
+        setCopiedAddress(true);
+        setTimeout(() => setCopiedAddress(false), 2000);
+      }
       toast({
-        title: "Copied!",
-        description: `${type} copied to clipboard`
+        title: "Copied",
+        description: `${type === 'mnemonic' ? 'Recovery phrase' : 'Address'} copied to clipboard`,
       });
     } catch (error) {
       toast({
         title: "Copy Failed",
-        description: "Please manually select and copy the text",
-        variant: "destructive"
+        description: "Failed to copy to clipboard",
+        variant: "destructive",
       });
     }
   };
 
-  const downloadBackup = () => {
-    if (!backupData) return;
-    
-    const backupContent = {
-      mnemonic: backupData.mnemonic,
-      address: backupData.address,
-      timestamp: backupData.timestamp,
-      warning: "KEEP THIS FILE SECURE - NEVER SHARE WITH ANYONE"
-    };
-    
-    const blob = new Blob([JSON.stringify(backupContent, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sniperx-wallet-backup-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Backup Downloaded",
-      description: "Wallet backup file saved successfully"
-    });
-  };
-
-  const handleVerificationInput = (index: number, value: string) => {
-    const newInputs = [...userInputWords];
-    newInputs[index] = value.toLowerCase().trim();
-    setUserInputWords(newInputs);
-  };
-
-  const verifyBackup = () => {
-    const isValid = verificationWords.every((wordObj, index) => 
-      wordObj.word.toLowerCase() === userInputWords[index].toLowerCase()
-    );
-    
-    if (isValid) {
-      setCurrentStep(4);
+  const handleCreateBackup = () => {
+    if (password !== confirmPassword) {
       toast({
-        title: "Verification Successful",
-        description: "Your backup has been verified correctly"
+        title: "Password Mismatch",
+        description: "Passwords do not match",
+        variant: "destructive",
       });
-    } else {
+      return;
+    }
+    
+    if (password.length < 8) {
       toast({
-        title: "Verification Failed",
-        description: "Please check your words and try again",
-        variant: "destructive"
+        title: "Weak Password",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createBackup.mutate({ mnemonic, password });
+  };
+
+  const handleDownloadBackup = () => {
+    downloadBackup.mutate({ mnemonic, password });
+  };
+
+  const handleRecoverFromMnemonic = () => {
+    if (!recoveryMnemonic.trim()) {
+      toast({
+        title: "Missing Recovery Phrase",
+        description: "Please enter your 12-word recovery phrase",
+        variant: "destructive",
+      });
+      return;
+    }
+    recoverFromMnemonic.mutate({ mnemonic: recoveryMnemonic.trim() });
+  };
+
+  const handleRecoverFromFile = () => {
+    if (!recoveryFile || !recoveryPassword) {
+      toast({
+        title: "Missing Information",
+        description: "Please upload a backup file and enter the password",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const backupData = JSON.parse(recoveryFile);
+      recoverFromBackup.mutate({ backupData, password: recoveryPassword });
+    } catch (error) {
+      toast({
+        title: "Invalid Backup",
+        description: "Backup file format is invalid",
+        variant: "destructive",
       });
     }
   };
 
-  const canProceedToNext = () => {
-    switch (currentStep) {
-      case 2:
-        return Object.values(securityConfirmations).every(Boolean);
-      case 3:
-        return userInputWords.every(word => word.length > 0);
-      case 4:
-        return true;
-      default:
-        return true;
-    }
-  };
-
-  const nextStep = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      onComplete();
-    }
-  };
-
-  const renderStepContent = () => {
+  const renderBackupStep = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <Shield className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Wallet Backup Overview</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Your wallet backup contains sensitive information that allows complete access to your funds.
-                We'll guide you through creating a secure backup step by step.
-              </p>
+              <h3 className="text-xl font-semibold text-white mb-2">Step 1: Recovery Phrase</h3>
+              <p className="text-gray-400">Generate or enter your 12-word recovery phrase</p>
             </div>
             
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Important:</strong> Never share your backup with anyone. SniperX will never ask for your backup information.
-              </AlertDescription>
-            </Alert>
-            
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">What you'll backup:</h4>
-              <ul className="space-y-1 text-sm">
-                <li>• 12-word recovery phrase (seed phrase)</li>
-                <li>• Wallet address</li>
-                <li>• Backup timestamp</li>
-              </ul>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label>Recovery Phrase (12 words)</Label>
+                <Button
+                  onClick={() => generateMnemonic.mutate()}
+                  disabled={generateMnemonic.isPending}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Generate New
+                </Button>
+              </div>
+              
+              <div className="relative">
+                <Textarea
+                  value={mnemonic}
+                  onChange={(e) => setMnemonic(e.target.value)}
+                  placeholder="Enter your 12-word recovery phrase or generate a new one..."
+                  className={`min-h-24 font-mono text-sm ${!showMnemonic ? 'text-security-disc' : ''}`}
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <Button
+                    onClick={() => setShowMnemonic(!showMnemonic)}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {showMnemonic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  {mnemonic && (
+                    <Button
+                      onClick={() => copyToClipboard(mnemonic, 'mnemonic')}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      {copiedMnemonic ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Important:</strong> This recovery phrase is the only way to restore your wallet. 
+                  Store it securely offline and never share it with anyone.
+                </AlertDescription>
+              </Alert>
+              
+              <Button
+                onClick={() => setCurrentStep(2)}
+                disabled={!mnemonic.trim()}
+                className="w-full"
+              >
+                Continue to Password Setup
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
             </div>
           </div>
         );
@@ -198,79 +351,68 @@ export const WalletBackupWizard: React.FC<BackupWizardProps> = ({ onComplete, on
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <Key className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Your Recovery Phrase</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Write down these 12 words in order. This is your master key to your wallet.
-              </p>
+              <h3 className="text-xl font-semibold text-white mb-2">Step 2: Backup Password</h3>
+              <p className="text-gray-400">Create a strong password to encrypt your backup</p>
             </div>
-
-            {backupData && (
-              <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold">Recovery Phrase</h4>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowPrivateData(!showPrivateData)}
-                      >
-                        {showPrivateData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(backupData.mnemonic, 'Recovery phrase')}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2">
-                    {backupData.mnemonic.split(' ').map((word, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border"
-                      >
-                        <span className="text-xs text-gray-500 w-6">{index + 1}.</span>
-                        <span className="font-mono">
-                          {showPrivateData ? word : '•••••'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="space-y-3">
-              <h4 className="font-semibold">Security Checklist</h4>
-              {Object.entries({
-                understand: "I understand this phrase gives full access to my wallet",
-                stored: "I have written this phrase down in a secure location",
-                responsible: "I am responsible for keeping this phrase safe",
-                noScreenshot: "I will not take screenshots or store digitally"
-              }).map(([key, label]) => (
-                <div key={key} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={key}
-                    checked={securityConfirmations[key as keyof typeof securityConfirmations]}
-                    onCheckedChange={(checked) =>
-                      setSecurityConfirmations(prev => ({ ...prev, [key]: checked as boolean }))
-                    }
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Backup Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter a strong password (min 8 characters)"
+                    className="pr-10"
                   />
-                  <Label htmlFor={key} className="text-sm">{label}</Label>
+                  <Button
+                    onClick={() => setShowPassword(!showPassword)}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={downloadBackup} variant="outline" className="flex-1">
-                <Download className="h-4 w-4 mr-2" />
-                Download Backup
-              </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Confirm Password</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm your password"
+                />
+              </div>
+              
+              <Alert>
+                <Lock className="h-4 w-4" />
+                <AlertDescription>
+                  Your backup will be encrypted with AES-256 encryption. 
+                  Remember this password - it cannot be recovered if lost.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setCurrentStep(1)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+                <Button
+                  onClick={handleCreateBackup}
+                  disabled={createBackup.isPending || !password || password !== confirmPassword}
+                  className="flex-1"
+                >
+                  {createBackup.isPending ? "Creating..." : "Create Backup"}
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
             </div>
           </div>
         );
@@ -279,115 +421,78 @@ export const WalletBackupWizard: React.FC<BackupWizardProps> = ({ onComplete, on
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Verify Your Backup</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Enter the requested words from your recovery phrase to verify you've stored it correctly.
-              </p>
+              <h3 className="text-xl font-semibold text-white mb-2">Step 3: Backup Complete</h3>
+              <p className="text-gray-400">Your wallet backup has been created successfully</p>
             </div>
-
-            <div className="space-y-4">
-              {verificationWords.map((wordObj, index) => (
-                <div key={index}>
-                  <Label htmlFor={`word-${index}`}>
-                    Word #{wordObj.index + 1}
-                  </Label>
-                  <Input
-                    id={`word-${index}`}
-                    type="text"
-                    placeholder="Enter the word"
-                    value={userInputWords[index]}
-                    onChange={(e) => handleVerificationInput(index, e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <Button onClick={verifyBackup} disabled={!canProceedToNext()} className="w-full">
-              Verify Backup
-            </Button>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <Lock className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Backup Security Tips</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Follow these best practices to keep your wallet safe.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <Alert>
-                <Shield className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Storage Recommendations:</strong>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    <li>• Write on paper and store in a fireproof safe</li>
-                    <li>• Consider a safety deposit box for large amounts</li>
-                    <li>• Make multiple copies in different secure locations</li>
-                    <li>• Never store in cloud services or photos</li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Security Warnings:</strong>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    <li>• Anyone with your phrase can access your funds</li>
-                    <li>• SniperX cannot recover lost phrases</li>
-                    <li>• Beware of phishing attempts asking for your phrase</li>
-                    <li>• Test recovery with small amounts first</li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Backup Complete!</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Your wallet has been successfully backed up. Keep your recovery phrase safe!
-              </p>
-            </div>
-
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">What's Next?</h4>
-              <ul className="space-y-1 text-sm">
-                <li>• Your wallet is now secured with a backup</li>
-                <li>• You can recover your wallet anytime with your 12-word phrase</li>
-                <li>• Consider testing recovery on a separate device</li>
-                <li>• Start trading with confidence knowing your funds are secure</li>
-              </ul>
-            </div>
-
+            
             {backupData && (
-              <Card className="bg-gray-50 dark:bg-gray-800">
-                <CardContent className="p-4">
-                  <h4 className="font-semibold mb-2">Backup Summary</h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400">Wallet Address:</span>
-                      <p className="font-mono break-all">{backupData.address}</p>
+              <div className="space-y-4">
+                <Card className="border-green-500/20 bg-green-900/10">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Check className="h-5 w-5 text-green-400" />
+                      <span className="font-medium text-green-300">Backup Created Successfully</span>
                     </div>
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400">Backup Created:</span>
-                      <p>{new Date(backupData.timestamp).toLocaleString()}</p>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Wallet Address:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-mono text-xs">
+                            {backupData.walletAddress.slice(0, 8)}...{backupData.walletAddress.slice(-8)}
+                          </span>
+                          <Button
+                            onClick={() => copyToClipboard(backupData.walletAddress, 'address')}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            {copiedAddress ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Created:</span>
+                        <span className="text-white">{new Date(backupData.createdAt).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Encryption:</span>
+                        <span className="text-green-300">AES-256</span>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+                
+                <Button
+                  onClick={handleDownloadBackup}
+                  disabled={downloadBackup.isPending}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {downloadBackup.isPending ? "Preparing Download..." : "Download Backup File"}
+                </Button>
+                
+                <Alert>
+                  <FileText className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Next Steps:</strong> Save the downloaded backup file in a secure location. 
+                    You can use this file along with your password to recover your wallet.
+                  </AlertDescription>
+                </Alert>
+                
+                <Button
+                  onClick={() => {
+                    setCurrentStep(1);
+                    setMnemonic('');
+                    setPassword('');
+                    setConfirmPassword('');
+                    setBackupData(null);
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Create Another Backup
+                </Button>
+              </div>
             )}
           </div>
         );
@@ -398,46 +503,155 @@ export const WalletBackupWizard: React.FC<BackupWizardProps> = ({ onComplete, on
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Wallet Backup Wizard
+    <div className="space-y-6">
+      <Card className="border-purple-500/20">
+        <CardHeader>
+          <CardTitle className="text-purple-300 flex items-center gap-2">
+            <Shield className="h-6 w-6" />
+            Wallet Backup & Recovery Wizard
           </CardTitle>
-          <span className="text-sm text-gray-500">
-            Step {currentStep} of {totalSteps}
-          </span>
-        </div>
-        <Progress value={(currentStep / totalSteps) * 100} className="mt-2" />
-      </CardHeader>
-      
-      <CardContent>
-        {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">Generating secure backup...</p>
-          </div>
-        ) : (
-          renderStepContent()
-        )}
-      </CardContent>
+          <CardDescription>
+            Secure your wallet with encrypted backups and recovery options
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="backup" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Create Backup
+              </TabsTrigger>
+              <TabsTrigger value="recovery" className="flex items-center gap-2">
+                <Unlock className="h-4 w-4" />
+                Recover Wallet
+              </TabsTrigger>
+            </TabsList>
 
-      <div className="flex justify-between p-6 border-t">
-        <Button
-          variant="outline"
-          onClick={currentStep === 1 ? onCancel : () => setCurrentStep(currentStep - 1)}
-        >
-          {currentStep === 1 ? 'Cancel' : 'Back'}
-        </Button>
-        
-        <Button
-          onClick={nextStep}
-          disabled={!canProceedToNext() || isLoading}
-        >
-          {currentStep === totalSteps ? 'Complete' : 'Next'}
-        </Button>
-      </div>
-    </Card>
+            <TabsContent value="backup" className="space-y-6 mt-6">
+              <div className="flex items-center justify-center mb-6">
+                <div className="flex items-center gap-4">
+                  {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                      <div className={`
+                        w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                        ${currentStep >= step 
+                          ? 'bg-purple-600 text-white' 
+                          : 'bg-gray-700 text-gray-400'
+                        }
+                      `}>
+                        {currentStep > step ? <Check className="h-4 w-4" /> : step}
+                      </div>
+                      {step < 3 && (
+                        <div className={`
+                          w-12 h-1 mx-2
+                          ${currentStep > step ? 'bg-purple-600' : 'bg-gray-700'}
+                        `} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {renderBackupStep()}
+            </TabsContent>
+
+            <TabsContent value="recovery" className="space-y-6 mt-6">
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-white mb-2">Recover Your Wallet</h3>
+                  <p className="text-gray-400">Choose your recovery method</p>
+                </div>
+
+                <Tabs defaultValue="mnemonic" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="mnemonic">Recovery Phrase</TabsTrigger>
+                    <TabsTrigger value="file">Backup File</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="mnemonic" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>12-Word Recovery Phrase</Label>
+                      <Textarea
+                        value={recoveryMnemonic}
+                        onChange={(e) => setRecoveryMnemonic(e.target.value)}
+                        placeholder="Enter your 12-word recovery phrase separated by spaces..."
+                        className="min-h-24 font-mono text-sm"
+                      />
+                    </div>
+                    
+                    <Button
+                      onClick={handleRecoverFromMnemonic}
+                      disabled={recoverFromMnemonic.isPending || !recoveryMnemonic.trim()}
+                      className="w-full"
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      {recoverFromMnemonic.isPending ? "Recovering..." : "Recover Wallet"}
+                    </Button>
+                  </TabsContent>
+
+                  <TabsContent value="file" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Backup File</Label>
+                      <Input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileUpload}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Backup Password</Label>
+                      <Input
+                        type="password"
+                        value={recoveryPassword}
+                        onChange={(e) => setRecoveryPassword(e.target.value)}
+                        placeholder="Enter the password used to create this backup"
+                      />
+                    </div>
+                    
+                    <Button
+                      onClick={handleRecoverFromFile}
+                      disabled={recoverFromBackup.isPending || !recoveryFile || !recoveryPassword}
+                      className="w-full"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {recoverFromBackup.isPending ? "Recovering..." : "Recover from File"}
+                    </Button>
+                  </TabsContent>
+                </Tabs>
+
+                {recoveredAddress && (
+                  <Card className="border-green-500/20 bg-green-900/10">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Check className="h-5 w-5 text-green-400" />
+                        <span className="font-medium text-green-300">Wallet Recovered Successfully</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Address:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-mono text-sm">
+                            {recoveredAddress.slice(0, 8)}...{recoveredAddress.slice(-8)}
+                          </span>
+                          <Button
+                            onClick={() => copyToClipboard(recoveredAddress, 'address')}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            {copiedAddress ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
-};
+}
