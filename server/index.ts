@@ -3,11 +3,11 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 // import "./continuousTrading"; // DISABLED - Only does SOL transfers without token swaps
-import "./scheduledTrader"; // Auto-start scheduled trading with autoTradeTrigger
+// import "./scheduledTrader"; // DISABLED - Auto-start scheduled trading with autoTradeTrigger
 import { initializeDatabase } from "./initDatabase";
 
-// Start automated sell monitoring system
-import { startSellConditionMonitoring } from "./utils/sellLogic";
+// DISABLED - Start automated sell monitoring system
+// import { startSellConditionMonitoring } from "./utils/sellLogic";
 
 // Schedule daily P&L summary
 import { sendDailySummary } from "./utils/telegramCommands";
@@ -53,8 +53,8 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
 
-  // Start automated sell monitoring system
-  startSellConditionMonitoring();
+  // DISABLED - Start automated sell monitoring system
+  // startSellConditionMonitoring();
 
   // Schedule daily P&L summary at 8 AM UTC
   function scheduleDailySummary() {

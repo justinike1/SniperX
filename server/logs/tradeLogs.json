@@ -12860,5 +12860,137 @@
     "symbol": "UNKNOWN",
     "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 22f6oWFcsRTpB6HZrdEMY6QoZ4qUk5qUXzTAsFGCaGoabBVgfeEu2WzSo8qXUjM9QZZYdT6kGt7UmvHnKBkJ5EU9 using the Solana Explorer or CLI tools.",
     "timestamp": "2025-06-30T07:48:01.396Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 3T9Y35V9Ah19aQvbdMnufkzQQAKQH8E4PEqukyqAJHSryaJgBT68Ym8aqVYTGW13EKTA4dfGx13Q5BtW1yWEB45t using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:52:56.388Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 4mzkeFCZ5fnUgrt7YSJCMoARkUHC2qoJ85ToFepecCmCPJxCcw6CSNjkbAGxdApXfKXj2Y9cZKhnqrLiZBao3WWK using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T07:56:19.415Z"
+  },
+  {
+    "id": "analysis_1751270347558_kl8n45qyh",
+    "symbol": "UNKNOWN",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 258.85007308870934,
+    "confidence": 32.83123411470143,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 261.5653995860376,
+    "stopLoss": 252.64188587280103,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T07:59:07.560Z"
+  },
+  {
+    "id": "analysis_1751270401932_6l9xx6bo9",
+    "symbol": "SOL",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 162.66113088688638,
+    "confidence": 36.75713331691741,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 164.23290479614502,
+    "stopLoss": 159.06694720877525,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:00:01.934Z"
+  },
+  {
+    "id": "analysis_1751270401957_sr85gkygb",
+    "symbol": "BTC",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 489.0307469468262,
+    "confidence": 57.5,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 497.25834565624547,
+    "stopLoss": 477.7407145472921,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:00:01.959Z"
+  },
+  {
+    "id": "analysis_1751270401986_1wl6n7cs2",
+    "symbol": "ETH",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 291.0847300080915,
+    "confidence": 37.63146410064337,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 293.46636715580166,
+    "stopLoss": 285.09398517406976,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:00:01.988Z"
+  },
+  {
+    "id": "analysis_1751270402009_zpl5mkfyv",
+    "symbol": "BONK",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 89.91715473432536,
+    "confidence": 30.318218533200543,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 90.55586318966964,
+    "stopLoss": 88.01603200147275,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:00:02.010Z"
+  },
+  {
+    "id": "analysis_1751270402031_u2g19qrfp",
+    "symbol": "JUP",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 213.61120954404151,
+    "confidence": 25.040657362026636,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 215.42504065338355,
+    "stopLoss": 208.34854531637174,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T08:00:02.034Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature 3798z2EPzwGkcZNriuNRzGy9nb9VesCWAqyPmGgw33486f1gvMZ9qD422SVnvHUMn1QNJ6NBDuhG7WFY3Rd9NtRd using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T08:00:09.969Z"
   }
 ]

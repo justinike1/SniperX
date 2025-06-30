@@ -10,17 +10,12 @@ import {
 import fs from 'fs';
 import { config } from '../config';
 
-// Solana RPC connection - using public endpoints to avoid API key issues
-const rpcEndpoints = [
-  'https://api.mainnet-beta.solana.com',
-  'https://rpc.ankr.com/solana',
-  'https://solana-api.projectserum.com',
-  'https://solana.public-rpc.com'
-];
+// WORKING RPC CONNECTION - confirmed functional endpoint
+const WORKING_RPC_ENDPOINT = 'https://api.mainnet-beta.solana.com';
 
 function getConnection() {
-  const endpoint = rpcEndpoints[Math.floor(Math.random() * rpcEndpoints.length)];
-  return new Connection(endpoint, "confirmed");
+  // Use confirmed working endpoint only
+  return new Connection(WORKING_RPC_ENDPOINT, "confirmed");
 }
 
 // Load keypair from wallet file - YOUR REAL WALLET

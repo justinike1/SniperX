@@ -1,10 +1,10 @@
 // Trading Configuration
 export const config = {
-  dryRun: false, // 🚀 LIVE TRADING ENABLED - Using working sendSol function
+  dryRun: true, // DISABLED - Stop all live trading to prevent rate limiting
   tradeAmount: 0.001,
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
-  tradeIntervalMs: 3000, // MAXIMUM BOT PACKAGE: Run every 3 seconds for ultra-aggressive trading
+  tradeIntervalMs: 300000, // 5 minutes to prevent rate limiting
   
   // Safety settings
   maxTradeAmount: 0.1, // Maximum SOL per trade
@@ -26,7 +26,7 @@ export const config = {
   ],
     
   // Trading bot settings
-  enableAutomaticTrading: true,
+  enableAutomaticTrading: false, // DISABLED to prevent rate limiting
   minConfidenceLevel: 85, // Minimum confidence for automatic trades
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit

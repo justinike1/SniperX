@@ -83,8 +83,8 @@ class ContinuousTrading {
 // Create and export the trading instance
 export const continuousTrading = new ContinuousTrading();
 
-// Auto-start if not in dry run mode
-if (!config.dryRun) {
-  console.log('🚀 AUTO-STARTING CONTINUOUS LIVE TRADING');
-  continuousTrading.start();
-}
+// DISABLED - Auto-start causes rate limiting issues
+// if (!config.dryRun) {
+//   console.log('🚀 AUTO-STARTING CONTINUOUS LIVE TRADING');
+//   continuousTrading.start();
+// }
