@@ -6,6 +6,8 @@
 import { pluginManager } from './pluginManager';
 import { MomentumTradingPlugin } from './momentumTradingPlugin';
 import { ArbitragePlugin } from './arbitragePlugin';
+import { EnhancedTokenSelectorPlugin } from './enhancedTokenSelector';
+import { TradingLogPlugin } from './tradingLogPlugin';
 
 /**
  * Initialize and register all plugins
@@ -17,13 +19,19 @@ export async function initializePlugins(): Promise<void> {
     // Register all available plugins
     const momentumPlugin = new MomentumTradingPlugin();
     const arbitragePlugin = new ArbitragePlugin();
+    const tokenSelectorPlugin = new EnhancedTokenSelectorPlugin();
+    const tradingLogPlugin = new TradingLogPlugin();
 
     pluginManager.registerPlugin(momentumPlugin);
     pluginManager.registerPlugin(arbitragePlugin);
+    pluginManager.registerPlugin(tokenSelectorPlugin);
+    pluginManager.registerPlugin(tradingLogPlugin);
 
     // Enable plugins by default
     await pluginManager.enablePlugin('MomentumTrading');
     await pluginManager.enablePlugin('Arbitrage');
+    await pluginManager.enablePlugin('EnhancedTokenSelector');
+    await pluginManager.enablePlugin('TradingLog');
 
     console.log(`✅ Plugin system initialized with ${pluginManager.getActivePluginsCount()} active plugins`);
   } catch (error) {

@@ -1,7 +1,8 @@
 // Trading Configuration
 export const config = {
   dryRun: false, // ENABLED - Live trading mode activated
-  tradeAmount: 0.003, // Adjusted for available balance of 0.0083 SOL
+  tradeAmount: 0.05, // Enhanced trade amount from your config
+  minConfidenceLevel: 0.7, // Minimum AI confidence threshold
   destinationWallet: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   logFilePath: "./server/logs/tradeLogs.json",
   tradeIntervalMs: 300000, // 5 minutes to prevent rate limiting
@@ -27,7 +28,7 @@ export const config = {
     
   // Trading bot settings
   enableAutomaticTrading: true, // ENABLED for autonomous bot trading
-  minConfidenceLevel: 85, // Minimum confidence for automatic trades
+  aiMinConfidenceLevel: 85, // Minimum confidence for automatic trades
   stopLossPercentage: 5, // 5% stop loss
   takeProfitPercentage: 15, // 15% take profit
   
