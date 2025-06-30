@@ -6977,5 +6977,315 @@
       "Phantom wallet integration active"
     ],
     "timestamp": "2025-06-30T06:49:49.614Z"
+  },
+  {
+    "id": "analysis_1751266244705_b1hlben97",
+    "symbol": "SOL",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 397.1982195071131,
+    "confidence": 32.687455106591095,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 400.64503005891044,
+    "stopLoss": 388.38732644834874,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:50:44.706Z"
+  },
+  {
+    "id": "analysis_1751266244821_xzgaqozgr",
+    "symbol": "BTC",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 93.00286094284186,
+    "confidence": 34.02229873829636,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 93.97524990597773,
+    "stopLoss": 90.81012510630838,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:50:44.823Z"
+  },
+  {
+    "id": "analysis_1751266244928_olwtdjaj6",
+    "symbol": "ETH",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 428.72030030074603,
+    "confidence": 36.907742473789405,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 435.3918057429435,
+    "stopLoss": 416.9786403801622,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:50:44.929Z"
+  },
+  {
+    "id": "analysis_1751266244954_x7htfg2rq",
+    "symbol": "BONK",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 271.0746540703992,
+    "confidence": 27.872911785095457,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 273.0602019595029,
+    "stopLoss": 265.0858002138348,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:50:44.955Z"
+  },
+  {
+    "id": "analysis_1751266244973_crt1xjlmo",
+    "symbol": "JUP",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 276.9714673740823,
+    "confidence": 32.8775542013637,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 279.29954790953235,
+    "stopLoss": 270.9181599299299,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:50:44.974Z"
+  },
+  {
+    "type": "BUY_ERROR",
+    "symbol": "UNKNOWN",
+    "error": "Transaction was not confirmed in 60.00 seconds. It is unknown if it succeeded or failed. Check signature a7VeD7ds28junFjxfCQNwiJ7HyXtEFg6RvJsr917vtRyDj3CUFG7WDSGYimdSQncfSQp38m3azaHyDKivfMUvjV using the Solana Explorer or CLI tools.",
+    "timestamp": "2025-06-30T06:50:50.169Z"
+  },
+  {
+    "id": "analysis_1751266304613_ugzatvj4w",
+    "symbol": "SOL",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 483.0566064922836,
+    "confidence": 64.5,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 491.3876828144189,
+    "stopLoss": 472.31038593950007,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:51:44.615Z"
+  },
+  {
+    "id": "analysis_1751266304648_g8tusncej",
+    "symbol": "BTC",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 415.70236834393535,
+    "confidence": 33.322783613272556,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 419.28447645715113,
+    "stopLoss": 406.5764279200767,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:51:44.649Z"
+  },
+  {
+    "id": "analysis_1751266304667_7mz2uzpzv",
+    "symbol": "ETH",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 157.06751775478583,
+    "confidence": 35.66879601030239,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 159.4491604852892,
+    "stopLoss": 152.7475827342483,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:51:44.668Z"
+  },
+  {
+    "id": "analysis_1751266304686_pvt8nkit2",
+    "symbol": "BONK",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 344.5478989981802,
+    "confidence": 28.68881169833205,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 347.0537154554958,
+    "stopLoss": 337.04243607485637,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:51:44.687Z"
+  },
+  {
+    "id": "analysis_1751266304704_2rgtimnmf",
+    "symbol": "JUP",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 446.38906683134877,
+    "confidence": 34.630438657942996,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 450.1173867441305,
+    "stopLoss": 436.8485393113486,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:51:44.705Z"
+  },
+  {
+    "id": "analysis_1751266364696_tdrgju8sp",
+    "symbol": "SOL",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 170.68014385783778,
+    "confidence": 23.54811650336878,
+    "prediction": "SELL",
+    "status": "DRY_RUN",
+    "targetPrice": 172.01379409306537,
+    "stopLoss": 166.51657151188923,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:52:44.697Z"
+  },
+  {
+    "id": "analysis_1751266364811_i6b0jvdcg",
+    "symbol": "BTC",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 416.0425214040455,
+    "confidence": 50.595380856668065,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 422.5754537070273,
+    "stopLoss": 406.19125041250027,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:52:44.812Z"
+  },
+  {
+    "id": "analysis_1751266364833_r5pojucqw",
+    "symbol": "ETH",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 130.78921888250022,
+    "confidence": 33.612962764872144,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 131.80169655712191,
+    "stopLoss": 128.04130785410453,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:52:44.834Z"
+  },
+  {
+    "id": "analysis_1751266364852_st00ma3y2",
+    "symbol": "BONK",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 223.6350800914516,
+    "confidence": 33.846329454557164,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 225.86484776167683,
+    "stopLoss": 218.45730710562697,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:52:44.853Z"
+  },
+  {
+    "id": "analysis_1751266364873_00czq7vwp",
+    "symbol": "JUP",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 376.35029644472496,
+    "confidence": 51.25519124164067,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 382.5929872999121,
+    "stopLoss": 367.2724169920671,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:52:44.874Z"
+  },
+  {
+    "id": "analysis_1751266598023_wor7z4niw",
+    "symbol": "UNKNOWN",
+    "tokenAddress": "",
+    "type": "BUY",
+    "amount": 0.04995,
+    "price": 490.8091913008578,
+    "confidence": 37.255136243667806,
+    "prediction": "HOLD",
+    "status": "DRY_RUN",
+    "targetPrice": 495.6365842179173,
+    "stopLoss": 479.9458496180079,
+    "reasoning": [
+      "OVERNIGHT_TRADING_SIGNAL",
+      "Maximum confidence for continuous trading",
+      "Phantom wallet integration active"
+    ],
+    "timestamp": "2025-06-30T06:56:38.025Z"
   }
 ]

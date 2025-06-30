@@ -22,7 +22,7 @@ try {
   // Load directly from phantom_key.json for reliability
   if (fs.existsSync('./phantom_key.json')) {
     const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
-    walletKeypair = Keypair.fromSecretKey(Uint8Array.from(phantomData.privateKey));
+    walletKeypair = Keypair.fromSecretKey(new Uint8Array(phantomData.privateKey));
     console.log(`🔗 Phantom wallet loaded successfully: ${walletKeypair.publicKey.toString()}`);
   } else if (process.env.PHANTOM_PRIVATE_KEY) {
     // Backup: Load from environment variable

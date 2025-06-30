@@ -7,25 +7,9 @@ const connection = new Connection('https://api.mainnet-beta.solana.com');
 // Load wallet using the same method as other parts of the system
 let wallet: Keypair;
 try {
-  const secretKeyData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
-  let secretKey: Uint8Array;
-  
-  if (Array.isArray(secretKeyData)) {
-    secretKey = new Uint8Array(secretKeyData);
-  } else if (secretKeyData.secretKey && Array.isArray(secretKeyData.secretKey)) {
-    secretKey = new Uint8Array(secretKeyData.secretKey);
-  } else {
-    throw new Error('Invalid wallet format');
-  }
-  
-  // Use fromSeed for 32-byte keys, fromSecretKey for 64-byte keys
-  if (secretKey.length === 32) {
-    wallet = Keypair.fromSeed(secretKey);
-  } else if (secretKey.length === 64) {
-    wallet = Keypair.fromSecretKey(secretKey);
-  } else {
-    throw new Error(`Invalid secret key length: ${secretKey.length}`);
-  }
+  const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+  const secretKey = new Uint8Array(phantomData.privateKey);
+  wallet = Keypair.fromSecretKey(secretKey);
   
   console.log('🔗 Jupiter wallet loaded:', wallet.publicKey.toString());
 } catch (error) {
