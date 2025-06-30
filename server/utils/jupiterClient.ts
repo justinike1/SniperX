@@ -7,8 +7,8 @@ const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${pro
 // Load wallet using the same method as other parts of the system
 let wallet: Keypair;
 try {
-  const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
-  const secretKey = new Uint8Array(phantomData.privateKey);
+  const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf-8'));
+  const secretKey = new Uint8Array(privateKeyArray);
   
   // Use fromSeed for 32-byte keys, fromSecretKey for 64-byte keys
   if (secretKey.length === 32) {

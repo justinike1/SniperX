@@ -10,12 +10,25 @@ import {
 import fs from 'fs';
 import { config } from '../config';
 
-// WORKING RPC CONNECTION - confirmed functional endpoint
-const WORKING_RPC_ENDPOINT = 'https://api.mainnet-beta.solana.com';
+// Multiple RPC endpoints for reliability
+const RPC_ENDPOINTS = [
+  'https://api.mainnet-beta.solana.com',
+  'https://rpc.ankr.com/solana',
+  'https://solana-api.projectserum.com',
+  'https://solana.public-rpc.com'
+];
+
+let currentRpcIndex = 0;
 
 function getConnection() {
-  // Use confirmed working endpoint only
-  return new Connection(WORKING_RPC_ENDPOINT, "confirmed");
+  // Rotate through RPC endpoints for better reliability
+  const endpoint = RPC_ENDPOINTS[currentRpcIndex];
+  currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
+  console.log(`🔗 Using RPC endpoint: ${endpoint}`);
+  return new Connection(endpoint, {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 120000, // 2 minutes
+  });
 }
 
 // Load keypair from wallet file - YOUR REAL WALLET
@@ -25,28 +38,32 @@ let walletKeypair: Keypair;
 try {
   // Load directly from phantom_key.json for reliability
   if (fs.existsSync('./phantom_key.json')) {
-    const phantomData = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
+    const privateKeyArray = JSON.parse(fs.readFileSync('./phantom_key.json', 'utf8'));
     
-    // Check if we have a private key or just an address
-    if (phantomData.privateKey && Array.isArray(phantomData.privateKey)) {
-      const secretKey = new Uint8Array(phantomData.privateKey);
+    // phantom_key.json contains the raw private key array
+    if (Array.isArray(privateKeyArray)) {
+      const secretKey = new Uint8Array(privateKeyArray);
       
-      // Use fromSeed for 32-byte keys, fromSecretKey for 64-byte keys
-      if (secretKey.length === 32) {
-        walletKeypair = Keypair.fromSeed(secretKey);
-      } else if (secretKey.length === 64) {
+      // Use fromSecretKey for 64-byte keys (which is what we have)
+      if (secretKey.length === 64) {
         walletKeypair = Keypair.fromSecretKey(secretKey);
+      } else if (secretKey.length === 32) {
+        walletKeypair = Keypair.fromSeed(secretKey);
       } else {
         throw new Error(`Invalid secret key length: ${secretKey.length}`);
       }
       
       console.log(`🔗 Phantom wallet loaded successfully: ${walletKeypair.publicKey.toString()}`);
+      
+      // Verify this is the correct funded wallet
+      const expectedAddress = '7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv';
+      if (walletKeypair.publicKey.toString() !== expectedAddress) {
+        console.log(`⚠️ WARNING: Wallet mismatch! Expected: ${expectedAddress}, Got: ${walletKeypair.publicKey.toString()}`);
+      } else {
+        console.log(`✅ Correct funded wallet loaded: ${expectedAddress}`);
+      }
     } else {
-      // Read-only mode - use address for balance checking only
-      console.log(`🔗 Read-only wallet mode: ${phantomData.address}`);
-      console.log(`⚠️ Private key needed for live trading`);
-      // Create a dummy keypair for non-trading operations
-      walletKeypair = Keypair.generate();
+      throw new Error('phantom_key.json should contain an array of numbers');
     }
   } else if (process.env.PHANTOM_PRIVATE_KEY) {
     // Backup: Load from environment variable
@@ -131,9 +148,43 @@ export async function sendSol(destinationAddress: string, amountSol: number): Pr
       })
     );
 
-    const signature = await sendAndConfirmTransaction(connection, transaction, [walletKeypair]);
-    console.log("✅ Sent:", amountSol, "SOL | Tx ID:", signature);
-    return signature;
+    // Get recent blockhash for faster confirmation
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = walletKeypair.publicKey;
+
+    // Sign and send transaction with improved confirmation
+    const signature = await connection.sendTransaction(transaction, [walletKeypair], {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+      maxRetries: 3
+    });
+
+    console.log("📤 Transaction submitted:", signature);
+
+    // Wait for confirmation with timeout handling
+    try {
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight: (await connection.getLatestBlockhash()).lastValidBlockHeight
+      }, 'confirmed');
+
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${confirmation.value.err}`);
+      }
+
+      console.log("✅ Sent:", amountSol, "SOL | Tx ID:", signature);
+      return signature;
+    } catch (confirmError: any) {
+      // Check if transaction actually succeeded even if confirmation timed out
+      const status = await connection.getSignatureStatus(signature);
+      if (status.value?.confirmationStatus === 'confirmed' || status.value?.confirmationStatus === 'finalized') {
+        console.log("✅ Transaction succeeded despite timeout | Tx ID:", signature);
+        return signature;
+      }
+      throw confirmError;
+    }
   } catch (error) {
     console.error('❌ Transaction failed:', error);
     throw error;
