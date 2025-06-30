@@ -70,5 +70,19 @@
     "confidence": 100,
     "priceImpact": 0,
     "pnl": 0.00031670261496223855
+  },
+  {
+    "id": "BUY_1751286129861_kc51xr8ik",
+    "timestamp": 1751286129861,
+    "type": "BUY",
+    "tokenSymbol": "UNKNOWN",
+    "tokenAddress": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    "solAmount": 0.001,
+    "tokenAmount": 1,
+    "price": 0.001,
+    "txHash": "2fG7zjaaZf8ouQ4xfyjGhMrif2n4S3LjdyqxgEh7U69uKziZKg5ySVkGqrUx1FbxR4m1GJf9JxixEJKtNJ5iNihT",
+    "solscanLink": "https://solscan.io/tx/2fG7zjaaZf8ouQ4xfyjGhMrif2n4S3LjdyqxgEh7U69uKziZKg5ySVkGqrUx1FbxR4m1GJf9JxixEJKtNJ5iNihT",
+    "confidence": 99.9,
+    "priceImpact": 0.001
   }
 ]
