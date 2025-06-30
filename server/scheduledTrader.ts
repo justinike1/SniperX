@@ -8,10 +8,10 @@ console.log(`⏰ Trading interval: ${config.tradeIntervalMs / 1000} seconds`);
 console.log(`💰 Trade amount: ${config.tradeAmount} SOL`);
 console.log(`🛡️ Safety mode: ${config.dryRun ? 'DRY RUN' : 'LIVE TRADING'}`);
 
-// DISABLED - Send system startup notification to Telegram
-// setTimeout(async () => {
-//   await sendSystemStartupAlert();
-// }, 3000); // Wait 3 seconds for system initialization
+// Send system startup notification to Telegram
+setTimeout(async () => {
+  await sendSystemStartupAlert();
+}, 3000); // Wait 3 seconds for system initialization
 
 // Start scheduled trading with enhanced token trading
 setInterval(() => {
