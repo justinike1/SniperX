@@ -8,30 +8,30 @@ import { buyTokenWithSOL, sellTokenForSOL, selectRandomToken, getWalletBalance }
 import { transactionReceiptLogger } from './utils/transactionReceiptLogger';
 import { protectiveTradingEngine } from './utils/protectiveTradingEngine';
 import { fundProtectionService } from './utils/fundProtectionService';
+import { diversifiedTradingEngine } from './services/diversifiedTradingEngine';
 import { config } from './config';
 
 /**
  * Auto Trade Trigger - Main function called by scheduled trading
+ * Now uses diversified trading for maximum velocity across multiple tokens
  */
 export async function autoTradeTrigger(): Promise<void> {
   try {
-    console.log('🔍 Analyzing market for trading opportunities...');
+    console.log('🔍 DIVERSIFIED TRADING: Analyzing multiple markets for maximum velocity...');
     
-    // Get AI prediction
-    const prediction = await enhancedAITradingEngine.analyzeTradingOpportunity('SOL');
+    // Execute diversified trading across multiple tokens for velocity
+    await diversifiedTradingEngine.executeDiversifiedTrading();
     
-    // Process prediction based on signal strength
-    if (prediction.prediction === 'STRONG_BUY' && prediction.confidence >= 85) {
-      await executeTrade(prediction);
-    } else if (prediction.prediction === 'STRONG_SELL' && prediction.confidence >= 85) {
-      await executeSell(prediction);
-    }
-    
-    // Check token positions for automated selling based on profit/loss targets
+    // Check existing token positions for automated selling based on profit/loss targets
     await tokenPositionManager.checkSellOpportunities();
 
+    // Log diversification stats
+    const stats = diversifiedTradingEngine.getDiversificationStats();
+    console.log(`📊 PORTFOLIO: ${stats.totalPositions} positions across ${stats.uniqueTokens} tokens`);
+    console.log(`🎯 DIVERSIFICATION: ${(stats.diversificationRatio * 100).toFixed(1)}% token coverage`);
+
   } catch (error) {
-    console.error('❌ Auto trading error:', error);
+    console.error('❌ Diversified trading error:', error);
     
     // Log the error
     logTrade({

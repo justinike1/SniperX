@@ -795,6 +795,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Diversified Trading Endpoints
+  app.post('/api/trading/diversified-execute', async (req, res) => {
+    try {
+      const { diversifiedTradingEngine } = await import('./services/diversifiedTradingEngine');
+      await diversifiedTradingEngine.executeDiversifiedTrading();
+      const stats = diversifiedTradingEngine.getDiversificationStats();
+      res.json({ success: true, message: 'Diversified trading executed', stats });
+    } catch (error) {
+      console.error('Error executing diversified trading:', error);
+      res.status(500).json({ success: false, message: 'Failed to execute diversified trading' });
+    }
+  });
+
+  app.get('/api/trading/diversification-stats', async (req, res) => {
+    try {
+      const { diversifiedTradingEngine } = await import('./services/diversifiedTradingEngine');
+      const stats = diversifiedTradingEngine.getDiversificationStats();
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error('Error fetching diversification stats:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch diversification stats' });
+    }
+  });
+
+  app.post('/api/trading/reset-diversification', async (req, res) => {
+    try {
+      const { diversifiedTradingEngine } = await import('./services/diversifiedTradingEngine');
+      diversifiedTradingEngine.resetPositionTracking();
+      res.json({ success: true, message: 'Diversification tracking reset' });
+    } catch (error) {
+      console.error('Error resetting diversification:', error);
+      res.status(500).json({ success: false, message: 'Failed to reset diversification' });
+    }
+  });
+
+  // 24/7 Autonomous Trading Endpoints
+  app.get('/api/trading/autonomous-status', async (req, res) => {
+    try {
+      const { autonomous24x7TradingEngine } = await import('./services/autonomous24x7TradingEngine');
+      const status = autonomous24x7TradingEngine.getStatus();
+      res.json({ success: true, status });
+    } catch (error) {
+      console.error('Error fetching autonomous status:', error);
+      res.status(500).json({ success: false, message: 'Failed to fetch autonomous status' });
+    }
+  });
+
+  app.post('/api/trading/start-autonomous', async (req, res) => {
+    try {
+      const { autonomous24x7TradingEngine } = await import('./services/autonomous24x7TradingEngine');
+      await autonomous24x7TradingEngine.start24x7Trading();
+      res.json({ success: true, message: '24/7 autonomous trading started' });
+    } catch (error) {
+      console.error('Error starting autonomous trading:', error);
+      res.status(500).json({ success: false, message: 'Failed to start autonomous trading' });
+    }
+  });
+
+  app.post('/api/trading/stop-autonomous', async (req, res) => {
+    try {
+      const { autonomous24x7TradingEngine } = await import('./services/autonomous24x7TradingEngine');
+      await autonomous24x7TradingEngine.stop24x7Trading();
+      res.json({ success: true, message: '24/7 autonomous trading stopped' });
+    } catch (error) {
+      console.error('Error stopping autonomous trading:', error);
+      res.status(500).json({ success: false, message: 'Failed to stop autonomous trading' });
+    }
+  });
+
   app.post('/api/trading/close-position', async (req, res) => {
     try {
       const { protectiveTradingEngine } = await import('./utils/protectiveTradingEngine');

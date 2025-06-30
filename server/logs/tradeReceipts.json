@@ -84,5 +84,20 @@
     "solscanLink": "https://solscan.io/tx/2fG7zjaaZf8ouQ4xfyjGhMrif2n4S3LjdyqxgEh7U69uKziZKg5ySVkGqrUx1FbxR4m1GJf9JxixEJKtNJ5iNihT",
     "confidence": 99.9,
     "priceImpact": 0.001
+  },
+  {
+    "id": "SELL_1751286162753_qdavxkyoi",
+    "timestamp": 1751286162753,
+    "type": "SELL",
+    "tokenSymbol": "UNKNOWN",
+    "tokenAddress": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    "solAmount": 0.0012618866775677155,
+    "tokenAmount": 1,
+    "price": 0.0012618866775677155,
+    "txHash": "3i47hVcrs7PVWEcVW8jMTXVz2DRKnU6ot6C15pH3Acs6q73nsJ5ixUu84KMECVSMZ6LHd8Y7XLyGDoDPNfhNem4C",
+    "solscanLink": "https://solscan.io/tx/3i47hVcrs7PVWEcVW8jMTXVz2DRKnU6ot6C15pH3Acs6q73nsJ5ixUu84KMECVSMZ6LHd8Y7XLyGDoDPNfhNem4C",
+    "confidence": 100,
+    "priceImpact": 0,
+    "pnl": 0.0002618866775677155
   }
 ]

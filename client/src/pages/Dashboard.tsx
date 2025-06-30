@@ -42,6 +42,8 @@ import FinalDeploymentDashboard from '@/components/FinalDeploymentDashboard';
 import MultiEnvDeploymentDashboard from '@/components/MultiEnvDeploymentDashboard';
 import JupiterPnLDashboard from '@/components/JupiterPnLDashboard';
 import FundProtectionDashboard from '@/components/FundProtectionDashboard';
+import DiversifiedTradingDashboard from '@/components/DiversifiedTradingDashboard';
+import Autonomous24x7Dashboard from '@/components/Autonomous24x7Dashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -286,6 +288,14 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <FundProtectionDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <DiversifiedTradingDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <Autonomous24x7Dashboard />
       </div>
       
       <div className="smooth-update">

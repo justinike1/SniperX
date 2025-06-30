@@ -15,6 +15,9 @@ import { sendDailySummary } from "./utils/telegramCommands";
 // CRITICAL: Initialize Fund Protection Service for automatic stop-loss and take-profit
 import { fundProtectionService } from "./utils/fundProtectionService";
 
+// AUTONOMOUS 24/7 TRADING: Initialize continuous trading engine
+import { autonomous24x7TradingEngine } from "./services/autonomous24x7TradingEngine";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -83,6 +86,17 @@ app.use((req, res, next) => {
   }
 
   scheduleDailySummary();
+
+  // ACTIVATE 24/7 AUTONOMOUS TRADING - Start after 5 seconds to ensure all services are ready
+  setTimeout(async () => {
+    try {
+      console.log('🚀 STARTING 24/7 AUTONOMOUS TRADING ENGINE...');
+      await autonomous24x7TradingEngine.start24x7Trading();
+      console.log('✅ 24/7 AUTONOMOUS TRADING ACTIVATED - Trading continuously even when offline');
+    } catch (error) {
+      console.error('❌ Failed to start 24/7 trading engine:', error);
+    }
+  }, 5000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
