@@ -44,7 +44,13 @@ export default function MultiEnvDeploymentDashboard() {
   const fetchEnvironmentStatus = async () => {
     try {
       const response = await apiRequest('GET', '/api/deployment/multi-env/status');
-      setEnvStatus(response);
+      if (response && response.success) {
+        setEnvStatus({
+          current: response.current,
+          environments: response.environments || [],
+          deploymentStatus: response.deploymentStatus || {}
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch environment status:', error);
     }

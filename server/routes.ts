@@ -467,6 +467,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Wallet Transfer System endpoints
+  app.get('/api/wallet/sniperx-balance', async (req, res) => {
+    try {
+      const { walletTransferSystem } = await import('./walletTransferSystem');
+      const balance = await walletTransferSystem.getSniperXBalance();
+      res.json({ success: true, ...balance });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
+    }
+  });
+
+  app.post('/api/wallet/withdraw', async (req, res) => {
+    try {
+      const { destinationAddress, amount } = req.body;
+      const { walletTransferSystem } = await import('./walletTransferSystem');
+      
+      if (!walletTransferSystem.isValidSolanaAddress(destinationAddress)) {
+        return res.status(400).json({ success: false, error: 'Invalid Solana address' });
+      }
+
+      const result = await walletTransferSystem.withdrawToPhantom(destinationAddress, amount);
+      res.json({ success: result.success, ...result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
+    }
+  });
+
+  app.get('/api/wallet/deposit-info', async (req, res) => {
+    try {
+      const { walletTransferSystem } = await import('./walletTransferSystem');
+      const depositInfo = walletTransferSystem.getDepositInfo();
+      res.json({ success: true, ...depositInfo });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
+    }
+  });
+
+  app.get('/api/wallet/transfer-history', async (req, res) => {
+    try {
+      const { walletTransferSystem } = await import('./walletTransferSystem');
+      const history = await walletTransferSystem.getTransferHistory();
+      res.json({ success: true, transfers: history });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
+    }
+  });
+
+  app.post('/api/wallet/emergency-withdraw', async (req, res) => {
+    try {
+      const { destinationAddress } = req.body;
+      const { walletTransferSystem } = await import('./walletTransferSystem');
+      
+      if (!walletTransferSystem.isValidSolanaAddress(destinationAddress)) {
+        return res.status(400).json({ success: false, error: 'Invalid Solana address' });
+      }
+
+      const result = await walletTransferSystem.emergencyWithdrawAll(destinationAddress);
+      res.json({ success: result.success, ...result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
+    }
+  });
+
+  // Comprehensive Testing endpoint
+  app.get('/api/test/comprehensive', async (req, res) => {
+    try {
+      const { comprehensiveTestSuite } = await import('./comprehensiveTest');
+      const results = await comprehensiveTestSuite.runComprehensiveTests();
+      res.json({ success: true, results });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
+    }
+  });
+
   // Multi-Environment Deployment endpoints
   app.get('/api/deployment/multi-env/status', async (req, res) => {
     try {
@@ -474,7 +548,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = multiEnvDeploymentManager.getEnvironmentStatus();
       res.json({ success: true, ...status });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Multi-env status error:', error);
+      res.status(500).json({ success: false, error: error?.message || 'Unknown error' });
     }
   });
 
