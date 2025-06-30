@@ -2,7 +2,9 @@ import { enhancedAITradingEngine } from './services/enhancedAITradingEngine';
 import { sendSol } from './utils/sendSol';
 import { logTrade } from './utils/tradeLogger';
 import { sendTelegramAlert } from './utils/telegramAlert';
+import { positionManager } from './services/positionManager';
 import { config } from './config';
+import axios from 'axios';
 
 /**
  * Auto Trade Trigger - Main function called by scheduled trading
@@ -11,33 +13,11 @@ export async function autoTradeTrigger(): Promise<void> {
   try {
     console.log('🔍 Analyzing market for trading opportunities...');
     
-    // Get latest high-confidence predictions from AI engine
-    const predictions = enhancedAITradingEngine.getLatestPredictions();
+    // First, check existing positions for sell opportunities
+    await checkAndExecuteSells();
     
-    if (predictions.length === 0) {
-      console.log('📊 No trading predictions available');
-      return;
-    }
-
-    // Filter for high-confidence STRONG_BUY signals
-    const highConfidenceTrades = predictions.filter(p => 
-      p.prediction === 'STRONG_BUY' && 
-      p.confidence >= config.minConfidenceLevel
-    );
-
-    if (highConfidenceTrades.length === 0) {
-      console.log(`📈 No high-confidence trades found (minimum ${config.minConfidenceLevel}% confidence required)`);
-      return;
-    }
-
-    console.log(`🎯 Found ${highConfidenceTrades.length} high-confidence trading opportunities`);
-
-    // Execute the most confident trade
-    const bestTrade = highConfidenceTrades.reduce((prev, current) => 
-      current.confidence > prev.confidence ? current : prev
-    );
-
-    await executeTrade(bestTrade);
+    // Then, look for new buy opportunities
+    await checkAndExecuteBuys();
 
   } catch (error) {
     console.error('❌ Auto trading error:', error);
@@ -52,11 +32,155 @@ export async function autoTradeTrigger(): Promise<void> {
 }
 
 /**
- * Execute a single trade based on AI prediction
+ * Execute SELL signal for profit-taking
+ */
+async function executeSellSignal(prediction: any): Promise<void> {
+  try {
+    console.log(`🔻 Selling ${prediction.symbol} at ${prediction.currentPrice} SOL`);
+    
+    // Execute the sell via sendSol (placeholder for token swap logic)
+    const tx = await sendSol(config.destinationWallet, config.tradeAmount);
+
+    const sellTrade = {
+      id: prediction.id,
+      symbol: prediction.symbol,
+      type: 'SELL' as const,
+      price: prediction.currentPrice,
+      amount: config.tradeAmount,
+      confidence: prediction.confidence,
+      prediction: prediction.prediction,
+      txHash: tx,
+      status: config.dryRun ? 'DRY_RUN' : 'EXECUTED' as const,
+      timestamp: new Date().toISOString()
+    };
+
+    logTrade(sellTrade);
+
+    await sendTelegramAlert(`🔻 SELL executed:\nSymbol: ${prediction.symbol}\nAmount: ${config.tradeAmount} SOL\nConfidence: ${prediction.confidence}%`);
+    
+    console.log(`✅ SELL executed: ${prediction.symbol} | TX: ${tx}`);
+    
+  } catch (error) {
+    console.error('❌ Sell execution failed:', error);
+    await sendTelegramAlert(`❌ SELL FAILED:\n${prediction.symbol}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Check existing positions and execute sells when profitable
+ */
+async function checkAndExecuteSells(): Promise<void> {
+  const activePositions = positionManager.getActivePositions();
+  
+  if (activePositions.length === 0) {
+    return;
+  }
+
+  console.log(`📊 Checking ${activePositions.length} active positions for sell signals...`);
+
+  // Get current market prices
+  const currentPrices = await getCurrentMarketPrices();
+  
+  // Check for sell signals
+  const sellSignals = positionManager.checkPositionsForSells(currentPrices);
+  
+  if (sellSignals.length > 0) {
+    console.log(`💰 Found ${sellSignals.length} sell opportunities`);
+    
+    // Execute sells
+    for (const sellSignal of sellSignals) {
+      await positionManager.executeSell(sellSignal);
+    }
+  }
+}
+
+/**
+ * Check for new buying and selling opportunities
+ */
+async function checkAndExecuteBuys(): Promise<void> {
+  // Get latest high-confidence predictions from AI engine
+  const predictions = enhancedAITradingEngine.getLatestPredictions();
+  
+  if (predictions.length === 0) {
+    console.log('📊 No trading predictions available');
+    return;
+  }
+
+  // Process SELL signals first for profit-taking
+  const sellSignals = predictions.filter(p => 
+    (p.prediction === 'SELL' || p.prediction === 'STRONG_SELL') && 
+    p.confidence >= config.minConfidenceLevel
+  );
+
+  if (sellSignals.length > 0) {
+    console.log(`💰 Found ${sellSignals.length} high-confidence SELL signals`);
+    for (const sell of sellSignals) {
+      await executeSellSignal(sell);
+    }
+  }
+
+  // Filter for high-confidence STRONG_BUY signals
+  const buySignals = predictions.filter(p => 
+    p.prediction === 'STRONG_BUY' && 
+    p.confidence >= config.minConfidenceLevel
+  );
+
+  if (buySignals.length > 0) {
+    console.log(`🎯 Found ${buySignals.length} high-confidence BUY opportunities`);
+    
+    // Execute the most confident trade
+    const bestTrade = buySignals.reduce((prev, current) => 
+      current.confidence > prev.confidence ? current : prev
+    );
+
+    await executeTrade(bestTrade);
+  } else {
+    console.log(`📈 No high-confidence trades found (minimum ${config.minConfidenceLevel}% confidence required)`);
+  }
+}
+
+/**
+ * Get current market prices for active positions
+ */
+async function getCurrentMarketPrices(): Promise<Map<string, number>> {
+  const prices = new Map<string, number>();
+  
+  try {
+    // Get SOL price from CoinGecko
+    const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd', {
+      timeout: 5000
+    });
+    
+    if (response.data.solana?.usd) {
+      prices.set('SOL', response.data.solana.usd);
+    }
+    
+    // Add more tokens as needed
+    // For simulation, add some mock prices for other tokens
+    prices.set('BTC', 95000 + (Math.random() - 0.5) * 2000); // Simulated BTC price
+    prices.set('ETH', 3800 + (Math.random() - 0.5) * 200);   // Simulated ETH price
+    prices.set('BONK', 0.00003 + (Math.random() - 0.5) * 0.000005); // Simulated BONK price
+    prices.set('JUP', 0.95 + (Math.random() - 0.5) * 0.1);  // Simulated JUP price
+    
+  } catch (error) {
+    console.log('Using backup price data for position checking');
+    // Fallback prices
+    prices.set('SOL', 140);
+    prices.set('BTC', 95000);
+    prices.set('ETH', 3800);
+    prices.set('BONK', 0.00003);
+    prices.set('JUP', 0.95);
+  }
+  
+  return prices;
+}
+
+/**
+ * Execute a single BUY trade based on AI prediction
  */
 async function executeTrade(prediction: any): Promise<void> {
   try {
-    console.log(`🚀 Executing trade for ${prediction.symbol} with ${prediction.confidence}% confidence`);
+    console.log(`🚀 Executing BUY trade for ${prediction.symbol} with ${prediction.confidence}% confidence`);
     
     const tradeDetails = {
       id: prediction.id,
@@ -77,7 +201,7 @@ async function executeTrade(prediction: any): Promise<void> {
     const txSignature = await sendSol(config.destinationWallet, config.tradeAmount);
     
     // Send Telegram notification
-    await sendTelegramAlert(`🚀 Trade executed:\nSymbol: ${prediction.symbol}\nAmount: ${config.tradeAmount} SOL\nConfidence: ${prediction.confidence}%`);
+    await sendTelegramAlert(`🚀 BUY executed:\nSymbol: ${prediction.symbol}\nAmount: ${config.tradeAmount} SOL\nConfidence: ${prediction.confidence}%\nTarget: ${prediction.targetPrice}`);
     
     // Log successful trade
     const completedTrade = {
@@ -90,10 +214,13 @@ async function executeTrade(prediction: any): Promise<void> {
 
     logTrade(completedTrade);
     
+    // Add position to position manager for tracking profit/loss
+    positionManager.addPosition(completedTrade);
+    
     if (config.dryRun) {
-      console.log(`✅ [DRY RUN] Trade logged: ${prediction.symbol} at ${prediction.currentPrice} SOL`);
+      console.log(`✅ [DRY RUN] BUY logged: ${prediction.symbol} at ${prediction.currentPrice} SOL`);
     } else {
-      console.log(`✅ Trade executed: ${prediction.symbol} | TX: ${txSignature}`);
+      console.log(`✅ BUY executed: ${prediction.symbol} | TX: ${txSignature}`);
     }
 
   } catch (error) {
