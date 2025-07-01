@@ -89,15 +89,51 @@ export const REAL_WALLET_ADDRESS = "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv
 /**
  * Get SOL balance for your real wallet
  */
+// Cache balance for 30 seconds to reduce RPC calls
+let cachedBalance = 0;
+let lastBalanceCheck = 0;
+
 export async function getSolBalance(): Promise<number> {
   try {
+    const now = Date.now();
+    
+    // Return cached balance if less than 30 seconds old
+    if (now - lastBalanceCheck < 30000) {
+      return cachedBalance;
+    }
+    
     // Use randomized RPC endpoint to avoid rate limiting
     const connection = getConnection();
     const publicKey = new PublicKey(REAL_WALLET_ADDRESS);
-    const balance = await connection.getBalance(publicKey);
-    return balance / LAMPORTS_PER_SOL;
+    
+    // Add retry logic with exponential backoff
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const balance = await connection.getBalance(publicKey);
+        cachedBalance = balance / LAMPORTS_PER_SOL;
+        lastBalanceCheck = now;
+        return cachedBalance;
+      } catch (error: any) {
+        if (error.message?.includes('429') && retries > 1) {
+          const delay = (4 - retries) * 2000; // 2s, 4s delays
+          console.log(`RPC rate limited, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          retries--;
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    throw new Error('Max retries exceeded');
   } catch (error) {
     console.error('Error fetching SOL balance:', error);
+    // Return cached balance if available during errors
+    if (cachedBalance > 0) {
+      console.log(`Using cached balance: ${cachedBalance} SOL`);
+      return cachedBalance;
+    }
     throw new Error('Failed to fetch wallet balance');
   }
 }

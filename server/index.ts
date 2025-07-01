@@ -12,11 +12,11 @@ import { initializeDatabase } from "./initDatabase";
 // Schedule daily P&L summary
 import { sendDailySummary } from "./utils/telegramCommands";
 
-// CRITICAL: Initialize Fund Protection Service for automatic stop-loss and take-profit
-import { fundProtectionService } from "./utils/fundProtectionService";
+// DISABLED - CRITICAL: Initialize Fund Protection Service for automatic stop-loss and take-profit
+// import { fundProtectionService } from "./utils/fundProtectionService";
 
-// AUTONOMOUS 24/7 TRADING: Initialize continuous trading engine
-import { autonomous24x7TradingEngine } from "./services/autonomous24x7TradingEngine";
+// DISABLED - AUTONOMOUS 24/7 TRADING: Initialize continuous trading engine
+// import { autonomous24x7TradingEngine } from "./services/autonomous24x7TradingEngine";
 
 // PLUGIN SYSTEM: Initialize modular trading strategies
 import { initializePlugins } from "./plugins/pluginRegistry";
@@ -115,16 +115,16 @@ app.use((req, res, next) => {
     }
   }, 2000);
 
-  // ACTIVATE 24/7 AUTONOMOUS TRADING - Start after 5 seconds to ensure all services are ready
-  setTimeout(async () => {
-    try {
-      console.log('🚀 STARTING 24/7 AUTONOMOUS TRADING ENGINE...');
-      await autonomous24x7TradingEngine.start24x7Trading();
-      console.log('✅ 24/7 AUTONOMOUS TRADING ACTIVATED - Trading continuously even when offline');
-    } catch (error) {
-      console.error('❌ Failed to start 24/7 trading engine:', error);
-    }
-  }, 5000);
+  // DISABLED - ACTIVATE 24/7 AUTONOMOUS TRADING - Causing rate limiting issues
+  // setTimeout(async () => {
+  //   try {
+  //     console.log('🚀 STARTING 24/7 AUTONOMOUS TRADING ENGINE...');
+  //     await autonomous24x7TradingEngine.start24x7Trading();
+  //     console.log('✅ 24/7 AUTONOMOUS TRADING ACTIVATED - Trading continuously even when offline');
+  //   } catch (error) {
+  //     console.error('❌ Failed to start 24/7 trading engine:', error);
+  //   }
+  // }, 5000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
