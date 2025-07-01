@@ -16,6 +16,7 @@ import EnhancedFinanceGeniusAI from '@/components/EnhancedFinanceGeniusAI';
 import SocialIntelligenceCenter from '@/components/SocialIntelligenceCenter';
 import { SocialIntelligence } from '@/components/SocialIntelligence';
 import { SocialIntelligenceAlerts } from '@/components/SocialIntelligenceAlerts';
+import { GlobalTradingIntelligence } from '@/components/GlobalTradingIntelligence';
 import { InsiderTradingIntelligence } from '@/components/InsiderTradingIntelligence';
 import { FixedTradingOnboarding } from '@/components/FixedTradingOnboarding';
 import { BeginTradingButton } from '@/components/BeginTradingButton';
@@ -274,6 +275,18 @@ export default function Dashboard() {
           </Button>
         </div>
       )}
+      
+      <div className="smooth-update">
+        <SocialIntelligenceAlerts />
+      </div>
+      
+      <div className="smooth-update">
+        <GlobalTradingIntelligence />
+      </div>
+      
+      <div className="smooth-update">
+        <InsiderTradingIntelligence />
+      </div>
       
       <div className="gpu-accelerated">
         <InstantMarketAccess />
