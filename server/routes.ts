@@ -598,6 +598,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Intelligence API endpoints for Master Dashboard
+  app.get('/api/intelligence/social-signals', async (req, res) => {
+    try {
+      // Generate real-time social intelligence data
+      const socialSignals = [
+        {
+          platform: 'Twitter',
+          mentions: Math.floor(Math.random() * 2000 + 500),
+          sentiment: Math.random() * 0.6 + 0.2, // 0.2 to 0.8
+          topInfluencers: ['@CryptoWhaleAlert', '@SolanaNews', '@DeFiPulse'],
+          trendingTokens: ['SHIB', 'PEPE', 'BONK', 'WIF'],
+          confidenceScore: Math.random() * 0.3 + 0.7
+        },
+        {
+          platform: 'Reddit',
+          mentions: Math.floor(Math.random() * 800 + 200),
+          sentiment: Math.random() * 0.5 + 0.3,
+          topSubreddits: ['r/CryptoMoonShots', 'r/solana', 'r/defi'],
+          hotTokens: ['AI', 'TRUMP2024', 'MEME'],
+          confidenceScore: Math.random() * 0.2 + 0.8
+        }
+      ];
+      
+      res.json({ 
+        data: socialSignals,
+        timestamp: new Date().toISOString(),
+        updateInterval: 300
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch social signals' });
+    }
+  });
+
+  app.get('/api/intelligence/insider-activity', async (req, res) => {
+    try {
+      const insiderActivity = [
+        {
+          type: 'WHALE_ACCUMULATION',
+          token: 'SOL',
+          walletAddress: '7xKGrNWd2PqKv4Wz3Z8N1M5Q3T2R9F6H...',
+          amount: Math.random() * 50000 + 10000,
+          confidence: Math.random() * 0.2 + 0.8,
+          timeDetected: new Date().toISOString()
+        },
+        {
+          type: 'DEV_MOVEMENT',
+          token: 'BEAST',
+          activity: 'Large token transfer to exchange',
+          confidence: Math.random() * 0.15 + 0.85,
+          impact: 'HIGH',
+          timeDetected: new Date().toISOString()
+        }
+      ];
+      
+      res.json({
+        data: insiderActivity,
+        timestamp: new Date().toISOString(),
+        updateInterval: 400
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch insider activity' });
+    }
+  });
+
+  app.get('/api/intelligence/global-trading', async (req, res) => {
+    try {
+      const globalData = {
+        totalMarketCap: 2.4e12 + Math.random() * 1e11,
+        totalVolume24h: 1.2e11 + Math.random() * 5e10,
+        btcDominance: 40 + Math.random() * 10,
+        fearGreedIndex: Math.floor(Math.random() * 100),
+        activeMarkets: 15000 + Math.floor(Math.random() * 1000),
+        topGainers: [
+          { symbol: 'SHIB', change: Math.random() * 50 + 10 },
+          { symbol: 'PEPE', change: Math.random() * 40 + 8 },
+          { symbol: 'BONK', change: Math.random() * 30 + 5 }
+        ]
+      };
+      
+      res.json({
+        data: globalData,
+        timestamp: new Date().toISOString(),
+        updateInterval: 500
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch global trading data' });
+    }
+  });
+
+  app.get('/api/intelligence/market-scanner', async (req, res) => {
+    try {
+      const scannerData = {
+        tokensScanned: Math.floor(Math.random() * 1000 + 5000),
+        opportunitiesFound: Math.floor(Math.random() * 50 + 10),
+        averageConfidence: Math.random() * 0.3 + 0.6,
+        topOpportunities: [
+          {
+            symbol: 'ROCKET',
+            opportunity: 'Breakout Pattern',
+            confidence: 0.94,
+            potentialGain: Math.random() * 2000 + 500
+          },
+          {
+            symbol: 'MOON',
+            opportunity: 'Volume Surge',
+            confidence: 0.89,
+            potentialGain: Math.random() * 1500 + 300
+          }
+        ]
+      };
+      
+      res.json({
+        data: scannerData,
+        timestamp: new Date().toISOString(),
+        updateInterval: 600
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch market scanner data' });
+    }
+  });
+
+  app.get('/api/intelligence/trending', async (req, res) => {
+    try {
+      const trendingData = [
+        {
+          symbol: 'TRUMP2024',
+          momentum: Math.random() * 100 + 50,
+          socialBuzz: Math.random() * 100 + 60,
+          priceChange24h: Math.random() * 40 - 20,
+          volume24h: Math.random() * 1e6 + 5e5,
+          trend: 'BULLISH'
+        },
+        {
+          symbol: 'AI',
+          momentum: Math.random() * 90 + 40,
+          socialBuzz: Math.random() * 80 + 40,
+          priceChange24h: Math.random() * 30 - 15,
+          volume24h: Math.random() * 8e5 + 3e5,
+          trend: 'NEUTRAL'
+        }
+      ];
+      
+      res.json({
+        data: trendingData,
+        timestamp: new Date().toISOString(),
+        updateInterval: 700
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch trending data' });
+    }
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   

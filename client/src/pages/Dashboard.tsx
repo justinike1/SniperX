@@ -50,6 +50,7 @@ import PhantomWalletMonitor from '@/components/PhantomWalletMonitor';
 import { EmotionalSentimentVisualizer } from '@/components/EmotionalSentimentVisualizer';
 import PluginManager from '@/components/PluginManager';
 import { PluginDashboard } from '@/components/PluginDashboard';
+import { MasterIntelligenceDashboard } from '@/components/MasterIntelligenceDashboard';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -275,6 +276,10 @@ export default function Dashboard() {
           </Button>
         </div>
       )}
+      
+      <div className="smooth-update">
+        <MasterIntelligenceDashboard />
+      </div>
       
       <div className="smooth-update">
         <SocialIntelligenceAlerts />

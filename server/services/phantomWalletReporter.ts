@@ -34,7 +34,7 @@ class PhantomWalletReporter {
     console.log('👻 Phantom Wallet Reporter initialized');
     console.log(`📱 Monitoring wallet: ${this.walletAddress.toString()}`);
     
-    this.startWalletMonitoring();
+    // DISABLED - this.startWalletMonitoring(); // Causing rate limiting
   }
 
   /**
