@@ -10,6 +10,7 @@ import { constantMoneyMovement } from "./services/constantMoneyMovement";
 import { sendTelegramAlert, setupTelegramCommands } from "./utils/telegramBot";
 import { logToSheets, logPnLToSheets } from "./utils/sheetsLogger";
 import { trackPnL, getPnLSummary, getActivePositions } from "./utils/pnlTracker";
+import { bonkLiquidator } from "./utils/bonkLiquidator";
 
 
 // Get live Solana price
@@ -904,6 +905,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Wallet Transfer System endpoints
+  // EMERGENCY BONK LIQUIDATION ENDPOINTS
+  app.get('/api/bonk/balance', async (req, res) => {
+    try {
+      const balance = await bonkLiquidator.getBonkBalance();
+      res.json({ 
+        success: true, 
+        balance,
+        formatted: balance.toLocaleString() + ' BONK'
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        error: error?.message || 'Failed to get BONK balance' 
+      });
+    }
+  });
+
+  app.post('/api/bonk/liquidate', async (req, res) => {
+    try {
+      const { amount } = req.body;
+      console.log('🚨 BONK liquidation requested:', amount || 'all');
+      
+      const result = amount
+        ? await bonkLiquidator.liquidateBonk(amount)
+        : await bonkLiquidator.emergencyLiquidateAll();
+      
+      if (result.success) {
+        res.json({ 
+          success: true,
+          message: 'BONK liquidated successfully',
+          txHash: result.txHash || result.message
+        });
+      } else {
+        res.status(400).json({ 
+          success: false,
+          error: result.error || result.message
+        });
+      }
+    } catch (error) {
+      console.error('❌ BONK liquidation error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error?.message || 'Failed to liquidate BONK' 
+      });
+    }
+  });
+
   app.get('/api/wallet/sniperx-balance', async (req, res) => {
     try {
       const { walletTransferSystem } = await import('./walletTransferSystem');

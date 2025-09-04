@@ -1,6 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { sendTelegramAlert } from './telegramAlert';
 import { jupiterClient } from './jupiterClient';
+import { bonkLiquidator } from './bonkLiquidator';
 
 const connection = new Connection(`https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`);
 
@@ -36,6 +37,19 @@ export class EmergencyRecoverySystem {
       const walletPubkey = new PublicKey(this.walletAddress);
       const balance = await connection.getBalance(walletPubkey) / 10**9;
       
+      // SPECIAL BONK HANDLING - Check for BONK first
+      const bonkBalance = await bonkLiquidator.getBonkBalance();
+      if (bonkBalance > 0) {
+        console.log(`💊 BONK POSITION DETECTED: ${bonkBalance.toLocaleString()} BONK`);
+        
+        // If we have BONK and low SOL, liquidate BONK immediately
+        if (balance < 0.015) {
+          console.log('🚨 CRITICAL: LOW SOL + BONK POSITION - Initiating emergency liquidation!');
+          await this.emergencyBonkLiquidation();
+          return; // Exit early after handling BONK
+        }
+      }
+      
       // Check if wallet has insufficient gas
       if (balance < this.minGasRequired) {
         console.log(`⚠️ STUCK POSITION DETECTED: Only ${balance} SOL, need ${this.minGasRequired} SOL`);
@@ -52,6 +66,36 @@ export class EmergencyRecoverySystem {
       }
     } catch (error) {
       console.error('Emergency check failed:', error);
+    }
+  }
+
+  async emergencyBonkLiquidation() {
+    console.log('🚨 EMERGENCY BONK LIQUIDATION ACTIVATED');
+    
+    try {
+      const result = await bonkLiquidator.emergencyLiquidateAll();
+      
+      if (result.success) {
+        console.log('✅ BONK successfully liquidated!');
+        await sendTelegramAlert(
+          '🎉 BONK LIQUIDATION SUCCESS!\n' +
+          result.message + '\n' +
+          'SOL balance restored - trading can continue'
+        );
+      } else {
+        console.error('❌ BONK liquidation failed:', result.message);
+        await sendTelegramAlert(
+          '🚨 BONK LIQUIDATION FAILED:\n' +
+          result.message + '\n\n' +
+          '🆘 MANUAL ACTION REQUIRED:\n' +
+          '1. Add 0.01 SOL for gas fees\n' +
+          '2. Use /liquidate_bonk command\n' +
+          '3. Or manually swap on Raydium/Jupiter'
+        );
+      }
+    } catch (error) {
+      console.error('❌ Critical BONK error:', error);
+      await sendTelegramAlert('🚨 CRITICAL: Failed to handle BONK position!');
     }
   }
 
