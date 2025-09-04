@@ -1,6 +1,8 @@
-// Autonomous Sniper Engine - Alfred-style intelligent trading bot
+// Autonomous Sniper Engine - AI-Powered intelligent trading bot with Elon Musk level sophistication
 import { Connection, PublicKey } from '@solana/web3.js';
 import fetch from 'node-fetch';
+import { aiDecisionEngine, type MarketData } from './utils/aiDecisionEngine';
+import { tradingSafety } from './utils/tradingSafety';
 
 interface TradingConfig {
   scanIntervalMs: number;
@@ -44,16 +46,16 @@ class SniperEngine {
       'confirmed'
     );
     
-    // Trading parameters
+    // ULTRA SAFE Trading parameters after BONK disaster
     this.config = {
-      scanIntervalMs: 30000, // Scan every 30 seconds
-      minConfidenceScore: 0.75, // Minimum confidence to trade
-      defaultTradeAmount: 0.05, // Default 0.05 SOL per trade
-      maxPositions: 5, // Maximum concurrent positions
+      scanIntervalMs: 60000, // Scan every 60 seconds (less aggressive)
+      minConfidenceScore: 0.70, // AI must be 70% confident
+      defaultTradeAmount: 0.005, // REDUCED: Only 0.005 SOL per trade
+      maxPositions: 3, // REDUCED: Maximum 3 concurrent positions
       profitTarget: 0.08, // 8% profit target
       stopLoss: 0.02, // 2% stop loss
-      momentumThreshold: 50, // Minimum momentum score
-      volumeThreshold: 100000, // Minimum 24h volume in USD
+      momentumThreshold: 30, // Lowered momentum threshold
+      volumeThreshold: 50000, // Minimum 50K volume
     };
     
     this.activePositions = new Map();
@@ -162,88 +164,75 @@ class SniperEngine {
   }
 
   async analyzeToken(token, socialSignals, insiderActivity) {
+    console.log(`🤖 AI analyzing ${token.symbol}...`);
+    
+    // Prepare market data for AI analysis
+    const marketData: MarketData = {
+      price: token.currentPrice || 0,
+      volume24h: token.volume24h || 0,
+      priceChange24h: token.priceChange24h || 0,
+      marketCap: token.marketCap || 0,
+      volatility: Math.abs(token.priceChange24h) || 0,
+      socialSentiment: this.calculateSocialSentiment(token, socialSignals),
+      technicalIndicators: {
+        momentum: token.momentum || 0,
+        whaleActivity: insiderActivity.filter(i => i.tokenSymbol === token.symbol).length > 0
+      }
+    };
+
+    // Get AI decision
+    const aiSignal = await aiDecisionEngine.analyzeMarket(token.symbol, marketData);
+    
+    // Build analysis result
     const analysis = {
       token: token.symbol,
       shouldBuy: false,
       confidence: 0,
       reasons: [],
-      risks: []
+      risks: [],
+      aiRecommendation: aiSignal
     };
 
-    // Alfred-style decision matrix
-    let score = 0;
-    const factors = [];
-
-    // 1. Momentum Analysis (0-30 points)
-    if (token.momentum > this.config.momentumThreshold) {
-      const momentumScore = Math.min(30, token.momentum * 0.3);
-      score += momentumScore;
-      factors.push(`Strong momentum: ${token.momentum.toFixed(1)}`);
+    // Apply additional safety checks on top of AI decision
+    if (aiSignal.action === 'BUY' && aiSignal.confidence >= this.config.minConfidenceScore * 100) {
+      // Check trading safety
+      const safetyCheck = await tradingSafety.checkSafety(token.symbol, aiSignal.suggestedAmount);
+      
+      if (safetyCheck.canTrade) {
+        analysis.shouldBuy = true;
+        analysis.confidence = aiSignal.confidence / 100;
+        analysis.reasons = [
+          aiSignal.reasoning,
+          `AI Confidence: ${aiSignal.confidence}%`,
+          `Risk Level: ${aiSignal.riskLevel}`,
+          `Expected Return: ${aiSignal.expectedReturn}%`
+        ];
+        
+        console.log(`✅ AI BUY SIGNAL: ${token.symbol}`);
+        console.log(`   🤖 AI Confidence: ${aiSignal.confidence}%`);
+        console.log(`   💰 Suggested Amount: ${aiSignal.suggestedAmount} SOL`);
+        console.log(`   📝 Reasoning: ${aiSignal.reasoning}`);
+      } else {
+        console.log(`⚠️ AI wanted to buy ${token.symbol} but safety check failed: ${safetyCheck.reason}`);
+        analysis.risks.push(safetyCheck.reason || 'Safety check failed');
+      }
+    } else if (aiSignal.action === 'SELL') {
+      console.log(`🔴 AI SELL SIGNAL: ${token.symbol} - ${aiSignal.reasoning}`);
     } else {
-      analysis.risks.push('Low momentum');
+      console.log(`🔍 AI HOLD: ${token.symbol} - ${aiSignal.reasoning}`);
     }
 
-    // 2. Social Sentiment (0-25 points)
+    return analysis;
+  }
+
+  private calculateSocialSentiment(token, socialSignals): number {
     const tokenSocial = socialSignals.filter(s => 
       s.tokenMention === token.symbol || (s.content && s.content.includes(token.symbol))
     );
     
-    if (tokenSocial.length > 0) {
-      const avgSentiment = tokenSocial.reduce((acc, s) => acc + (s.confidence || 0), 0) / tokenSocial.length;
-      const socialScore = avgSentiment * 25;
-      score += socialScore;
-      
-      if (avgSentiment > 0.8) {
-        factors.push(`High social sentiment: ${(avgSentiment * 100).toFixed(0)}%`);
-      }
-    }
-
-    // 3. Whale Activity (0-25 points)
-    const whaleActivity = insiderActivity.filter(i => 
-      i.tokenSymbol === token.symbol && i.type === 'WHALE_MOVEMENT'
-    );
+    if (tokenSocial.length === 0) return 0;
     
-    if (whaleActivity.length > 0) {
-      score += 25;
-      factors.push('Whale accumulation detected');
-    }
-
-    // 4. Volume Check (0-20 points)
-    if (token.volume24h > this.config.volumeThreshold) {
-      score += 20;
-      factors.push(`High volume: $${(token.volume24h / 1000).toFixed(0)}K`);
-    } else {
-      analysis.risks.push('Low volume');
-    }
-
-    // 5. Price Action Analysis
-    if (token.priceChange24h > 5 && token.priceChange24h < 50) {
-      score += 10;
-      factors.push(`Healthy price action: +${token.priceChange24h.toFixed(1)}%`);
-    } else if (token.priceChange24h > 50) {
-      analysis.risks.push('Potential pump - too risky');
-      score -= 20;
-    } else if (token.priceChange24h < -10) {
-      analysis.risks.push('Negative price action');
-      score -= 10;
-    }
-
-    // Calculate confidence score (0-1)
-    analysis.confidence = Math.max(0, Math.min(1, score / 100));
-    
-    // Decision logic
-    if (analysis.confidence >= this.config.minConfidenceScore && analysis.risks.length < 2) {
-      analysis.shouldBuy = true;
-      analysis.reasons = factors;
-      
-      console.log(`✅ BUY SIGNAL: ${token.symbol}`);
-      console.log(`   Confidence: ${(analysis.confidence * 100).toFixed(0)}%`);
-      console.log(`   Factors: ${factors.join(', ')}`);
-    } else if (analysis.confidence > 0.5) {
-      console.log(`🤔 Watching ${token.symbol} - Score: ${score}/100`);
-    }
-
-    return analysis;
+    return tokenSocial.reduce((acc, s) => acc + (s.confidence || 0), 0) / tokenSocial.length;
   }
 
   async executeBuy(token, analysis) {
@@ -267,14 +256,21 @@ class SniperEngine {
 
       console.log(`🎯 Executing BUY: ${token.symbol}`);
       
-      // Call the backend buy endpoint
+      // Use AI-recommended amount or default (whichever is safer)
+      const tradeAmount = Math.min(
+        analysis.aiRecommendation?.suggestedAmount || this.config.defaultTradeAmount,
+        this.config.defaultTradeAmount
+      );
+      
+      console.log(`💰 Trade amount: ${tradeAmount} SOL (AI suggested: ${analysis.aiRecommendation?.suggestedAmount} SOL)`);
+      
+      // Call the backend buy endpoint with AI-determined amount
       const response = await fetch(`${this.baseUrl}/api/buy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tokenMint: token.symbol,
-          amount: this.config.defaultTradeAmount.toString(),
-          mode: process.env.ENABLE_LIVE_TRADING === 'true' ? 'live' : 'simulated'
+          amount: tradeAmount.toString()
         })
       });
 

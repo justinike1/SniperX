@@ -30,14 +30,15 @@ class TradingSafetySystem {
   private walletPublicKey: PublicKey;
 
   constructor() {
+    // ULTRA CONSERVATIVE SETTINGS after the BONK disaster
     this.config = {
-      maxSpendPerTrade: parseFloat(process.env.MAX_SPEND_PER_TRADE || '0.1'),
-      maxDailySpend: parseFloat(process.env.MAX_DAILY_SPEND || '1.0'),
-      minWalletBalance: parseFloat(process.env.MIN_WALLET_BALANCE || '0.05'),
-      maxVolatility: parseFloat(process.env.MAX_VOLATILITY || '20'),
-      maxSlippage: parseFloat(process.env.MAX_SLIPPAGE || '5'),
-      priceDropThreshold: parseFloat(process.env.PRICE_DROP_THRESHOLD || '10'),
-      circuitBreakerCooldown: parseInt(process.env.CIRCUIT_BREAKER_COOLDOWN || '5')
+      maxSpendPerTrade: parseFloat(process.env.MAX_SPEND_PER_TRADE || '0.01'), // REDUCED from 0.1 to 0.01
+      maxDailySpend: parseFloat(process.env.MAX_DAILY_SPEND || '0.05'), // REDUCED from 1.0 to 0.05  
+      minWalletBalance: parseFloat(process.env.MIN_WALLET_BALANCE || '0.015'), // INCREASED - always keep gas
+      maxVolatility: parseFloat(process.env.MAX_VOLATILITY || '10'), // REDUCED from 20 to 10
+      maxSlippage: parseFloat(process.env.MAX_SLIPPAGE || '2'), // REDUCED from 5 to 2
+      priceDropThreshold: parseFloat(process.env.PRICE_DROP_THRESHOLD || '5'), // REDUCED from 10 to 5
+      circuitBreakerCooldown: parseInt(process.env.CIRCUIT_BREAKER_COOLDOWN || '30') // INCREASED from 5 to 30 min
     };
 
     const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
@@ -63,14 +64,42 @@ class TradingSafetySystem {
 
   async checkSafety(tokenSymbol: string, amount: number): Promise<SafetyStatus> {
     try {
+      // CRITICAL GAS RESERVE CHECK - NEVER SPEND LAST SOL
+      const GAS_RESERVE = 0.01; // ALWAYS keep this for gas fees
+      const EMERGENCY_BUFFER = 0.005; // Extra safety buffer
+      const TOTAL_RESERVE = GAS_RESERVE + EMERGENCY_BUFFER;
+      
       // Check wallet balance
       const balance = await this.getWalletBalance();
+      const availableBalance = Math.max(0, balance - TOTAL_RESERVE);
       
-      // Check minimum balance
-      if (balance - amount < this.config.minWalletBalance) {
+      console.log(`💰 Balance: ${balance} SOL | Reserved: ${TOTAL_RESERVE} SOL | Available: ${availableBalance} SOL`);
+      
+      // EMERGENCY STOP if balance too low
+      if (balance <= TOTAL_RESERVE) {
         return {
           canTrade: false,
-          reason: `Insufficient balance. Would leave only ${(balance - amount).toFixed(4)} SOL`,
+          reason: `🚨 EMERGENCY STOP: Balance critically low! Have ${balance} SOL, need > ${TOTAL_RESERVE} SOL`,
+          walletBalance: balance,
+          dailySpent: this.getDailySpending()
+        };
+      }
+      
+      // Check if trade would deplete available funds
+      if (amount > availableBalance) {
+        return {
+          canTrade: false,
+          reason: `Insufficient funds. Available: ${availableBalance.toFixed(4)} SOL (after ${TOTAL_RESERVE} SOL reserve)`,
+          walletBalance: balance,
+          dailySpent: this.getDailySpending()
+        };
+      }
+      
+      // BONK special restriction after disaster
+      if (tokenSymbol.toUpperCase().includes('BONK') && amount > 0.005) {
+        return {
+          canTrade: false,
+          reason: `BONK trades restricted to max 0.005 SOL due to previous incident`,
           walletBalance: balance,
           dailySpent: this.getDailySpending()
         };

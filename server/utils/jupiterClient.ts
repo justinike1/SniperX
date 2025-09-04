@@ -204,55 +204,153 @@ export async function executeSwap(quote: JupiterQuote): Promise<string> {
   }
 }
 
+// Get wallet balance helper
+async function getWalletBalance(): Promise<number> {
+  try {
+    const balance = await connection.getBalance(wallet.publicKey);
+    return balance / 10**9; // Convert lamports to SOL
+  } catch (error) {
+    console.error('Failed to get balance:', error);
+    return 0;
+  }
+}
+
+export interface SwapResult {
+  success: boolean;
+  txHash?: string;
+  tokenAmount?: number;
+  tokenSymbol?: string;
+  error?: string;
+}
+
 export async function swapSolToToken(
   tokenMint: string, 
   solAmount: number
-): Promise<string | null> {
+): Promise<SwapResult> {
   try {
-    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    // CRITICAL SAFETY CHECKS - NEVER SPEND ALL SOL
+    const GAS_RESERVE = 0.01; // ALWAYS keep this for gas fees
+    const MAX_TRADE_PERCENT = 0.2; // Max 20% of available balance per trade
+    const MIN_TRADE_SIZE = 0.001; // Minimum trade size
     
-    console.log(`🔄 Swapping ${solAmount} SOL for ${tokenMint}`);
+    // Get current balance
+    const balance = await getWalletBalance();
+    console.log(`💰 Current balance: ${balance} SOL`);
     
-    const quote = await getBestRoute(SOL_MINT, tokenMint, solAmount);
-    if (!quote) {
-      throw new Error('No quote available for swap');
+    // Calculate available balance (minus gas reserve)
+    const availableBalance = Math.max(0, balance - GAS_RESERVE);
+    console.log(`⛽ Gas Reserve: ${GAS_RESERVE} SOL`);
+    console.log(`✅ Available for trading: ${availableBalance} SOL`);
+    
+    // EMERGENCY STOP: Never trade if balance is too low
+    if (balance <= GAS_RESERVE) {
+      const error = `EMERGENCY STOP: Balance too low! Have ${balance} SOL, need > ${GAS_RESERVE} SOL for gas`;
+      console.error(`🚨 ${error}`);
+      return { success: false, error };
     }
     
-    console.log(`💡 Quote: ${solAmount} SOL → ${(parseInt(quote.outAmount) / 10**9).toFixed(6)} tokens`);
+    // Enforce position size limits (max 20% of available)
+    const maxAllowedTrade = availableBalance * MAX_TRADE_PERCENT;
+    const actualTradeAmount = Math.min(solAmount, maxAllowedTrade);
+    
+    if (actualTradeAmount < MIN_TRADE_SIZE) {
+      const error = `Trade too small. Min: ${MIN_TRADE_SIZE} SOL, requested: ${actualTradeAmount} SOL`;
+      console.error(`❌ ${error}`);
+      return { success: false, error };
+    }
+    
+    if (actualTradeAmount < solAmount) {
+      console.log(`⚠️ POSITION LIMIT: Reducing trade from ${solAmount} to ${actualTradeAmount} SOL (20% max)`);
+    }
+    
+    // Final check - ensure we have enough after gas reserve
+    if (actualTradeAmount > availableBalance) {
+      const error = `Insufficient available balance. Have: ${availableBalance} SOL, need: ${actualTradeAmount} SOL`;
+      console.error(`❌ ${error}`);
+      return { success: false, error };
+    }
+    
+    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    
+    console.log(`🔄 SAFE SWAP: ${actualTradeAmount} SOL for ${tokenMint}`);
+    console.log(`💰 Will keep ${balance - actualTradeAmount} SOL after trade`);
+    
+    const quote = await getBestRoute(SOL_MINT, tokenMint, actualTradeAmount);
+    if (!quote) {
+      return { success: false, error: 'No quote available for swap' };
+    }
+    
+    const tokenAmount = parseInt(quote.outAmount) / 10**9;
+    console.log(`💡 Quote: ${actualTradeAmount} SOL → ${tokenAmount.toFixed(6)} tokens`);
     console.log(`📊 Price impact: ${quote.priceImpactPct}%`);
     
-    const txid = await executeSwap(quote);
-    return txid;
+    // Check if price impact is too high
+    const priceImpact = parseFloat(quote.priceImpactPct);
+    if (priceImpact > 5) {
+      const error = `Price impact too high: ${priceImpact}%. Max allowed: 5%`;
+      console.error(`⚠️ ${error}`);
+      return { success: false, error };
+    }
     
-  } catch (error) {
+    const txid = await executeSwap(quote);
+    return {
+      success: true,
+      txHash: txid,
+      tokenAmount: tokenAmount,
+      tokenSymbol: tokenMint.slice(0, 6)
+    };
+    
+  } catch (error: any) {
     console.error('❌ SOL to token swap failed:', error);
-    return null;
+    return { success: false, error: error.message || 'Swap failed' };
   }
 }
 
 export async function swapTokenToSol(
   tokenMint: string, 
   tokenAmount: number
-): Promise<string | null> {
+): Promise<SwapResult> {
   try {
     const SOL_MINT = 'So11111111111111111111111111111111111111112';
     
+    // Check we have enough SOL for gas fees before attempting sell
+    const balance = await getWalletBalance();
+    const MIN_GAS_FOR_SELL = 0.003; // Minimum SOL needed for sell transaction
+    
+    if (balance < MIN_GAS_FOR_SELL) {
+      const error = `Cannot sell! Need ${MIN_GAS_FOR_SELL} SOL for gas, have only ${balance} SOL`;
+      console.error(`🚨 ${error}`);
+      // Send critical alert
+      try {
+        const { sendTelegramAlert } = await import('../utils/telegramAlert');
+        await sendTelegramAlert(`🚨 CRITICAL: Cannot sell ${tokenMint}!\n💰 Current Balance: ${balance} SOL\n⛽ Required: ${MIN_GAS_FOR_SELL} SOL for swap fees\n💸 Add: ${(MIN_GAS_FOR_SELL - balance).toFixed(4)} SOL to wallet\n⚠️ Wallet: ${wallet.publicKey.toString()}`);
+      } catch {}
+      return { success: false, error };
+    }
+    
     console.log(`🔄 Swapping ${tokenAmount} tokens for SOL`);
+    console.log(`⛽ Gas available: ${balance} SOL`);
     
     const quote = await getBestRoute(tokenMint, SOL_MINT, tokenAmount);
     if (!quote) {
-      throw new Error('No quote available for swap');
+      return { success: false, error: 'No quote available for swap' };
     }
     
-    console.log(`💡 Quote: ${tokenAmount} tokens → ${(parseInt(quote.outAmount) / 10**9).toFixed(6)} SOL`);
+    const solReceived = parseInt(quote.outAmount) / 10**9;
+    console.log(`💡 Quote: ${tokenAmount} tokens → ${solReceived.toFixed(6)} SOL`);
     console.log(`📊 Price impact: ${quote.priceImpactPct}%`);
     
     const txid = await executeSwap(quote);
-    return txid;
+    return {
+      success: true,
+      txHash: txid,
+      solReceived: solReceived,
+      tokenSymbol: tokenMint.slice(0, 6)
+    };
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Token to SOL swap failed:', error);
-    return null;
+    return { success: false, error: error.message || 'Swap failed' };
   }
 }
 

@@ -12,6 +12,10 @@ import { initializeDatabase } from "./initDatabase";
 // Schedule daily P&L summary
 import { sendDailySummary } from "./utils/telegramCommands";
 
+// EMERGENCY SYSTEMS: Critical safety features
+import { emergencyRecovery } from "./utils/emergencyRecovery";
+import { aiDecisionEngine } from "./utils/aiDecisionEngine";
+
 // DISABLED - CRITICAL: Initialize Fund Protection Service for automatic stop-loss and take-profit
 // import { fundProtectionService } from "./utils/fundProtectionService";
 
@@ -133,15 +137,28 @@ app.use((req, res, next) => {
     }
   }, 3000);
 
-  // INITIALIZE SNIPER ENGINE - Autonomous Alfred-style trading
+  // INITIALIZE EMERGENCY RECOVERY SYSTEM - Prevent stuck positions
   setTimeout(async () => {
     try {
-      console.log('🎯 INITIALIZING SNIPER ENGINE...');
-      console.log('🤖 Alfred-style AI logic for autonomous trading');
-      console.log('📊 Scanning trending tokens every 30 seconds');
-      console.log('💰 Auto-executing trades with safety checks');
+      console.log('🚑 INITIALIZING EMERGENCY RECOVERY SYSTEM...');
+      await emergencyRecovery.startMonitoring();
+      console.log('✅ EMERGENCY RECOVERY ACTIVE - Monitoring for stuck positions');
+      console.log('🛡️ Gas reserve protection: Always keeps 0.01 SOL for fees');
+      console.log('📊 AI Decision Engine: Intelligent trading with GPT-4 analysis');
+    } catch (error) {
+      console.error('❌ Failed to start emergency recovery:', error);
+    }
+  }, 4000);
+
+  // INITIALIZE SNIPER ENGINE - Now with AI Decision Engine
+  setTimeout(async () => {
+    try {
+      console.log('🎯 INITIALIZING ENHANCED SNIPER ENGINE...');
+      console.log('🤖 AI Decision Engine: Market analysis before every trade');
+      console.log('🛡️ Safety limits: Max 0.01 SOL per trade, 0.05 SOL daily');
+      console.log('⛽ Gas reserve: Always preserves 0.01 SOL for transactions');
       await sniperEngine.start();
-      console.log('✅ SNIPER ENGINE ACTIVATED - Hunting for profits 24/7');
+      console.log('✅ SNIPER ENGINE ACTIVATED - Intelligent trading with safety first');
     } catch (error) {
       console.error('❌ Failed to start sniper engine:', error);
     }
