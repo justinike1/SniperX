@@ -47,7 +47,7 @@ export function PluginDashboard() {
     refetchInterval: 3000
   });
 
-  const plugins: PluginStatus[] = pluginStatus || [
+  const plugins: PluginStatus[] = (Array.isArray(pluginStatus) ? pluginStatus : pluginStatus?.plugins) || [
     {
       name: 'MomentumTrading',
       enabled: true,

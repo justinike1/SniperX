@@ -70,8 +70,8 @@ export default function FundProtectionDashboard() {
     },
   });
 
-  const activePositions = positions.filter((p: ProtectedPosition) => p.isActive);
-  const closedPositions = positions.filter((p: ProtectedPosition) => !p.isActive);
+  const activePositions = Array.isArray(positions) ? positions.filter((p: ProtectedPosition) => p.isActive) : [];
+  const closedPositions = Array.isArray(positions) ? positions.filter((p: ProtectedPosition) => !p.isActive) : [];
 
   const calculatePnL = (position: ProtectedPosition) => {
     if (!position.currentPrice) return { pnl: 0, pnlPercent: 0 };
@@ -118,12 +118,12 @@ export default function FundProtectionDashboard() {
                 </CardDescription>
               </div>
             </div>
-            {stats?.isMonitoring && (
+            {stats && typeof stats === 'object' && 'isMonitoring' in stats && (stats as FundProtectionStats).isMonitoring ? (
               <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
                 <Activity className="h-3 w-3 mr-1" />
                 Monitoring Active
               </Badge>
-            )}
+            ) : null}
           </div>
         </CardHeader>
         <CardContent>
