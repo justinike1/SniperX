@@ -1,34 +1,15 @@
 import { google } from 'googleapis';
-import * as fs from 'fs';
-import * as path from 'path';
+import { JWT } from 'google-auth-library';
 
-const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || '1kdlXUEErNutCnqu7BuLxNBAmNftM2czKkMOBlHz5vaw';
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 
-let sheetsService: any = null;
+const jwtClient = new JWT({
+  email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+  key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  scopes: SCOPES,
+});
 
-function initializeSheets() {
-  try {
-    const credentialsPath = path.join(process.cwd(), 'attached_assets/google-creds.json');
-    
-    if (fs.existsSync(credentialsPath)) {
-      const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-      
-      const auth = new google.auth.GoogleAuth({
-        credentials,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets']
-      });
-      
-      sheetsService = google.sheets({ version: 'v4', auth });
-      console.log('📊 Google Sheets logger initialized');
-    } else {
-      console.log('[Sheets] Credentials file not found, logging disabled');
-    }
-  } catch (error) {
-    console.error('[Sheets Error] Failed to initialize:', error);
-  }
-}
-
-initializeSheets();
+const sheets = google.sheets({ version: 'v4', auth: jwtClient });
 
 export async function logToSheets(
   action: string, 
@@ -37,31 +18,28 @@ export async function logToSheets(
   txid: string
 ): Promise<void> {
   try {
-    if (!sheetsService) {
-      console.log('[Sheets] Service not initialized, skipping log');
+    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+      console.log('[Sheets] Missing configuration, skipping log');
       return;
     }
 
-    const timestamp = new Date().toISOString();
-    const row = [
-      timestamp,
+    const values = [[
+      new Date().toLocaleString(),
       action,
       tokenMint,
       amount.toString(),
       txid,
       `https://solscan.io/tx/${txid}`
-    ];
+    ]];
 
-    await sheetsService.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Trading!A:F',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [row]
-      }
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
+      range: 'Sheet1!A:F',
+      valueInputOption: 'RAW',
+      requestBody: { values },
     });
 
-    console.log(`[SNIPERX] 📊 Trade logged to Google Sheets`);
+    console.log('📊 Trade logged to Google Sheets');
   } catch (error) {
     console.error('[Sheets Error]', error);
   }
@@ -69,33 +47,48 @@ export async function logToSheets(
 
 export async function logPnLToSheets(pnlData: any): Promise<void> {
   try {
-    if (!sheetsService) {
-      console.log('[Sheets] Service not initialized, skipping PnL log');
+    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
       return;
     }
 
     const timestamp = new Date().toISOString();
-    const row = [
+    const summary = [
       timestamp,
-      pnlData.totalTrades,
-      pnlData.winRate,
-      pnlData.totalPnL,
-      pnlData.todayPnL,
-      pnlData.bestTrade,
-      pnlData.worstTrade
+      'PnL_SUMMARY',
+      pnlData.totalTrades || 0,
+      pnlData.successfulTrades || 0,
+      pnlData.totalProfit || 0,
+      pnlData.totalLoss || 0,
+      pnlData.winRate || 0
     ];
 
-    await sheetsService.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: process.env.GOOGLE_SHEET_ID,
       range: 'PnL!A:G',
-      valueInputOption: 'USER_ENTERED',
+      valueInputOption: 'RAW',
       requestBody: {
-        values: [row]
+        values: [summary]
       }
     });
 
-    console.log(`[SNIPERX] 📊 PnL data logged to Google Sheets`);
+    console.log('📊 PnL summary logged to Google Sheets');
   } catch (error) {
     console.error('[Sheets PnL Error]', error);
   }
 }
+
+export async function initializeSheets(): Promise<void> {
+  try {
+    if (!process.env.GOOGLE_SHEET_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+      console.log('[Sheets] Configuration missing, logger disabled');
+      return;
+    }
+
+    await jwtClient.authorize();
+    console.log('✅ Google Sheets logger ready');
+  } catch (error) {
+    console.error('[Sheets Init Error]', error);
+  }
+}
+
+initializeSheets();

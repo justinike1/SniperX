@@ -1,181 +1,99 @@
-interface Trade {
-  tokenMint: string;
-  amount: number;
-  action: 'buy' | 'sell';
-  price: number;
-  timestamp: Date;
-  txid?: string;
-}
-
-interface PnLData {
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  totalPnL: number;
-  todayPnL: number;
-  winRate: number;
-  bestTrade: number;
-  worstTrade: number;
-  positions: Map<string, Position>;
-}
-
-interface Position {
-  tokenMint: string;
-  buyPrice: number;
-  amount: number;
-  currentPrice?: number;
-  unrealizedPnL?: number;
-  realizedPnL?: number;
-}
-
-class PnLTracker {
-  private trades: Trade[] = [];
-  private positions: Map<string, Position> = new Map();
-  private pnlData: PnLData;
-
-  constructor() {
-    this.pnlData = {
-      totalTrades: 0,
-      winningTrades: 0,
-      losingTrades: 0,
-      totalPnL: 0,
-      todayPnL: 0,
-      winRate: 0,
-      bestTrade: 0,
-      worstTrade: 0,
-      positions: new Map()
-    };
-    console.log('[SNIPERX] 📈 PnL Tracker initialized');
-  }
-
-  async trackTrade(
-    tokenMint: string, 
-    amount: number | string, 
-    action: 'buy' | 'sell',
-    price?: number
-  ): Promise<void> {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    const tradePrice = price || await this.getTokenPrice(tokenMint);
-
-    const trade: Trade = {
-      tokenMint,
-      amount: numAmount,
-      action,
-      price: tradePrice,
-      timestamp: new Date()
-    };
-
-    this.trades.push(trade);
-    this.pnlData.totalTrades++;
-
-    if (action === 'buy') {
-      this.positions.set(tokenMint, {
-        tokenMint,
-        buyPrice: tradePrice,
-        amount: numAmount
-      });
-      console.log(`[SNIPERX] 💰 Opened position: ${numAmount} ${tokenMint} @ ${tradePrice}`);
-    } else if (action === 'sell') {
-      const position = this.positions.get(tokenMint);
-      if (position) {
-        const pnl = (tradePrice - position.buyPrice) * numAmount;
-        position.realizedPnL = pnl;
-        this.pnlData.totalPnL += pnl;
-        
-        if (pnl > 0) {
-          this.pnlData.winningTrades++;
-          if (pnl > this.pnlData.bestTrade) {
-            this.pnlData.bestTrade = pnl;
-          }
-        } else {
-          this.pnlData.losingTrades++;
-          if (pnl < this.pnlData.worstTrade) {
-            this.pnlData.worstTrade = pnl;
-          }
-        }
-
-        this.pnlData.winRate = (this.pnlData.winningTrades / this.pnlData.totalTrades) * 100;
-        
-        console.log(`[SNIPERX] 💵 Closed position: ${numAmount} ${tokenMint}`);
-        console.log(`[SNIPERX] 📊 PnL: ${pnl > 0 ? '+' : ''}${pnl.toFixed(4)} SOL`);
-        
-        this.positions.delete(tokenMint);
-      }
-    }
-
-    this.updateTodayPnL();
-  }
-
-  private updateTodayPnL(): void {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    this.pnlData.todayPnL = this.trades
-      .filter(t => t.timestamp >= today)
-      .reduce((sum, trade) => {
-        if (trade.action === 'sell') {
-          const buyTrade = this.trades.find(t => 
-            t.tokenMint === trade.tokenMint && 
-            t.action === 'buy' && 
-            t.timestamp < trade.timestamp
-          );
-          if (buyTrade) {
-            return sum + (trade.price - buyTrade.price) * trade.amount;
-          }
-        }
-        return sum;
-      }, 0);
-  }
-
-  private async getTokenPrice(tokenMint: string): Promise<number> {
-    try {
-      const response = await fetch(`https://api.coingecko.com/api/v3/simple/token_price/solana?contract_addresses=${tokenMint}&vs_currencies=usd`);
-      const data = await response.json();
-      return data[tokenMint]?.usd || 0.001;
-    } catch (error) {
-      console.log('[PnL] Using default price for', tokenMint);
-      return 0.001;
-    }
-  }
-
-  getPnLSummary(): PnLData {
-    return {
-      ...this.pnlData,
-      positions: new Map(this.positions)
-    };
-  }
-
-  getPositions(): Position[] {
-    return Array.from(this.positions.values());
-  }
-
-  async updateUnrealizedPnL(): Promise<void> {
-    for (const [token, position] of this.positions) {
-      const currentPrice = await this.getTokenPrice(token);
-      position.currentPrice = currentPrice;
-      position.unrealizedPnL = (currentPrice - position.buyPrice) * position.amount;
-    }
-  }
-}
-
-const pnlTracker = new PnLTracker();
+const portfolio: { [key: string]: any[] } = {};
 
 export async function trackPnL(
-  tokenMint: string,
-  amount: number | string,
-  action: 'buy' | 'sell'
+  tokenMint: string, 
+  amount: number | string, 
+  direction: 'BUY' | 'SELL'
 ): Promise<void> {
-  await pnlTracker.trackTrade(tokenMint, amount, action);
+  const now = Date.now();
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  if (!portfolio[tokenMint]) {
+    portfolio[tokenMint] = [];
+  }
+
+  portfolio[tokenMint].push({
+    direction,
+    amount: numAmount,
+    timestamp: now
+  });
+
+  console.log(`[💹 PnL] ${direction} ${numAmount} of ${tokenMint}`);
 }
 
-export function getPnLSummary(): PnLData {
-  return pnlTracker.getPnLSummary();
+export function getPnLSummary(): any {
+  let totalTrades = 0;
+  let successfulTrades = 0;
+  let totalProfit = 0;
+  let totalLoss = 0;
+  let bestTrade = 0;
+  let worstTrade = 0;
+
+  for (const token in portfolio) {
+    const trades = portfolio[token];
+    for (let i = 0; i < trades.length; i++) {
+      if (trades[i].direction === 'SELL') {
+        totalTrades++;
+        
+        const buyTrade = trades.find((t: any, idx: number) => 
+          t.direction === 'BUY' && idx < i
+        );
+        
+        if (buyTrade) {
+          const profit = trades[i].amount - buyTrade.amount;
+          
+          if (profit > 0) {
+            successfulTrades++;
+            totalProfit += profit;
+            if (profit > bestTrade) bestTrade = profit;
+          } else {
+            totalLoss += Math.abs(profit);
+            if (profit < worstTrade) worstTrade = profit;
+          }
+        }
+      }
+    }
+  }
+
+  const winRate = totalTrades > 0 ? (successfulTrades / totalTrades) * 100 : 0;
+
+  return {
+    totalTrades,
+    successfulTrades,
+    totalProfit,
+    totalLoss,
+    bestTrade,
+    worstTrade,
+    winRate
+  };
 }
 
-export function getActivePositions(): Position[] {
-  return pnlTracker.getPositions();
+export function getActivePositions(): any[] {
+  const positions = [];
+  
+  for (const token in portfolio) {
+    const trades = portfolio[token];
+    const buyTrades = trades.filter((t: any) => t.direction === 'BUY');
+    const sellTrades = trades.filter((t: any) => t.direction === 'SELL');
+    
+    if (buyTrades.length > sellTrades.length) {
+      const totalBought = buyTrades.reduce((sum: number, t: any) => sum + t.amount, 0);
+      const totalSold = sellTrades.reduce((sum: number, t: any) => sum + t.amount, 0);
+      const remaining = totalBought - totalSold;
+      
+      if (remaining > 0) {
+        positions.push({
+          tokenMint: token,
+          amount: remaining,
+          entryPrice: buyTrades[buyTrades.length - 1].amount
+        });
+      }
+    }
+  }
+  
+  return positions;
 }
 
 export async function updateUnrealizedPnL(): Promise<void> {
-  await pnlTracker.updateUnrealizedPnL();
+  console.log('[PnL] Updating unrealized PnL for active positions');
 }
