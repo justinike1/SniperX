@@ -54,6 +54,7 @@ import { MasterIntelligenceDashboard } from '@/components/MasterIntelligenceDash
 import AlfredAIDashboard from '@/components/AlfredAIDashboard';
 import AdvancedSellEngineUI from '@/components/AdvancedSellEngineUI';
 import { SimpleTrading } from '@/components/SimpleTrading';
+import LiveTradingPanel from '@/components/LiveTradingPanel';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -282,6 +283,10 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <SimpleTrading />
+      </div>
+      
+      <div className="smooth-update">
+        <LiveTradingPanel />
       </div>
       
       <div className="smooth-update">

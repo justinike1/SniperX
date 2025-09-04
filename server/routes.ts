@@ -73,11 +73,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Buy Endpoint (Simulated + Live Trading)
   app.post('/api/buy', async (req, res) => {
     try {
-      const { tokenMint, amount, mode = 'simulated' } = req.body;
-      const tradeAmount = parseFloat(amount) || 0.1;
+      const { tokenMint, amount } = req.body;
+      const tradeAmount = parseFloat(amount) || 0.01;
       
-      // Import safety system
+      // Import required modules
       const { tradingSafety } = await import('./utils/tradingSafety');
+      const { swapSolToToken } = await import('./utils/jupiterClient');
+      const { config } = await import('./config');
       
       // Perform safety checks
       const safetyCheck = await tradingSafety.checkSafety(tokenMint || 'UNKNOWN', tradeAmount);
@@ -87,105 +89,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await sendTelegramAlert(`🚫 TRADE BLOCKED\nReason: ${safetyCheck.reason}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL\nDaily spent: ${safetyCheck.dailySpent.toFixed(4)} SOL`);
         return res.status(400).json({ 
           success: false, 
-          msg: 'Trade blocked by safety system', 
+          message: 'Trade blocked by safety system', 
           reason: safetyCheck.reason,
           walletBalance: safetyCheck.walletBalance,
           dailySpent: safetyCheck.dailySpent
         });
       }
       
-      if (mode === 'live' && process.env.ENABLE_LIVE_TRADING === 'true') {
-        // Live trading logic would go here
-        const txid = 'sim_' + Math.random().toString(36).substr(2, 9);
+      // Check if live trading is enabled (dryRun = false means live)
+      if (!config.dryRun) {
+        // Execute real Jupiter swap
+        console.log(`🚀 Executing LIVE BUY: ${tradeAmount} SOL for ${tokenMint}`);
+        const result = await swapSolToToken(tokenMint, tradeAmount);
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Swap failed');
+        }
+        
+        const txHash = result.txHash || 'pending';
         
         // Record the trade in safety system
         tradingSafety.recordTrade(tradeAmount);
         
         // Log to Google Sheets
-        await logToSheets('BUY', tokenMint || 'UNKNOWN', amount || '0.1', txid);
+        await logToSheets('BUY', tokenMint || 'UNKNOWN', amount || '0.01', txHash);
         
         // Send Telegram notification
-        await sendTelegramAlert(`✅ BUY: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL\nDaily: ${safetyCheck.dailySpent.toFixed(4)} SOL`);
+        await sendTelegramAlert(`✅ LIVE BUY EXECUTED!\n${tokenMint}\nAmount: ${amount} SOL\nTokens: ${result.tokenAmount || 'calculating...'}\nTX: ${txHash}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL`);
         
         // Track PnL
         await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'buy');
         
-        console.log('[SNIPERX] 🟢 Live buy executed');
+        console.log('[SNIPERX] 🟢 LIVE buy executed successfully');
         res.json({ 
           success: true, 
-          msg: 'Buy executed (live)', 
-          txid,
+          message: 'Buy executed successfully (LIVE)', 
+          txHash,
+          tokenAmount: result.tokenAmount,
+          tokenSymbol: result.tokenSymbol,
           timestamp: Date.now(),
           safetyStatus: safetyCheck
         });
       } else {
-        // Simulated trading
-        console.log('[SNIPERX] 🟢 Buy executed (sim)');
+        // Test mode - no real trades
+        console.log('[SNIPERX] 🟢 Buy executed (TEST MODE)');
+        const testTxHash = 'test_' + Math.random().toString(36).substr(2, 9);
         
-        // Track simulated PnL
-        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'buy');
+        // Send notification for test mode
+        await sendTelegramAlert(`🧪 TEST BUY (Not Real)\n${tokenMint}\nAmount: ${amount} SOL\nMode: Test/Dry Run`);
         
         res.json({ 
           success: true, 
-          msg: 'Buy executed (simulated)', 
+          message: 'Buy executed (TEST MODE - No real trade)',
+          txHash: testTxHash,
           timestamp: Date.now(),
           safetyStatus: safetyCheck
         });
       }
     } catch (error: any) {
       console.error('[SNIPERX] Buy error:', error);
-      res.status(500).json({ success: false, msg: 'Buy failed', error: error.message });
+      await sendTelegramAlert(`❌ BUY FAILED\nError: ${error.message}`);
+      res.status(500).json({ success: false, message: 'Buy failed', error: error.message });
     }
   });
 
   // Enhanced Sell Endpoint (Simulated + Live Trading)
   app.post('/api/sell', async (req, res) => {
     try {
-      const { tokenMint, amount, mode = 'simulated' } = req.body;
-      const tradeAmount = parseFloat(amount) || 0.1;
+      const { tokenMint, amount } = req.body;
+      const tokenAmount = parseFloat(amount) || 100;
       
-      // Import safety system for sell checks too
+      // Import required modules
       const { tradingSafety } = await import('./utils/tradingSafety');
+      const { swapTokenToSol } = await import('./utils/jupiterClient');
+      const { config } = await import('./config');
       const safetyCheck = await tradingSafety.checkSafety(tokenMint || 'UNKNOWN', 0); // Check without spending for sells
       
-      if (mode === 'live' && process.env.ENABLE_LIVE_TRADING === 'true') {
-        // Live trading logic would go here
-        const txid = 'sim_' + Math.random().toString(36).substr(2, 9);
+      // Check if live trading is enabled (dryRun = false means live)
+      if (!config.dryRun) {
+        // Execute real Jupiter swap
+        console.log(`🚀 Executing LIVE SELL: ${tokenAmount} tokens of ${tokenMint}`);
+        const result = await swapTokenToSol(tokenMint, tokenAmount);
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Swap failed');
+        }
+        
+        const txHash = result.txHash || 'pending';
         
         // Log to Google Sheets
-        await logToSheets('SELL', tokenMint || 'UNKNOWN', amount || '0.1', txid);
+        await logToSheets('SELL', tokenMint || 'UNKNOWN', amount || '100', txHash);
         
         // Send Telegram notification
-        await sendTelegramAlert(`🔴 SELL: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL`);
+        await sendTelegramAlert(`🔴 LIVE SELL EXECUTED!\n${tokenMint}\nAmount: ${tokenAmount} tokens\nSOL Received: ${result.solReceived || 'calculating...'}\nTX: ${txHash}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL`);
         
         // Track PnL
-        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'sell');
+        await trackPnL(tokenMint || 'UNKNOWN', result.solReceived || 0, 'sell');
         
-        console.log('[SNIPERX] 🔴 Live sell executed');
+        console.log('[SNIPERX] 🔴 LIVE sell executed successfully');
         res.json({ 
           success: true, 
-          msg: 'Sell executed (live)', 
-          txid,
+          message: 'Sell executed successfully (LIVE)', 
+          txHash,
+          solReceived: result.solReceived,
+          tokenSymbol: result.tokenSymbol,
           timestamp: Date.now(),
           safetyStatus: safetyCheck
         });
       } else {
-        // Simulated trading
-        console.log('[SNIPERX] 🔴 Sell executed (sim)');
+        // Test mode - no real trades
+        console.log('[SNIPERX] 🔴 Sell executed (TEST MODE)');
+        const testTxHash = 'test_' + Math.random().toString(36).substr(2, 9);
         
-        // Track simulated PnL
-        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'sell');
+        // Send notification for test mode
+        await sendTelegramAlert(`🧪 TEST SELL (Not Real)\n${tokenMint}\nAmount: ${tokenAmount} tokens\nMode: Test/Dry Run`);
         
         res.json({ 
           success: true, 
-          msg: 'Sell executed (simulated)', 
+          message: 'Sell executed (TEST MODE - No real trade)',
+          txHash: testTxHash,
           timestamp: Date.now(),
           safetyStatus: safetyCheck
         });
       }
     } catch (error: any) {
       console.error('[SNIPERX] Sell error:', error);
-      res.status(500).json({ success: false, msg: 'Sell failed', error: error.message });
+      await sendTelegramAlert(`❌ SELL FAILED\nError: ${error.message}`);
+      res.status(500).json({ success: false, message: 'Sell failed', error: error.message });
     }
   });
 
