@@ -15,8 +15,8 @@ import { sendDailySummary } from "./utils/telegramCommands";
 // DISABLED - CRITICAL: Initialize Fund Protection Service for automatic stop-loss and take-profit
 // import { fundProtectionService } from "./utils/fundProtectionService";
 
-// DISABLED - AUTONOMOUS 24/7 TRADING: Initialize continuous trading engine
-// import { autonomous24x7TradingEngine } from "./services/autonomous24x7TradingEngine";
+// AUTONOMOUS 24/7 TRADING: Initialize continuous trading engine
+import { autonomous24x7TradingEngine } from "./services/autonomous24x7TradingEngine";
 
 // PLUGIN SYSTEM: Initialize modular trading strategies
 import { initializePlugins } from "./plugins/pluginRegistry";
@@ -147,16 +147,16 @@ app.use((req, res, next) => {
     }
   }, 5000); // Start 5 seconds after server init
 
-  // DISABLED - ACTIVATE 24/7 AUTONOMOUS TRADING - Causing rate limiting issues
-  // setTimeout(async () => {
-  //   try {
-  //     console.log('🚀 STARTING 24/7 AUTONOMOUS TRADING ENGINE...');
-  //     await autonomous24x7TradingEngine.start24x7Trading();
-  //     console.log('✅ 24/7 AUTONOMOUS TRADING ACTIVATED - Trading continuously even when offline');
-  //   } catch (error) {
-  //     console.error('❌ Failed to start 24/7 trading engine:', error);
-  //   }
-  // }, 5000);
+  // ACTIVATE 24/7 AUTONOMOUS TRADING
+  setTimeout(async () => {
+    try {
+      console.log('🚀 STARTING 24/7 AUTONOMOUS TRADING ENGINE...');
+      await autonomous24x7TradingEngine.start24x7Trading();
+      console.log('✅ 24/7 AUTONOMOUS TRADING ACTIVATED - Trading continuously even when offline');
+    } catch (error) {
+      console.error('❌ Failed to start 24/7 trading engine:', error);
+    }
+  }, 7000); // Start 7 seconds after server init
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
