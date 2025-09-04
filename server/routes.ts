@@ -76,38 +76,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/buy', async (req, res) => {
     try {
       const { tokenMint, amount, mode = 'simulated' } = req.body;
+      const tradeAmount = parseFloat(amount) || 0.1;
+      
+      // Import safety system
+      const { tradingSafety } = await import('./utils/tradingSafety');
+      
+      // Perform safety checks
+      const safetyCheck = await tradingSafety.checkSafety(tokenMint || 'UNKNOWN', tradeAmount);
+      
+      if (!safetyCheck.canTrade) {
+        console.log(`🚫 Trade blocked: ${safetyCheck.reason}`);
+        await sendTelegramAlert(`🚫 TRADE BLOCKED\nReason: ${safetyCheck.reason}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL\nDaily spent: ${safetyCheck.dailySpent.toFixed(4)} SOL`);
+        return res.status(400).json({ 
+          success: false, 
+          msg: 'Trade blocked by safety system', 
+          reason: safetyCheck.reason,
+          walletBalance: safetyCheck.walletBalance,
+          dailySpent: safetyCheck.dailySpent
+        });
+      }
       
       if (mode === 'live' && process.env.ENABLE_LIVE_TRADING === 'true') {
         // Live trading logic would go here
         const txid = 'sim_' + Math.random().toString(36).substr(2, 9);
         
+        // Record the trade in safety system
+        tradingSafety.recordTrade(tradeAmount);
+        
         // Log to Google Sheets
         await logToSheets('BUY', tokenMint || 'UNKNOWN', amount || '0.1', txid);
         
         // Send Telegram notification
-        await sendTelegramAlert(`✅ BUY: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}`);
+        await sendTelegramAlert(`✅ BUY: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL\nDaily: ${safetyCheck.dailySpent.toFixed(4)} SOL`);
         
         // Track PnL
-        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'buy');
+        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'buy');
         
         console.log('[SNIPERX] 🟢 Live buy executed');
         res.json({ 
           success: true, 
           msg: 'Buy executed (live)', 
           txid,
-          timestamp: Date.now() 
+          timestamp: Date.now(),
+          safetyStatus: safetyCheck
         });
       } else {
         // Simulated trading
         console.log('[SNIPERX] 🟢 Buy executed (sim)');
         
         // Track simulated PnL
-        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'buy');
+        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'buy');
         
         res.json({ 
           success: true, 
           msg: 'Buy executed (simulated)', 
-          timestamp: Date.now() 
+          timestamp: Date.now(),
+          safetyStatus: safetyCheck
         });
       }
     } catch (error: any) {
@@ -120,6 +144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/sell', async (req, res) => {
     try {
       const { tokenMint, amount, mode = 'simulated' } = req.body;
+      const tradeAmount = parseFloat(amount) || 0.1;
+      
+      // Import safety system for sell checks too
+      const { tradingSafety } = await import('./utils/tradingSafety');
+      const safetyCheck = await tradingSafety.checkSafety(tokenMint || 'UNKNOWN', 0); // Check without spending for sells
       
       if (mode === 'live' && process.env.ENABLE_LIVE_TRADING === 'true') {
         // Live trading logic would go here
@@ -129,29 +158,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await logToSheets('SELL', tokenMint || 'UNKNOWN', amount || '0.1', txid);
         
         // Send Telegram notification
-        await sendTelegramAlert(`🔴 SELL: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}`);
+        await sendTelegramAlert(`🔴 SELL: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}\nWallet: ${safetyCheck.walletBalance.toFixed(4)} SOL`);
         
         // Track PnL
-        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'sell');
+        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'sell');
         
         console.log('[SNIPERX] 🔴 Live sell executed');
         res.json({ 
           success: true, 
           msg: 'Sell executed (live)', 
           txid,
-          timestamp: Date.now() 
+          timestamp: Date.now(),
+          safetyStatus: safetyCheck
         });
       } else {
         // Simulated trading
         console.log('[SNIPERX] 🔴 Sell executed (sim)');
         
         // Track simulated PnL
-        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'sell');
+        await trackPnL(tokenMint || 'UNKNOWN', tradeAmount, 'sell');
         
         res.json({ 
           success: true, 
           msg: 'Sell executed (simulated)', 
-          timestamp: Date.now() 
+          timestamp: Date.now(),
+          safetyStatus: safetyCheck
         });
       }
     } catch (error: any) {
@@ -192,6 +223,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('[SNIPERX] Stop bot error:', error);
       res.status(500).json({ success: false, msg: 'Failed to stop bot', error: error.message });
+    }
+  });
+
+  // Safety Status Endpoint
+  app.get('/api/safety/status', async (req, res) => {
+    try {
+      const { tradingSafety } = await import('./utils/tradingSafety');
+      const status = tradingSafety.getStatus();
+      const config = tradingSafety.getConfig();
+      const balance = await tradingSafety.getWalletBalance();
+      
+      res.json({
+        success: true,
+        status: {
+          ...status,
+          walletBalance: balance
+        },
+        config,
+        timestamp: Date.now()
+      });
+    } catch (error: any) {
+      console.error('[SNIPERX] Safety status error:', error);
+      res.status(500).json({ success: false, msg: 'Failed to get safety status', error: error.message });
     }
   });
   
