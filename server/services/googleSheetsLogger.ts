@@ -140,6 +140,7 @@ export class GoogleSheetsLogger {
         await this.setupSpreadsheet();
       }
     }
+    }
   }
 
   private async setupHeaders(): Promise<void> {
