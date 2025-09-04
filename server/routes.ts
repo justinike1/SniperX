@@ -357,6 +357,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== MASTER MODE - SUPERIOR 7-FIGURE TRADING SYSTEM =====
+  
+  app.get('/api/master-mode/status', (req, res) => {
+    try {
+      const { masterMode } = require('./services/masterModeIntegration');
+      const status = masterMode.getStatus();
+      res.json({
+        success: true,
+        ...status
+      });
+    } catch (error) {
+      res.json({
+        success: true,
+        isActive: false,
+        message: 'Master Mode not initialized'
+      });
+    }
+  });
+
+  app.post('/api/master-mode/initialize', requireAuth, async (req, res) => {
+    try {
+      const { masterMode } = require('./services/masterModeIntegration');
+      const success = await masterMode.initializeMasterMode();
+      res.json({
+        success,
+        message: success ? 'Master Mode initialized - Target: $1,000,000' : 'Initialization failed'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to initialize Master Mode'
+      });
+    }
+  });
+
+  app.post('/api/master-mode/start', requireAuth, async (req, res) => {
+    try {
+      const { masterMode } = require('./services/masterModeIntegration');
+      await masterMode.startAutonomousTrading();
+      res.json({
+        success: true,
+        message: '24/7 Autonomous Trading activated'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start autonomous trading'
+      });
+    }
+  });
+
+  app.post('/api/master-mode/pause', requireAuth, async (req, res) => {
+    try {
+      const { masterMode } = require('./services/masterModeIntegration');
+      masterMode.pauseTrading(req.body.reason || 'User requested');
+      res.json({
+        success: true,
+        message: 'Trading paused'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to pause trading'
+      });
+    }
+  });
+
+  app.post('/api/master-mode/resume', requireAuth, async (req, res) => {
+    try {
+      const { masterMode } = require('./services/masterModeIntegration');
+      masterMode.resumeTrading();
+      res.json({
+        success: true,
+        message: 'Trading resumed'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resume trading'
+      });
+    }
+  });
+
+  app.post('/api/master-mode/shutdown', requireAuth, async (req, res) => {
+    try {
+      const { masterMode } = require('./services/masterModeIntegration');
+      await masterMode.shutdown();
+      res.json({
+        success: true,
+        message: 'Master Mode shutdown complete'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to shutdown'
+      });
+    }
+  });
+
+  app.get('/api/ai/learning-stats', (req, res) => {
+    try {
+      const { selfLearningAI } = require('./services/selfLearningAI');
+      const stats = selfLearningAI.getModelStats();
+      res.json({
+        success: true,
+        ...stats
+      });
+    } catch (error) {
+      res.json({
+        success: true,
+        generation: 1,
+        patterns: [],
+        winRate: 0,
+        totalTrades: 0
+      });
+    }
+  });
+
+  app.get('/api/fail-safe/status', (req, res) => {
+    try {
+      const { failSafeGuard } = require('./services/failSafeGuard');
+      const status = failSafeGuard.getStatus();
+      res.json({
+        success: true,
+        ...status
+      });
+    } catch (error) {
+      res.json({
+        success: true,
+        circuitBreaker: { isOpen: false },
+        protectionRules: [],
+        riskMetrics: {}
+      });
+    }
+  });
+
+  app.post('/api/fail-safe/test', requireAuth, async (req, res) => {
+    try {
+      const { failSafeGuard } = require('./services/failSafeGuard');
+      await failSafeGuard.testEmergencySystem();
+      res.json({
+        success: true,
+        message: 'Emergency system test complete'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Test failed'
+      });
+    }
+  });
+
+  app.get('/api/sheets/report', requireAuth, async (req, res) => {
+    try {
+      const { googleSheetsLogger } = require('./services/googleSheetsLogger');
+      const report = await googleSheetsLogger.generateReport();
+      res.json({
+        success: true,
+        report,
+        url: googleSheetsLogger.getSpreadsheetUrl()
+      });
+    } catch (error) {
+      res.json({
+        success: false,
+        message: 'Google Sheets not configured'
+      });
+    }
+  });
+
   app.get('/api/trading/stats', (req, res) => {
     try {
       const fs = require('fs');
