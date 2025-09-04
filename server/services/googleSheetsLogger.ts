@@ -55,25 +55,28 @@ interface PerformanceMetrics {
 export class GoogleSheetsLogger {
   private sheets: any;
   private auth: any;
-  private spreadsheetId: string;
+  private spreadsheetId: string = '1kdlXUEErNutCnqu7BuLxNBAmNftM2czKkMOBlHz5vaw';
   private isConnected: boolean = false;
   private tradeQueue: TradeLog[] = [];
   private portfolioHistory: PortfolioSnapshot[] = [];
   private lastUpdateTime: Date = new Date();
 
   constructor() {
-    this.spreadsheetId = process.env.GOOGLE_SHEETS_ID || '';
     this.initializeGoogleSheets();
   }
 
   private async initializeGoogleSheets(): Promise<void> {
     try {
-      if (!process.env.GOOGLE_SHEETS_CREDENTIALS) {
-        console.log('⚠️ Google Sheets not configured - add credentials to enable logging');
+      // Load credentials from file
+      const fs = require('fs');
+      const credentialsPath = './attached_assets/google-creds.json';
+      
+      if (!fs.existsSync(credentialsPath)) {
+        console.log('⚠️ Google Sheets credentials file not found');
         return;
       }
 
-      const credentials = JSON.parse(process.env.GOOGLE_SHEETS_CREDENTIALS);
+      const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
       
       this.auth = new google.auth.GoogleAuth({
         credentials,
@@ -97,9 +100,17 @@ export class GoogleSheetsLogger {
   }
 
   private async setupSpreadsheet(): Promise<void> {
-    if (!this.spreadsheetId) {
-      // Create new spreadsheet
-      const response = await this.sheets.spreadsheets.create({
+    // Always use the existing spreadsheet
+    try {
+      await this.sheets.spreadsheets.get({ spreadsheetId: this.spreadsheetId });
+      console.log('📊 Connected to existing Google Sheets:', this.spreadsheetId);
+      
+      // Setup headers if needed
+      await this.setupHeaders();
+    } catch (error: any) {
+      if (error.code === 404) {
+        // Create new spreadsheet only if not found
+        const response = await this.sheets.spreadsheets.create({
         requestBody: {
           properties: {
             title: 'SniperX 7-Figure Trading Log'
@@ -489,7 +500,7 @@ export class GoogleSheetsLogger {
   }
 
   getSpreadsheetUrl(): string {
-    return `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}`;
+    return `https://docs.google.com/spreadsheets/d/1kdlXUEErNutCnqu7BuLxNBAmNftM2czKkMOBlHz5vaw/edit`;
   }
 
   async generateReport(): Promise<string> {
