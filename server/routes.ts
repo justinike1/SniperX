@@ -1050,6 +1050,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server
   const httpServer = createServer(app);
   
+  // Initialize Telegram bot with polling
+  setupTelegramCommands(app);
+  
   // WebSocket server setup
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
