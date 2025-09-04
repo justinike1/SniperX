@@ -71,32 +71,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Simulate Buy
   app.post('/api/buy', (req, res) => {
-    console.log('[SNIPERX] 🟢 Buy executed (sim)');
-    res.json({ success: true, msg: 'Buy executed (simulated)' });
+    try {
+      console.log('[SNIPERX] 🟢 Buy executed (sim)');
+      res.json({ success: true, msg: 'Buy executed (simulated)', timestamp: Date.now() });
+    } catch (error: any) {
+      console.error('[SNIPERX] Buy error:', error);
+      res.status(500).json({ success: false, msg: 'Buy failed', error: error.message });
+    }
   });
 
   // Simulate Sell
   app.post('/api/sell', (req, res) => {
-    console.log('[SNIPERX] 🔴 Sell executed (sim)');
-    res.json({ success: true, msg: 'Sell executed (simulated)' });
+    try {
+      console.log('[SNIPERX] 🔴 Sell executed (sim)');
+      res.json({ success: true, msg: 'Sell executed (simulated)', timestamp: Date.now() });
+    } catch (error: any) {
+      console.error('[SNIPERX] Sell error:', error);
+      res.status(500).json({ success: false, msg: 'Sell failed', error: error.message });
+    }
   });
 
   // Simulate Market Analysis
   app.post('/api/simulate', (req, res) => {
-    console.log('[SNIPERX] 📊 Trade simulation run');
-    res.json({ success: true, msg: 'Simulated trade: Bullish signal detected' });
+    try {
+      console.log('[SNIPERX] 📊 Trade simulation run');
+      const signals = ['Bullish signal detected', 'Bearish trend identified', 'Market consolidating'];
+      const randomSignal = signals[Math.floor(Math.random() * signals.length)];
+      res.json({ success: true, msg: `Simulated trade: ${randomSignal}`, timestamp: Date.now() });
+    } catch (error: any) {
+      console.error('[SNIPERX] Simulation error:', error);
+      res.status(500).json({ success: false, msg: 'Simulation failed', error: error.message });
+    }
   });
 
   // Start Bot
   app.post('/api/start-bot', (req, res) => {
-    console.log('[SNIPERX] 🤖 BOT STARTED');
-    res.json({ success: true, msg: 'SniperX Bot has started' });
+    try {
+      console.log('[SNIPERX] 🤖 BOT STARTED');
+      res.json({ success: true, msg: 'SniperX Bot has started', timestamp: Date.now(), botStatus: 'active' });
+    } catch (error: any) {
+      console.error('[SNIPERX] Start bot error:', error);
+      res.status(500).json({ success: false, msg: 'Failed to start bot', error: error.message });
+    }
   });
 
   // Stop Bot
   app.post('/api/stop-bot', (req, res) => {
-    console.log('[SNIPERX] ⛔ BOT STOPPED');
-    res.json({ success: true, msg: 'SniperX Bot has stopped' });
+    try {
+      console.log('[SNIPERX] ⛔ BOT STOPPED');
+      res.json({ success: true, msg: 'SniperX Bot has stopped', timestamp: Date.now(), botStatus: 'stopped' });
+    } catch (error: any) {
+      console.error('[SNIPERX] Stop bot error:', error);
+      res.status(500).json({ success: false, msg: 'Failed to stop bot', error: error.message });
+    }
   });
   
   // ===== AUTHENTICATION ROUTES =====
