@@ -27,7 +27,7 @@ async function checkCurrentBalance() {
     console.log('✅ Trading wallet loaded successfully');
     console.log('🔑 Trading Wallet Address:', tradingWallet.publicKey.toBase58());
   } catch (error) {
-    console.log('❌ Failed to load trading wallet:', error.message);
+    console.log('❌ Failed to load trading wallet:', (error as Error).message);
     return;
   }
 
@@ -60,7 +60,7 @@ async function checkCurrentBalance() {
       }
       
     } catch (error) {
-      console.log(`  ❌ Failed: ${error.message}`);
+      console.log(`  ❌ Failed: ${(error as Error).message}`);
     }
   }
   
@@ -72,7 +72,7 @@ async function checkCurrentBalance() {
     console.log(`✅ Working RPC: ${workingEndpoint}`);
     console.log(`💰 Current Balance: ${walletBalance} SOL`);
     
-    if (walletBalance === 0) {
+    if (walletBalance === 0 || walletBalance === null) {
       console.log('\n🚨 CRITICAL ISSUE: WALLET HAS ZERO BALANCE');
       console.log('💡 SOLUTION: Transfer SOL to this wallet address:');
       console.log(`   ${tradingWallet.publicKey.toBase58()}`);
@@ -118,3 +118,7 @@ if (require.main === module) {
 }
 
 export { checkCurrentBalance };
+
+// Default export and alias for compatibility
+export default checkCurrentBalance;
+export const checkWalletBalance = checkCurrentBalance;

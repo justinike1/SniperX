@@ -95,13 +95,14 @@ export class ComprehensiveTestSuite {
       this.addResult('Wallet Address', 'PASS', `Generated address: ${pubkey}`);
 
     } catch (error) {
-      this.addResult('Wallet Connectivity', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Wallet Connectivity', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
   private async testBalanceChecking() {
     try {
-      const balance = await checkWalletBalance();
+      const result = await checkWalletBalance();
+      const balance = result?.balance ?? 0;
       this.addResult('Balance Check', 'PASS', `Retrieved balance: ${balance} SOL`);
 
       if (balance > 0) {
@@ -110,7 +111,7 @@ export class ComprehensiveTestSuite {
         this.addResult('Wallet Funding', 'WARNING', 'Wallet has zero balance - needs funding for trading');
       }
     } catch (error) {
-      this.addResult('Balance Check', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Balance Check', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
@@ -133,7 +134,7 @@ export class ComprehensiveTestSuite {
       config.dryRun = originalDryRun;
 
     } catch (error) {
-      this.addResult('Transaction Test', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Transaction Test', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
@@ -157,7 +158,7 @@ export class ComprehensiveTestSuite {
           this.addResult(`API ${endpoint}`, 'FAIL', `Status: ${response.status}`);
         }
       } catch (error) {
-        this.addResult(`API ${endpoint}`, 'FAIL', `Error: ${error.message}`);
+        this.addResult(`API ${endpoint}`, 'FAIL', `Error: ${(error as Error).message}`);
       }
     }
   }
@@ -169,7 +170,7 @@ export class ComprehensiveTestSuite {
       await db.execute('SELECT 1 as test');
       this.addResult('Database', 'PASS', 'PostgreSQL connection successful');
     } catch (error) {
-      this.addResult('Database', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Database', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
@@ -208,7 +209,7 @@ export class ComprehensiveTestSuite {
       this.addResult('AI Analysis', 'PASS', 'Market analysis functions operational');
       
     } catch (error) {
-      this.addResult('Trading Engine', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Trading Engine', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
@@ -217,7 +218,7 @@ export class ComprehensiveTestSuite {
       // Test WebSocket server existence
       this.addResult('WebSocket', 'PASS', 'WebSocket broadcasting system operational');
     } catch (error) {
-      this.addResult('WebSocket', 'FAIL', `Error: ${error.message}`);
+      this.addResult('WebSocket', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
@@ -234,7 +235,7 @@ export class ComprehensiveTestSuite {
 
       this.addResult('Security Systems', 'PASS', 'Security configurations verified');
     } catch (error) {
-      this.addResult('Security Systems', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Security Systems', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
@@ -249,7 +250,7 @@ export class ComprehensiveTestSuite {
         this.addResult('Multi-Env System', 'FAIL', 'Multi-environment system not responding');
       }
     } catch (error) {
-      this.addResult('Multi-Env System', 'FAIL', `Error: ${error.message}`);
+      this.addResult('Multi-Env System', 'FAIL', `Error: ${(error as Error).message}`);
     }
   }
 
