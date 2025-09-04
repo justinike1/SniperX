@@ -11,8 +11,6 @@ import { sendTelegramAlert, setupTelegramCommands } from "./utils/telegramBot";
 import { logToSheets, logPnLToSheets } from "./utils/sheetsLogger";
 import { trackPnL, getPnLSummary, getActivePositions } from "./utils/pnlTracker";
 
-// Import scheduled trading system
-import "./scheduledTrader";
 
 // Get live Solana price
 async function getRealSolanaPrice(): Promise<number> {

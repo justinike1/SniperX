@@ -1,6 +1,7 @@
 import { Telegraf } from 'telegraf';
 
 let bot: Telegraf | null = null;
+let botLaunched = false;
 
 if (process.env.TELEGRAM_BOT_TOKEN) {
   bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
@@ -24,6 +25,11 @@ export function setupTelegramCommands(app: any): void {
   try {
     if (!bot) {
       console.log('[Telegram] Bot token not configured');
+      return;
+    }
+
+    if (botLaunched) {
+      console.log('[Telegram] Bot already launched, skipping');
       return;
     }
 
@@ -90,11 +96,25 @@ export function setupTelegramCommands(app: any): void {
       );
     });
 
-    bot.launch();
-    console.log('✅ Telegram bot ready');
+    bot.launch().then(() => {
+      botLaunched = true;
+      console.log('✅ Telegram bot ready');
+    }).catch((error) => {
+      console.error('[Telegram Launch Error]', error);
+      if (error.message?.includes('409') || error.message?.includes('Conflict')) {
+        console.log('[Telegram] Another instance is already running');
+        botLaunched = true;
+      }
+    });
 
-    process.once('SIGINT', () => bot?.stop('SIGINT'));
-    process.once('SIGTERM', () => bot?.stop('SIGTERM'));
+    process.once('SIGINT', () => {
+      botLaunched = false;
+      bot?.stop('SIGINT');
+    });
+    process.once('SIGTERM', () => {
+      botLaunched = false;
+      bot?.stop('SIGTERM');
+    });
   } catch (error) {
     console.error('[Telegram Setup Error]', error);
   }

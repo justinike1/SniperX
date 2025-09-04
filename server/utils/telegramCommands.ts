@@ -5,7 +5,7 @@
 
 import { config } from '../config';
 import { sendTelegramAlert } from './telegramAlert';
-import { continuousTrading } from '../continuousTrading';
+import { sniperEngine } from '../sniperEngine';
 import { getPnLSummary, getOpenPositions } from './pnlLogger';
 
 interface TelegramCommand {
@@ -71,7 +71,7 @@ class TelegramCommandHandler {
   // Command Handlers
   private async startBot(args: string[]): Promise<string> {
     try {
-      continuousTrading.start();
+      await sniperEngine.start();
       await sendTelegramAlert(
         '🚀 SniperX Trading Bot Started',
         'Live trading activated via Telegram command'
@@ -84,7 +84,7 @@ class TelegramCommandHandler {
 
   private async stopBot(args: string[]): Promise<string> {
     try {
-      continuousTrading.stop();
+      await sniperEngine.stop();
       await sendTelegramAlert(
         '⏸️ SniperX Trading Bot Stopped',
         'Trading paused via Telegram command'
@@ -96,11 +96,11 @@ class TelegramCommandHandler {
   }
 
   private async getBotStatus(args: string[]): Promise<string> {
-    const status = continuousTrading.getStatus();
+    const isRunning = sniperEngine.isRunning();
     const pnl = getPnLSummary();
     
     return `📊 SniperX Bot Status\n\n` +
-           `🔄 Trading: ${status.isRunning ? '🟢 ACTIVE' : '🔴 STOPPED'}\n` +
+           `🔄 Trading: ${isRunning ? '🟢 ACTIVE' : '🔴 STOPPED'}\n` +
            `💰 Total P&L: ${pnl.totalPnL.toFixed(6)} SOL\n` +
            `📈 Win Rate: ${pnl.winRate.toFixed(1)}%\n` +
            `📊 Total Trades: ${pnl.totalTrades}\n` +
@@ -194,7 +194,7 @@ class TelegramCommandHandler {
 
   private async emergencyStop(args: string[]): Promise<string> {
     try {
-      continuousTrading.stop();
+      await sniperEngine.stop();
       await telegramAlert(
         '🚨 EMERGENCY STOP ACTIVATED',
         'All trading stopped via emergency command'
@@ -210,7 +210,7 @@ class TelegramCommandHandler {
 
   private async killSwitch(args: string[]): Promise<string> {
     try {
-      continuousTrading.stop();
+      await sniperEngine.stop();
       await telegramAlert(
         '💀 KILL SWITCH ACTIVATED',
         'Complete system shutdown via kill command'
