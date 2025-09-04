@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, DollarSign, Plus } from 'lucide-react';
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
 
 interface WalletData {
   address: string;
@@ -89,6 +91,14 @@ export function WalletHeader() {
               <span className="text-sm text-gray-300">
                 (${balanceUSD.toFixed(2)})
               </span>
+              {walletBalance < 0.1 && (
+                <Link href="/deposit">
+                  <Button size="sm" variant="outline" className="h-6 text-xs px-2 border-green-500 text-green-400 hover:bg-green-500/20">
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add SOL
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
