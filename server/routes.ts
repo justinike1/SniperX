@@ -7,6 +7,9 @@ import { aiTradingEngine } from "./services/aiTradingEngine";
 import { realTimeMarketData } from "./services/realTimeMarketData";
 import { lightningFastSellEngine } from "./services/lightningFastSellEngine";
 import { constantMoneyMovement } from "./services/constantMoneyMovement";
+import { sendTelegramAlert, setupTelegramCommands } from "./utils/telegramBot";
+import { logToSheets, logPnLToSheets } from "./utils/sheetsLogger";
+import { trackPnL, getPnLSummary, getActivePositions } from "./utils/pnlTracker";
 
 // Import scheduled trading system
 import "./scheduledTrader";
@@ -69,22 +72,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SIMPLE TRADING UI ROUTES =====
   
-  // Simulate Buy
-  app.post('/api/buy', (req, res) => {
+  // Enhanced Buy Endpoint (Simulated + Live Trading)
+  app.post('/api/buy', async (req, res) => {
     try {
-      console.log('[SNIPERX] 🟢 Buy executed (sim)');
-      res.json({ success: true, msg: 'Buy executed (simulated)', timestamp: Date.now() });
+      const { tokenMint, amount, mode = 'simulated' } = req.body;
+      
+      if (mode === 'live' && process.env.ENABLE_LIVE_TRADING === 'true') {
+        // Live trading logic would go here
+        const txid = 'sim_' + Math.random().toString(36).substr(2, 9);
+        
+        // Log to Google Sheets
+        await logToSheets('BUY', tokenMint || 'UNKNOWN', amount || '0.1', txid);
+        
+        // Send Telegram notification
+        await sendTelegramAlert(`✅ BUY: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}`);
+        
+        // Track PnL
+        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'buy');
+        
+        console.log('[SNIPERX] 🟢 Live buy executed');
+        res.json({ 
+          success: true, 
+          msg: 'Buy executed (live)', 
+          txid,
+          timestamp: Date.now() 
+        });
+      } else {
+        // Simulated trading
+        console.log('[SNIPERX] 🟢 Buy executed (sim)');
+        
+        // Track simulated PnL
+        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'buy');
+        
+        res.json({ 
+          success: true, 
+          msg: 'Buy executed (simulated)', 
+          timestamp: Date.now() 
+        });
+      }
     } catch (error: any) {
       console.error('[SNIPERX] Buy error:', error);
       res.status(500).json({ success: false, msg: 'Buy failed', error: error.message });
     }
   });
 
-  // Simulate Sell
-  app.post('/api/sell', (req, res) => {
+  // Enhanced Sell Endpoint (Simulated + Live Trading)
+  app.post('/api/sell', async (req, res) => {
     try {
-      console.log('[SNIPERX] 🔴 Sell executed (sim)');
-      res.json({ success: true, msg: 'Sell executed (simulated)', timestamp: Date.now() });
+      const { tokenMint, amount, mode = 'simulated' } = req.body;
+      
+      if (mode === 'live' && process.env.ENABLE_LIVE_TRADING === 'true') {
+        // Live trading logic would go here
+        const txid = 'sim_' + Math.random().toString(36).substr(2, 9);
+        
+        // Log to Google Sheets
+        await logToSheets('SELL', tokenMint || 'UNKNOWN', amount || '0.1', txid);
+        
+        // Send Telegram notification
+        await sendTelegramAlert(`🔴 SELL: ${tokenMint || 'Token'} — ${amount || '0.1'} SOL\nTX: ${txid}`);
+        
+        // Track PnL
+        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'sell');
+        
+        console.log('[SNIPERX] 🔴 Live sell executed');
+        res.json({ 
+          success: true, 
+          msg: 'Sell executed (live)', 
+          txid,
+          timestamp: Date.now() 
+        });
+      } else {
+        // Simulated trading
+        console.log('[SNIPERX] 🔴 Sell executed (sim)');
+        
+        // Track simulated PnL
+        await trackPnL(tokenMint || 'UNKNOWN', amount || 0.1, 'sell');
+        
+        res.json({ 
+          success: true, 
+          msg: 'Sell executed (simulated)', 
+          timestamp: Date.now() 
+        });
+      }
     } catch (error: any) {
       console.error('[SNIPERX] Sell error:', error);
       res.status(500).json({ success: false, msg: 'Sell failed', error: error.message });

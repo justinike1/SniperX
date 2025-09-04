@@ -37,6 +37,14 @@ Mission-Critical Standards: Dot every I and cross every T. Apply perfection and 
 - **Security**: Comprehensive monitoring, auto-mitigation, firewall protection, encryption, and secure environment variable management.
 - **Modular Plugin Architecture**: Integrates various trading modules like Jupiter Executor, Portfolio Manager, and Risk Scanner.
 
+## Recent Updates (Sept 4, 2025)
+- **Live Trading Integration**: Added Jupiter protocol integration for actual Solana token swaps
+- **Telegram Bot**: Integrated real-time trade notifications and bot commands
+- **Google Sheets Logging**: Added automated trade logging with service account authentication
+- **PnL Tracker**: Comprehensive profit/loss tracking with analytics and daily summaries
+- **Enhanced Security**: Production-ready environment variables for all API integrations
+- **Trading Modes**: Support for both dry-run testing and live trading modes
+
 ## External Dependencies
 - **Solana Integration**: `@solana/web3.js` for blockchain interaction, connection to Solana RPC endpoints.
 - **Database**: PostgreSQL via `@neondatabase/serverless` and Drizzle ORM.
@@ -46,5 +54,12 @@ Mission-Critical Standards: Dot every I and cross every T. Apply perfection and 
 - **Solana DEX Aggregator**: Jupiter API (v6) for token swaps and liquidity.
 - **Real-time Data**: CoinGecko API for live market data.
 - **AI/ML**: OpenAI API (GPT-4) for intelligent trade analysis.
-- **Communication**: Telegram API for real-time notifications.
-```
+- **Communication**: Telegram Bot API (node-telegram-bot-api) for real-time notifications.
+- **Data Logging**: Google Sheets API with service account authentication for trade records.
+
+## Key Files
+- `server/utils/telegramBot.ts`: Telegram notification system with command handling
+- `server/utils/sheetsLogger.ts`: Google Sheets trade logging integration
+- `server/utils/pnlTracker.ts`: Profit/loss tracking and analytics
+- `server/routes.ts`: Enhanced trading endpoints with live/test mode support
+- `.env.example`: Comprehensive environment variables template

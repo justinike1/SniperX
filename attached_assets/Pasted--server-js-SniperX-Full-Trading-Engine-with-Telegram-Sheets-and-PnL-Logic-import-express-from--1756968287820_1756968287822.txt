@@ -1,0 +1,96 @@
+// server.js — SniperX Full Trading Engine with Telegram, Sheets, and PnL Logic
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
+
+import { Connection, Keypair, PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
+import { Jupiter } from "@jup-ag/core";
+import bs58 from "bs58";
+import { derivePath } from "ed25519-hd-key";
+import * as bip39 from "bip39";
+
+import { logToSheets } from "./utils/sheetsLogger.js";
+import { sendTelegramAlert, setupTelegramCommands } from "./utils/telegramBot.js";
+import { trackPnL } from "./utils/pnlTracker.js";
+
+const app = express();
+const port = process.env.PORT || 3000;
+app.use(cors());
+app.use(express.json());
+
+const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
+const connection = new Connection(SOLANA_RPC, "confirmed");
+
+// --- Load Wallet from Mnemonic ---
+const mnemonic = process.env.MNEMONIC;
+const seed = await bip39.mnemonicToSeed(mnemonic);
+const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
+const keypair = Keypair.fromSeed(derived.key);
+console.log("[✅ Wallet Loaded]", keypair.publicKey.toBase58());
+
+// --- Endpoint: Buy Token ---
+app.post("/api/buy", async (req, res) => {
+  try {
+    const { tokenMint, amount } = req.body;
+    const jupiter = await Jupiter.load({ connection, cluster: "mainnet-beta" });
+
+    const routes = await jupiter.computeRoutes({
+      inputMint: new PublicKey("So11111111111111111111111111111111111111112"),
+      outputMint: new PublicKey(tokenMint),
+      amount: Number(amount),
+      slippage: 0.5,
+    });
+
+    const { swapTransaction } = await jupiter.exchange({
+      routeInfo: routes.routesInfos[0],
+      userPublicKey: keypair.publicKey,
+    });
+
+    const txid = await sendAndConfirmTransaction(connection, swapTransaction, [keypair]);
+    await logToSheets("BUY", tokenMint, amount, txid);
+    await sendTelegramAlert(`✅ BUY: ${tokenMint} — ${amount} units\nTX: https://solscan.io/tx/${txid}`);
+    await trackPnL(tokenMint, amount, "buy");
+
+    res.json({ success: true, txid });
+  } catch (err) {
+    console.error("[BUY ERROR]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Endpoint: Sell Token ---
+app.post("/api/sell", async (req, res) => {
+  try {
+    const { tokenMint, amount } = req.body;
+    const jupiter = await Jupiter.load({ connection, cluster: "mainnet-beta" });
+
+    const routes = await jupiter.computeRoutes({
+      inputMint: new PublicKey(tokenMint),
+      outputMint: new PublicKey("So11111111111111111111111111111111111111112"),
+      amount: Number(amount),
+      slippage: 0.5,
+    });
+
+    const { swapTransaction } = await jupiter.exchange({
+      routeInfo: routes.routesInfos[0],
+      userPublicKey: keypair.publicKey,
+    });
+
+    const txid = await sendAndConfirmTransaction(connection, swapTransaction, [keypair]);
+    await logToSheets("SELL", tokenMint, amount, txid);
+    await sendTelegramAlert(`🔴 SELL: ${tokenMint} — ${amount} units\nTX: https://solscan.io/tx/${txid}`);
+    await trackPnL(tokenMint, amount, "sell");
+
+    res.json({ success: true, txid });
+  } catch (err) {
+    console.error("[SELL ERROR]", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+setupTelegramCommands(app); // Activates /buy, /sell, /summary commands
+
+app.listen(port, () => {
+  console.log(`SniperX full backend running on http://localhost:${port}`);
+});
