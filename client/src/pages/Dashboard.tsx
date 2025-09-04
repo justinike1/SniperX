@@ -51,6 +51,8 @@ import { EmotionalSentimentVisualizer } from '@/components/EmotionalSentimentVis
 import PluginManager from '@/components/PluginManager';
 import { PluginDashboard } from '@/components/PluginDashboard';
 import { MasterIntelligenceDashboard } from '@/components/MasterIntelligenceDashboard';
+import AlfredAIDashboard from '@/components/AlfredAIDashboard';
+import AdvancedSellEngineUI from '@/components/AdvancedSellEngineUI';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useSolanaWallet } from '@/hooks/useSolanaWallet';
 import { 
@@ -279,6 +281,14 @@ export default function Dashboard() {
       
       <div className="smooth-update">
         <MasterIntelligenceDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <AlfredAIDashboard />
+      </div>
+      
+      <div className="smooth-update">
+        <AdvancedSellEngineUI />
       </div>
       
       <div className="smooth-update">

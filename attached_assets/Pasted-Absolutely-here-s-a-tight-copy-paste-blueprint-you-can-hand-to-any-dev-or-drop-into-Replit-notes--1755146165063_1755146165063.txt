@@ -1,0 +1,140 @@
+Absolutely—here’s a tight, copy-paste blueprint you can hand to any dev (or drop into Replit notes). It’s brief by design: says what to build and how it should behave—then lets the system “do its thing.”
+
+⸻
+
+SniperX — Founder Blueprint (Brief, Actionable)
+
+0) Mission
+	•	Be the smartest, safest, fastest Solana sniper that explains itself (“Alfred mode”), scales winners automatically, and never blows up the wallet.
+
+⸻
+
+1) Core Behavior
+	•	Auto-mode ON (default).
+	•	Max position: 10% of wallet per trade.
+	•	Stops: −8% floor if trade never hits +20%; hard kill at −20%.
+	•	Profit ladder exits: +20, +35, +50, +75, +100, +150, +250, +500, +1000, +2500, +5000 (%).
+	•	Dynamic trailing stop based on peak profit (wider as gains grow).
+	•	Full pull when momentum/volume/sentiment all flip bearish.
+
+⸻
+
+2) Inputs (“Eyes”)
+	•	Social: Twitter/X trends, Reddit crypto subs (spikes, velocity).
+	•	Whales: Large Solana wallet inflow/outflow + unusual DEX swaps.
+	•	DEX: Liquidity added/removed, volume spikes, holder concentration.
+	•	Tech cues: Fibonacci zones, RSI divergence, trend strength (simple).
+	•	Rug checks: LP lock/drain, honeypot/tax flags, dev wallet activity.
+
+Goal: Produce a single confidence score (0–1) + quick metadata (which signals fired).
+
+⸻
+
+3) Decision (“Brain”)
+	•	Fuse signals → confidence score + risk tag (normal/cautious/avoid).
+	•	If confidence ≥ threshold and risk acceptable → send to execution.
+	•	Alfred reasoning: one clean sentence why we’re acting (top 2–3 signals).
+
+⸻
+
+4) Execution (“Hands”)
+	•	Use existing wallet setup (do not touch keys).
+	•	Route via Jupiter with slippage guard & retry.
+	•	Open position and start sell manager (ladder + trailing + full-pull).
+	•	Liquidity-aware selling: chunk exits to respect pool depth.
+
+⸻
+
+5) Voice & Reports (“Mouth”)
+	•	Alfred style: calm, educated, concise.
+	•	On buy: token, size, confidence, 1-line reason.
+	•	On trim: rung hit or trailing reason.
+	•	On exit: PnL %, exit reason (e.g., “reversal + volume decay”).
+	•	Daily recap: wins/losses, hit-rate, best/worst, next watchlist.
+
+⸻
+
+6) Safety (“Never go broke”)
+	•	Enforce 10% cap strictly (no stacking beyond rule).
+	•	Cooldown after a failed setup; block re-entry too soon.
+	•	No thin-liquidity apes; minimum depth & volume gates.
+	•	Block tokens with rug flags.
+	•	Network errors → fail closed (no blind trading).
+
+⸻
+
+7) Tiers (Feature Flags)
+	•	Lite: Real-time alerts, top 3 trends, fixed risk profile (no delays).
+	•	Pro: Full automation, custom targets/stops, whale & meme scanners, dashboard + Telegram commands.
+	•	Mastermind: Priority signals, GPT coaching, early token tracking, deep rug scan, portfolio mirroring, private group.
+
+Implementation: TIER=lite|pro|mastermind toggles behavior.
+
+⸻
+
+8) Minimal Interfaces (Keep it simple)
+	•	Scanner → Brain: {symbol, mint, confidence, signals:{twitter,reddit,whales,dex}, entryHints}
+	•	Brain → Exec: {symbol, mint, amountSOL}
+	•	Exec → Manager: {positionId, entryPrice}
+	•	Manager needs: getPnLPercent(positionId), sellChunk(positionId, amountSOL, reason)
+
+Note: Exec adapter uses existing wallet/Jupiter functions; no key changes.
+
+⸻
+
+9) Defaults (bake in)
+	•	AUTO_MODE=true
+	•	MAX_POSITION_PCT=10
+	•	STOP_LOSS_PRIMARY=-8
+	•	STOP_LOSS_MAX=-20
+	•	Confidence threshold (start at 0.65; tune later).
+	•	Trailing bands:
+	•	0–50% peak → trail 12%
+	•	50–150% → 18%
+	•	150–500% → 25%
+	•	500%+ → 35%
+
+⸻
+
+10) Telemetry & Memory
+	•	Log entry reason, PnL path, exit reason, time-in-trade.
+	•	Track hit-rate by signal mix (e.g., whales+twitter, dex+reddit).
+	•	Use logs to adjust confidence weights over time (simple moving average OK).
+
+⸻
+
+11) Commands (Telegram)
+	•	/status (wallet SOL, open positions, realized PnL)
+	•	/top (top 3 watches with confidence)
+	•	/why <symbol> (last rationale)
+	•	/panic (close all, if enabled)
+	•	/auto on|off (override auto mode)
+
+⸻
+
+12) Deploy (brief)
+	•	Replit: keep current .env, run node src/launcher.js.
+	•	PM2/VPS: pm2 start src/launcher.js --name sniperx.
+	•	Railway/Oracle: same command; persist env vars there.
+
+⸻
+
+13) Success Metrics
+	•	Win-rate %, avg gain vs. avg loss, max drawdown, weekly net PnL.
+	•	Alert-to-entry latency, entry-to-fill slippage, exit efficiency (avg capture of peak).
+
+⸻
+
+14) Roadmap (after MVP)
+	•	Dashboard/App: PnL, holdings, logs, controls.
+	•	Priority queue for Mastermind signals.
+	•	Affiliate + licensing (keys by Telegram ID or wallet).
+	•	Model tuning from memory stats (no overfit).
+
+⸻
+
+One-liner for devs
+
+“Fuse social/whale/dex into a confidence score, enforce 10% sizing and -8%/-20% stops, buy via existing wallet/Jupiter, sell via profit ladder + adaptive trailing, explain every move in a single sentence, and report everything in Telegram. Tiers are feature flags. Safety first.”
+
+That’s the entire blueprint—brief, specific, and build-ready.
