@@ -50,7 +50,7 @@ class FundProtectionService {
 
   constructor() {
     this.initializeMonitoring();
-    this.addExistingBonkPosition();
+    // Removed test BONK position that was causing spam alerts
     console.log('🛡️ Fund Protection Service initialized');
     console.log(`🔻 Stop Loss: ${(this.settings.stopLossPercentage * 100).toFixed(1)}%`);
     console.log(`🎯 Take Profit: ${(this.settings.takeProfitPercentage * 100).toFixed(1)}%`);
