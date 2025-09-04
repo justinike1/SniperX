@@ -523,6 +523,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sniper Engine API endpoints
+  app.get('/api/sniper/status', async (req, res) => {
+    try {
+      const { sniperEngine } = await import('./sniperEngine');
+      const status = sniperEngine.getStatus();
+      res.json({
+        success: true,
+        ...status,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Sniper status error:', error);
+      res.json({
+        success: false,
+        message: 'Failed to get sniper status',
+        isRunning: false
+      });
+    }
+  });
+
+  app.post('/api/sniper/start', async (req, res) => {
+    try {
+      const { sniperEngine } = await import('./sniperEngine');
+      await sniperEngine.start();
+      res.json({
+        success: true,
+        message: 'Sniper engine started'
+      });
+    } catch (error) {
+      console.error('Sniper start error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start sniper engine'
+      });
+    }
+  });
+
+  app.post('/api/sniper/stop', async (req, res) => {
+    try {
+      const { sniperEngine } = await import('./sniperEngine');
+      sniperEngine.stop();
+      res.json({
+        success: true,
+        message: 'Sniper engine stopped'
+      });
+    } catch (error) {
+      console.error('Sniper stop error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to stop sniper engine'
+      });
+    }
+  });
+
   app.post('/api/bot/deactivate-maximum', requireAuth, async (req, res) => {
     try {
       const { maximumBotActivation } = require('./maximumBotActivation');

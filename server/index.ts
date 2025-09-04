@@ -24,6 +24,9 @@ import { initializePlugins } from "./plugins/pluginRegistry";
 // ULTIMATE TRADING ENGINE: The superior merged system
 import { ultimateTradeEngine } from "./services/ultimateTradeEngine";
 
+// SNIPER ENGINE: Autonomous Alfred-style trading bot
+import { sniperEngine } from "./sniperEngine";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -129,6 +132,20 @@ app.use((req, res, next) => {
       console.error('❌ Failed to activate ultimate engine:', error);
     }
   }, 3000);
+
+  // INITIALIZE SNIPER ENGINE - Autonomous Alfred-style trading
+  setTimeout(async () => {
+    try {
+      console.log('🎯 INITIALIZING SNIPER ENGINE...');
+      console.log('🤖 Alfred-style AI logic for autonomous trading');
+      console.log('📊 Scanning trending tokens every 30 seconds');
+      console.log('💰 Auto-executing trades with safety checks');
+      await sniperEngine.start();
+      console.log('✅ SNIPER ENGINE ACTIVATED - Hunting for profits 24/7');
+    } catch (error) {
+      console.error('❌ Failed to start sniper engine:', error);
+    }
+  }, 5000); // Start 5 seconds after server init
 
   // DISABLED - ACTIVATE 24/7 AUTONOMOUS TRADING - Causing rate limiting issues
   // setTimeout(async () => {
