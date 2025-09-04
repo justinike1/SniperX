@@ -58,38 +58,61 @@
 
         const simulatePrice = () => (24 + Math.random()).toFixed(2);
 
+        async function callAPI(endpoint, logMessage) {
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({})
+            });
+            const data = await response.json();
+            log(logMessage + " - " + (data.msg || "Success"));
+            return data;
+          } catch (error) {
+            log("❌ API Error: " + error.message);
+            return null;
+          }
+        }
+
         const buyBtn = document.getElementById("buyBtn");
         if (buyBtn) {
-          buyBtn.addEventListener("click", () => {
-            log("🟢 Simulated BUY at $" + simulatePrice());
+          buyBtn.addEventListener("click", async () => {
+            log("🟢 Executing BUY at $" + simulatePrice() + "...");
+            await callAPI('/api/buy', '✅ BUY');
           });
         }
 
         const sellBtn = document.getElementById("sellBtn");
         if (sellBtn) {
-          sellBtn.addEventListener("click", () => {
-            log("🔴 Simulated SELL at $" + simulatePrice());
+          sellBtn.addEventListener("click", async () => {
+            log("🔴 Executing SELL at $" + simulatePrice() + "...");
+            await callAPI('/api/sell', '✅ SELL');
           });
         }
 
         const simulateBtn = document.getElementById("simulateBtn");
         if (simulateBtn) {
-          simulateBtn.addEventListener("click", () => {
-            log("📊 Simulated trade analysis: Detected strong trend.");
+          simulateBtn.addEventListener("click", async () => {
+            log("📊 Running trade analysis...");
+            await callAPI('/api/simulate', '✅ ANALYSIS');
           });
         }
 
         const startBotBtn = document.getElementById("startBotBtn");
         if (startBotBtn) {
-          startBotBtn.addEventListener("click", () => {
-            log("🤖 SniperX BOT STARTED");
+          startBotBtn.addEventListener("click", async () => {
+            log("🤖 Starting SniperX BOT...");
+            await callAPI('/api/start-bot', '✅ BOT');
           });
         }
 
         const stopBotBtn = document.getElementById("stopBotBtn");
         if (stopBotBtn) {
-          stopBotBtn.addEventListener("click", () => {
-            log("⛔ SniperX BOT STOPPED");
+          stopBotBtn.addEventListener("click", async () => {
+            log("⛔ Stopping SniperX BOT...");
+            await callAPI('/api/stop-bot', '✅ BOT');
           });
         }
       }, 1000);

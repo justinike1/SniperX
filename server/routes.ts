@@ -66,6 +66,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/test', (req, res) => {
     res.json({ success: true, message: 'SniperX API operational', timestamp: Date.now() });
   });
+
+  // ===== SIMPLE TRADING UI ROUTES =====
+  
+  // Simulate Buy
+  app.post('/api/buy', (req, res) => {
+    console.log('[SNIPERX] 🟢 Buy executed (sim)');
+    res.json({ success: true, msg: 'Buy executed (simulated)' });
+  });
+
+  // Simulate Sell
+  app.post('/api/sell', (req, res) => {
+    console.log('[SNIPERX] 🔴 Sell executed (sim)');
+    res.json({ success: true, msg: 'Sell executed (simulated)' });
+  });
+
+  // Simulate Market Analysis
+  app.post('/api/simulate', (req, res) => {
+    console.log('[SNIPERX] 📊 Trade simulation run');
+    res.json({ success: true, msg: 'Simulated trade: Bullish signal detected' });
+  });
+
+  // Start Bot
+  app.post('/api/start-bot', (req, res) => {
+    console.log('[SNIPERX] 🤖 BOT STARTED');
+    res.json({ success: true, msg: 'SniperX Bot has started' });
+  });
+
+  // Stop Bot
+  app.post('/api/stop-bot', (req, res) => {
+    console.log('[SNIPERX] ⛔ BOT STOPPED');
+    res.json({ success: true, msg: 'SniperX Bot has stopped' });
+  });
   
   // ===== AUTHENTICATION ROUTES =====
   
