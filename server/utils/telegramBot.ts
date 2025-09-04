@@ -35,11 +35,57 @@ export function setupTelegramCommands(app: any): void {
       ctx.reply('🟢 Trading bot is active and monitoring markets 24/7');
     });
 
+    bot.command('buy', async (ctx) => {
+      const args = ctx.message.text.split(' ').slice(1);
+      if (args.length !== 2) {
+        return ctx.reply('Usage: /buy <tokenMint> <amount>');
+      }
+      const [tokenMint, amount] = args;
+
+      try {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const res = await fetch(`${backendUrl}/api/buy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tokenMint, amount }),
+        });
+        const data = await res.json();
+        ctx.reply(`✅ Buy placed: ${data.txid || 'Simulated'}`);
+      } catch (err) {
+        console.error('Telegram /buy error:', err);
+        ctx.reply('❌ Error executing buy.');
+      }
+    });
+
+    bot.command('sell', async (ctx) => {
+      const args = ctx.message.text.split(' ').slice(1);
+      if (args.length !== 2) {
+        return ctx.reply('Usage: /sell <tokenMint> <amount>');
+      }
+      const [tokenMint, amount] = args;
+
+      try {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const res = await fetch(`${backendUrl}/api/sell`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tokenMint, amount }),
+        });
+        const data = await res.json();
+        ctx.reply(`🔴 Sell placed: ${data.txid || 'Simulated'}`);
+      } catch (err) {
+        console.error('Telegram /sell error:', err);
+        ctx.reply('❌ Error executing sell.');
+      }
+    });
+
     bot.command('help', async (ctx) => {
       ctx.reply(
         '🤖 SniperX Commands:\n' +
         '/summary - Get trading summary\n' +
         '/status - Check bot status\n' +
+        '/buy <tokenMint> <amount> - Execute buy order\n' +
+        '/sell <tokenMint> <amount> - Execute sell order\n' +
         '/help - Show this message'
       );
     });
