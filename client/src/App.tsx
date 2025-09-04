@@ -2,14 +2,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import SimpleDashboard from "@/components/SimpleDashboard";
+import Dashboard from "@/pages/Dashboard";
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <SimpleDashboard />
+        <Dashboard />
       </TooltipProvider>
     </QueryClientProvider>
   );
