@@ -45,6 +45,11 @@ Mission-Critical Standards: Dot every I and cross every T. Apply perfection and 
 - **Professional Jupiter Gateway**: Simulation before every trade, 3-attempt retry with exponential backoff, proper BONK decimal handling
 - **Emergency BONK Liquidator**: Automated detection and liquidation of stuck BONK positions with chunked selling and high priority fees
 - **Production Endpoints**: `/api/pro/trade`, `/api/pro/liquidate-bonk`, `/api/pro/status` for professional trading operations
+- **🎯 ONEDROP INTEGRATION**: Integrated Pyth price feeds, worker queue system, and enhanced Telegram bot with Grammy library
+- **Pyth Price Feeds**: Real-time oracle data for SOL, BTC, ETH, BONK, JUP with 5-second caching
+- **Worker Queue System**: Event-driven async trade execution with retry logic (3 attempts) and task status tracking
+- **Enhanced Telegram Bot**: Grammy-based commands (/buy, /sell, /prices, /queue, /status) with clean interface
+- **Smart Sell Routing**: BONK → liquidation endpoint, other tokens → professional trading (full position only)
 
 ## Previous Updates (Sept 4, 2025)
 - **Live Trading Integration**: Added Jupiter protocol integration for actual Solana token swaps
@@ -76,6 +81,12 @@ Mission-Critical Standards: Dot every I and cross every T. Apply perfection and 
 - `server/routes/professionalTrading.ts`: Professional API endpoints (/api/pro/*)
 - `server/utils/solanaAdapter.ts`: Solana wallet and connection adapter
 - `server/utils/envAdapter.ts`: Environment configuration adapter
+
+### OneDrop Integration (Nov 4, 2025)
+- `server/services/pythPriceFeed.ts`: Real-time Pyth oracle price feeds with 5-second caching
+- `server/worker/queue.ts`: Event-driven worker queue with retry logic and status tracking
+- `server/worker/handlers.ts`: BUY/SELL trade handlers with smart routing (BONK → liquidation, others → professional trading)
+- `server/utils/telegramBotEnhanced.ts`: Grammy-based Telegram bot with /buy, /sell, /prices, /queue, /status commands
 
 ### Legacy Systems
 - `server/utils/telegramBot.ts`: Telegram notification system with command handling
