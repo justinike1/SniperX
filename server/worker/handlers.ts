@@ -97,7 +97,7 @@ async function sellHandler(task: TradeTask): Promise<void> {
   try {
     const tokenMint = TOKEN_MINTS[task.token] || task.token;
     
-    // ONLY use liquidation endpoint for BONK
+    // ONLY use liquidation endpoint for BONK (sells entire position)
     if (task.token === 'BONK') {
       const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
       const response = await fetch(`${backendUrl}/api/pro/liquidate-bonk`, {
@@ -119,7 +119,14 @@ async function sellHandler(task: TradeTask): Promise<void> {
       }
     }
     
-    // Regular sell through professional trading
+    // Only support "ALL" sells (amount === 0) for now
+    // Professional trading API sells entire position with Kelly/risk management
+    // Partial sells not yet supported - prevents misleading behavior
+    if (task.amount !== 0) {
+      throw new Error(`Partial sells not supported yet. Use '/sell ${task.token} ALL' to sell entire position.`);
+    }
+    
+    // Sell through professional trading (entire position)
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
     const response = await fetch(`${backendUrl}/api/pro/trade`, {
       method: 'POST',
@@ -130,7 +137,7 @@ async function sellHandler(task: TradeTask): Promise<void> {
           tokenMint,
           action: 'SELL',
           confidence: 0.9,
-          reason: `Telegram sell: ${task.amount} ${task.denom}`
+          reason: `Telegram sell entire position`
         }],
         tokenMint,
         action: 'SELL',

@@ -115,9 +115,10 @@ export function setupTelegramCommands(): void {
       if (!token) {
         return ctx.reply(
           '📖 *Sell Usage:*\n\n' +
-          '/sell BONK ALL - Sell all BONK\n' +
-          '/sell SOL 5 TOKEN - Sell 5 SOL\n' +
-          '/sell JUP 100 USD - Sell $100 worth of JUP',
+          '/sell BONK ALL - Liquidate all BONK (chunked)\n' +
+          '/sell SOL ALL - Sell entire SOL position\n' +
+          '/sell JUP ALL - Sell entire JUP position\n\n' +
+          '_Note: Currently only supports selling entire positions_',
           { parse_mode: 'Markdown' }
         );
       }
