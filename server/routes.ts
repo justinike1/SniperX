@@ -2095,5 +2095,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PROFESSIONAL TRADING SYSTEM - Kelly Criterion + Risk Management
+  const { registerProfessionalRoutes } = await import('./routes/professionalTrading');
+  registerProfessionalRoutes(app);
+
   return httpServer;
 }
