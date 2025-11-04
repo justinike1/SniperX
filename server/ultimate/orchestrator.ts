@@ -11,7 +11,7 @@ export class UltimateOrchestrator {
     if(!this.v.allowed()) return { decided:"HOLD", sizeSOL:0, reason:"VOL_TOO_HIGH" as const };
     if(wallet.balanceSOL < this.cfg.minWalletSOL) return { decided:"HOLD", sizeSOL:0, reason:"LOW_WALLET" as const };
     const probs=softmax(usable.map(s=>Math.max(0.01,s.confidence))); const pick=usable[probs.indexOf(Math.max(...probs))];
-    const scale=this.dd.scale(); const kf=this.k.fraction(pick.confidence); let size=Math.max(0, Math.min(this.cfg.maxPerTradeSOL, this.ctx.equity*kf*scale)); if(pick.sizeHintPct) size=Math.min(size, this.ctx.equity*pick.sizeHintPct);
+    const scale=this.dd.scale(); const kf=this.k.fraction(pick.confidence); const maxSpendable=Math.max(0, wallet.balanceSOL - this.cfg.minWalletSOL); let size=Math.max(0, Math.min(this.cfg.maxPerTradeSOL, this.ctx.equity*kf*scale, maxSpendable)); if(pick.sizeHintPct) size=Math.min(size, this.ctx.equity*pick.sizeHintPct);
     const chk=this.b.canSpend(size); if(!chk.ok) return { decided:"HOLD", sizeSOL:0, reason:chk.reason as const };
     const last=this.ctx.last.get(pick.tokenMint); if(!last) return { decided:"HOLD", sizeSOL:0, reason:"NO_PRICE" as const };
     let res:ExecResult={ success:true };
