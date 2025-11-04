@@ -1,0 +1,9 @@
+openapi: 3.0.3
+info: { title: SniperX API, version: 1.0.0 }
+servers: [ { url: https://your-repl.replit.app } ]
+paths:
+  /cmd/buy: { post: { summary: Buy token, responses: { '200': { description: OK } } } }
+  /cmd/sell: { post: { summary: Sell token, responses: { '200': { description: OK } } } }
+  /positions: { get: { summary: Positions, responses: { '200': { description: OK } } } }
+  /trades: { get: { summary: Trades, responses: { '200': { description: OK } } } }
+  /healthz: { get: { summary: Health, responses: { '200': { description: OK } } } }
