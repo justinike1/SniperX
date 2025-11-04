@@ -123,10 +123,11 @@ export function setupTelegramCommands(): void {
       }
 
       try {
+        // For "ALL", use 0 as sentinel value (handlers will interpret)
         const taskId = tradeQueue.enqueue({
           type: 'SELL',
           token: token.toUpperCase(),
-          amount: amount === 'ALL' ? 999999999 : amount as number,
+          amount: amount === 'ALL' ? 0 : amount as number,
           denom: denom.toUpperCase() as any
         });
 

@@ -97,8 +97,8 @@ async function sellHandler(task: TradeTask): Promise<void> {
   try {
     const tokenMint = TOKEN_MINTS[task.token] || task.token;
     
-    // For BONK or large sells, use liquidation endpoint
-    if (task.token === 'BONK' || task.amount > 1000000) {
+    // ONLY use liquidation endpoint for BONK
+    if (task.token === 'BONK') {
       const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
       const response = await fetch(`${backendUrl}/api/pro/liquidate-bonk`, {
         method: 'POST'
@@ -109,8 +109,7 @@ async function sellHandler(task: TradeTask): Promise<void> {
       if (result.success) {
         task.result = result;
         await sendTelegramAlert(
-          `✅ *LIQUIDATION COMPLETE*\n\n` +
-          `Token: ${task.token}\n` +
+          `✅ *BONK LIQUIDATION COMPLETE*\n\n` +
           `Amount: ${result.amount.toLocaleString()}\n` +
           `Tx: https://solscan.io/tx/${result.txid}`
         );
