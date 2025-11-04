@@ -31,6 +31,11 @@ import { ultimateTradeEngine } from "./services/ultimateTradeEngine";
 // SNIPER ENGINE: Autonomous Alfred-style trading bot
 import { sniperEngine } from "./sniperEngine";
 
+// ONEDROP INTEGRATION: Enhanced Telegram + Worker Queue + Pyth Feeds
+import { setupTelegramCommands } from "./utils/telegramBotEnhanced";
+import { registerTradeHandlers } from "./worker/handlers";
+import { pythPriceService } from "./services/pythPriceFeed";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -136,6 +141,21 @@ app.use((req, res, next) => {
       console.error('❌ Failed to activate ultimate engine:', error);
     }
   }, 3000);
+
+  // INITIALIZE ONEDROP FEATURES - Enhanced Telegram, Worker Queue, Pyth Feeds
+  setTimeout(() => {
+    try {
+      console.log('🎯 INITIALIZING ONEDROP INTEGRATION...');
+      registerTradeHandlers();
+      setupTelegramCommands();
+      console.log('✅ ONEDROP INTEGRATION ACTIVE');
+      console.log('📊 Pyth Price Feeds: Real-time oracle data');
+      console.log('⚙️ Worker Queue: Async trade execution');
+      console.log('🤖 Enhanced Telegram: Clean command interface');
+    } catch (error) {
+      console.error('❌ Failed to initialize OneDrop features:', error);
+    }
+  }, 1500);
 
   // INITIALIZE EMERGENCY RECOVERY SYSTEM - Prevent stuck positions
   setTimeout(async () => {
