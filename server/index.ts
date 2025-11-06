@@ -1,9 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerProfessionalRoutes } from "./routes/professionalTrading";
 
-// EMERGENCY SYSTEMS: Critical safety features
-import { emergencyRecovery } from "./utils/emergencyRecovery";
-
 // ONEDROP INTEGRATION: Enhanced Telegram + Worker Queue + Pyth Feeds
 import { setupTelegramCommands } from "./utils/telegramBotEnhanced";
 import { registerTradeHandlers } from "./worker/handlers";
@@ -48,18 +45,9 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     }
   }, 1000);
 
-  // INITIALIZE EMERGENCY RECOVERY SYSTEM
-  setTimeout(async () => {
-    try {
-      console.log("🚑 Starting emergency recovery system...");
-      await emergencyRecovery.startMonitoring();
-      console.log("✅ Emergency recovery active");
-      console.log("🛡️ Gas reserve protection enabled");
-      console.log("");
-    } catch (error) {
-      console.error("❌ Failed to start emergency recovery:", error);
-    }
-  }, 2000);
+  // EMERGENCY RECOVERY DISABLED FOR MANUAL BOT MODE
+  // (Emergency recovery caused RPC rate limits with constant monitoring)
+  // User controls all trades manually via Telegram - no auto-monitoring needed
 
   // Autonomous trading disabled - manual Telegram control only
   setTimeout(() => {
