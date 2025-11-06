@@ -1,96 +1,131 @@
-# SniperX - Revolutionary AI Trading Platform
+# SniperX - Personal Trading Bot
 
 ## Overview
-SniperX is an AI-powered cryptocurrency trading bot designed for 24/7 autonomous operation. It aims to revolutionize financial markets by combining advanced AI neural networks, quantum computing simulation, and sophisticated market intelligence. The platform's vision is to deliver the most sophisticated trading bot ever created, capable of superhuman precision and market insight, offering features like Wall Street disruption technology, market manipulation detection, institutional portfolio management, and global trading intelligence. SniperX seeks to transform global finance by providing an unparalleled trading experience.
+SniperX is your personal autonomous cryptocurrency trading bot for Solana. Control it entirely via Telegram, make profits 24/7. No web interface - just lean, mean trading power.
 
-## User Preferences
-Preferred communication style: Simple, everyday language.
-Vision: Create the best invention of all time - an amazing product for the entire universe that changes humanity through revolutionary cryptocurrency trading technology.
-Mission-Critical Standards: Dot every I and cross every T. Apply perfection and care as if life depends on it. This platform must be flawless.
+## Purpose
+**Personal profit-focused trading bot** controlled remotely via Telegram. Designed for individual use with professional-grade risk management and institutional trading strategies.
 
-## System Architecture
+## Control Interface
+**Telegram Bot Only** - All trading operations via @SupermanThatHoe_Bot
 
-### Core Capabilities
-- **24/7 AI Trading Bot**: Fully autonomous trading with real-time market monitoring, instant execution, and advanced risk management.
-- **Wall Street Disruption Engine**: Analyzes and exploits market inefficiencies in traditional finance.
-- **Market Manipulation Detection System**: Real-time threat protection against pump & dump schemes, wash trading, and whale activity.
-- **Institutional Portfolio Manager**: Professional-grade analytics, risk metrics, and optimization for asset allocation.
-- **Global Trading Intelligence**: Worldwide market analysis, sentiment analysis, cross-regional arbitrage, and regulatory impact assessment.
-- **Advanced Sentiment Analysis**: Processes social media and news for real-time market psychology and predictive modeling.
-- **Quantum-Enhanced Trading**: Simulates parallel universes for advanced probability calculations and multiverse trading scenarios.
-- **AI Trading Engine**: Neural network predictions, blockchain data analysis, and adaptive learning algorithms for trade execution.
-- **Diversified Trading Engine**: Enables trading across multiple tokens with intelligent position limits and rotation systems.
-- **Lightning Fast Sell Engine**: Automated selling with dynamic profit targets, smart stop-loss, and rug pull detection.
+Available Commands:
+- `/buy SOL 10 USD` - Buy $10 worth of SOL
+- `/sell BONK ALL` - Liquidate all BONK (chunked for large positions)
+- `/sell SOL ALL` - Sell entire SOL position
+- `/prices` - View real-time Pyth oracle prices
+- `/queue` - Check pending trades
+- `/status` - System health check
+- `/help` - Command reference
 
-### Technical Implementation
-- **Frontend**: React with TypeScript, Vite, Tailwind CSS (dark theme), Radix UI/shadcn/ui, TanStack Query, WebSocket, Wouter.
-- **Backend**: Node.js with TypeScript, Express.js (REST API), WebSocket server, PostgreSQL with Drizzle ORM, esbuild.
-- **Data Flow**: Token discovery by blockchain scanner, AI-driven trading decisions, user interaction via mobile interface/API, and real-time portfolio updates.
-- **Authentication**: Secure user registration, login, JWT tokens, and wallet management with bank-grade security.
-- **UI/UX**: Focus on captivating, intuitive design, instant market access, and mobile-friendly control panels. Features animations, gradients, and hover effects for engagement.
+## Core Systems
 
-### System Design
-- **Autonomous Operation**: Designed for continuous 24/7 trading, with automated startup and scheduled trading intervals.
-- **Fund Protection**: Implements automatic stop-loss (2%) and take-profit (8%) with real-time position monitoring.
-- **Wallet Management**: Secure wallet creation, backup/recovery wizards, and compatibility with major exchanges.
-- **Performance Optimization**: Advanced caching, request queue optimization, and real-time system monitoring.
-- **Security**: Comprehensive monitoring, auto-mitigation, firewall protection, encryption, and secure environment variable management.
-- **Modular Plugin Architecture**: Integrates various trading modules like Jupiter Executor, Portfolio Manager, and Risk Scanner.
+### Professional Trading Engine (Kelly Criterion)
+- **Optimal Position Sizing**: Kelly criterion with 10% fraction cap for maximum risk-adjusted returns
+- **Multi-Layer Risk Management**:
+  - DrawdownGuard: Scales positions at 10% drawdown, stops at 15%
+  - BudgetManager: Max 0.005 SOL per trade
+  - VolatilityLimiter: Max 25% volatility tolerance
+- **Gas Reserve Protection**: Always protects 0.015 SOL for transaction fees
+- **Professional Jupiter Gateway**: Simulation before every trade, 3-attempt retry with exponential backoff
 
-## Recent Updates (Nov 4, 2025)
-- **🚀 PROFESSIONAL SNIPERX PRIME DEPLOYED**: Complete replacement of broken trading system with institutional-grade risk management
-- **Kelly Criterion Position Sizing**: Optimal position sizing with 10% Kelly fraction cap for maximum risk-adjusted returns
-- **Multi-Layer Risk Management**: DrawdownGuard (scales at 10%, stops at 15%), BudgetManager (0.005 SOL/trade max), VolatilityLimiter (25% max)
-- **Bulletproof Gas Reserve Protection**: Critical fix ensuring 0.015 SOL always protected from trades - prevents $8 BONK disaster
-- **Professional Jupiter Gateway**: Simulation before every trade, 3-attempt retry with exponential backoff, proper BONK decimal handling
-- **Emergency BONK Liquidator**: Automated detection and liquidation of stuck BONK positions with chunked selling and high priority fees
-- **Production Endpoints**: `/api/pro/trade`, `/api/pro/liquidate-bonk`, `/api/pro/status` for professional trading operations
-- **🎯 ONEDROP INTEGRATION**: Integrated Pyth price feeds, worker queue system, and enhanced Telegram bot with Grammy library
-- **Pyth Price Feeds**: Real-time oracle data for SOL, BTC, ETH, BONK, JUP with 5-second caching
-- **Worker Queue System**: Event-driven async trade execution with retry logic (3 attempts) and task status tracking
-- **Enhanced Telegram Bot**: Grammy-based commands (/buy, /sell, /prices, /queue, /status) with clean interface
-- **Smart Sell Routing**: BONK → liquidation endpoint, other tokens → professional trading (full position only)
+### OneDrop Integration
+- **Pyth Price Feeds**: Real-time oracle data with 5-second caching
+- **Worker Queue System**: Async trade execution with retry logic (3 attempts)
+- **Grammy Telegram Bot**: Modern, clean command interface
+- **Smart Sell Routing**: 
+  - BONK → Emergency liquidation endpoint (chunked selling)
+  - Other tokens → Professional trading (full position only)
 
-## Previous Updates (Sept 4, 2025)
-- **Live Trading Integration**: Added Jupiter protocol integration for actual Solana token swaps
-- **Telegram Bot**: Integrated real-time trade notifications and bot commands
-- **Google Sheets Logging**: Added automated trade logging with service account authentication
-- **PnL Tracker**: Comprehensive profit/loss tracking with analytics and daily summaries
-- **Enhanced Security**: Production-ready environment variables for all API integrations
-- **Trading Modes**: Support for both dry-run testing and live trading modes
+### Safety Systems
+- **Emergency Recovery**: Monitors for stuck positions, prevents disasters
+- **24/7 Autonomous Trading**: Continuous market monitoring and execution
+- **Fund Protection**: 2% stop-loss, 8% take-profit
+- **AI Decision Engine**: GPT-4 market analysis (when configured)
 
-## External Dependencies
-- **Solana Integration**: `@solana/web3.js` for blockchain interaction, connection to Solana RPC endpoints.
-- **Database**: PostgreSQL via `@neondatabase/serverless` and Drizzle ORM.
-- **UI Libraries**: Radix UI, Tailwind CSS, Lucide React.
-- **State Management**: TanStack Query.
-- **Routing**: Wouter.
-- **Solana DEX Aggregator**: Jupiter API (v6) for token swaps and liquidity.
-- **Real-time Data**: CoinGecko API for live market data.
-- **AI/ML**: OpenAI API (GPT-4) for intelligent trade analysis.
-- **Communication**: Telegram Bot API (node-telegram-bot-api) for real-time notifications.
-- **Data Logging**: Google Sheets API with service account authentication for trade records.
+## Technical Stack
+- **Backend**: Node.js with TypeScript, Express (minimal HTTP server for health checks)
+- **Trading**: Jupiter DEX aggregator for Solana token swaps
+- **Price Data**: Pyth Network oracles for real-time pricing
+- **Communication**: Grammy (Telegram bot library)
+- **Blockchain**: Solana (@solana/web3.js)
+- **Database**: PostgreSQL (minimal usage)
 
 ## Key Files
 
-### Professional Trading System (Nov 4, 2025)
-- `server/ultimate/orchestrator.ts`: Kelly criterion position sizing + multi-layer risk orchestration
-- `server/ultimate/risk.ts`: KellySizer, DrawdownGuard, BudgetManager, VolatilityLimiter, AdaptiveSlippage
-- `server/ultimate/gateway/jupiterGateway.ts`: Professional Jupiter swap execution with simulation + retry
-- `server/ultimate/gateway/tx.ts`: Transaction broadcasting with exponential backoff retry logic
+### Professional Trading
+- `server/ultimate/orchestrator.ts`: Kelly criterion + multi-layer risk orchestration
+- `server/ultimate/risk.ts`: Risk management components (KellySizer, DrawdownGuard, etc.)
+- `server/ultimate/gateway/jupiterGateway.ts`: Jupiter swap execution with simulation
 - `server/routes/professionalTrading.ts`: Professional API endpoints (/api/pro/*)
-- `server/utils/solanaAdapter.ts`: Solana wallet and connection adapter
-- `server/utils/envAdapter.ts`: Environment configuration adapter
 
-### OneDrop Integration (Nov 4, 2025)
-- `server/services/pythPriceFeed.ts`: Real-time Pyth oracle price feeds with 5-second caching
-- `server/worker/queue.ts`: Event-driven worker queue with retry logic and status tracking
-- `server/worker/handlers.ts`: BUY/SELL trade handlers with smart routing (BONK → liquidation, others → professional trading)
-- `server/utils/telegramBotEnhanced.ts`: Grammy-based Telegram bot with /buy, /sell, /prices, /queue, /status commands
+### OneDrop Integration
+- `server/services/pythPriceFeed.ts`: Pyth oracle price feeds with caching
+- `server/worker/queue.ts`: Event-driven worker queue with retry logic
+- `server/worker/handlers.ts`: BUY/SELL trade handlers with smart routing
+- `server/utils/telegramBotEnhanced.ts`: Grammy Telegram bot with commands
 
-### Legacy Systems
-- `server/utils/telegramBot.ts`: Telegram notification system with command handling
-- `server/utils/sheetsLogger.ts`: Google Sheets trade logging integration
-- `server/utils/pnlTracker.ts`: Profit/loss tracking and analytics
-- `server/routes.ts`: Enhanced trading endpoints with live/test mode support
-- `.env.example`: Comprehensive environment variables template
+### Core Systems
+- `server/index.ts`: Main bot entry point (bot-only mode)
+- `server/services/autonomous24x7TradingEngine.ts`: 24/7 trading automation
+- `server/utils/emergencyRecovery.ts`: Emergency position recovery system
+
+## Environment Variables
+Required secrets (use Replit Secrets):
+- `SOLANA_PRIVATE_KEY`: Your wallet private key (base58 encoded)
+- `TELEGRAM_BOT_TOKEN`: Bot token from @BotFather
+- `TELEGRAM_CHAT_ID`: Your Telegram user ID
+- `DATABASE_URL`: PostgreSQL connection (auto-provided by Replit)
+
+Optional (for enhanced features):
+- `OPENAI_API_KEY`: GPT-4 market analysis
+- `GOOGLE_SHEETS_CREDENTIALS`: Trade logging to Google Sheets
+
+## How It Works
+
+1. **Bot starts automatically** when you launch the Repl
+2. **Telegram bot activates** - ready to receive commands
+3. **24/7 engine monitors** markets continuously
+4. **Send commands via Telegram** to execute trades
+5. **Emergency systems protect** your capital
+6. **Profit!**
+
+## Recent Updates (Nov 6, 2025)
+- **🎯 PERSONAL BOT MODE**: Removed web app entirely, focused on personal profit trading
+- **Telegram-Only Control**: All operations via Telegram bot - no web UI needed
+- **Simplified Architecture**: Lean server focused on trading, not serving pages
+- **Professional Trading Engine**: Kelly criterion, multi-layer risk management preserved
+- **OneDrop Integration**: Pyth prices, worker queue, Grammy bot fully operational
+- **Auto-Start**: Bot launches automatically and begins trading immediately
+
+## Previous Updates (Nov 4, 2025)
+- **Professional SniperX Prime**: Kelly criterion position sizing, institutional-grade risk management
+- **Gas Reserve Protection**: Bulletproof 0.015 SOL protection from trades
+- **Emergency BONK Liquidator**: Automated detection and chunked liquidation
+- **Pyth Price Feeds**: Real-time oracle data integration
+- **Worker Queue System**: Event-driven async execution with retry logic
+- **Enhanced Telegram Bot**: Grammy-based commands with clean interface
+
+## Architecture Decisions
+
+### Why No Web Interface?
+- **Simpler**: Less code, fewer bugs, faster deployment
+- **Secure**: No attack surface from web frontend
+- **Mobile-First**: Telegram works everywhere, no browser needed
+- **Lean**: Focus computing power on trading, not serving pages
+- **Personal**: Built for individual use, not multi-user management
+
+### Why Telegram?
+- **Remote Control**: Trade from anywhere in the world
+- **Instant Notifications**: Get alerts immediately
+- **Simple Commands**: Natural language-style interface
+- **Proven**: Reliable messaging platform with excellent API
+
+### Why Professional Trading Engine?
+- **Proven Strategy**: Kelly criterion is mathematically optimal
+- **Risk Management**: Multi-layer protection prevents blowups
+- **Position Sizing**: Automatically calculates optimal trade sizes
+- **Safety First**: Multiple failsafes prevent catastrophic losses
+
+## Mission
+**Make consistent profits through disciplined, automated cryptocurrency trading** - controlled entirely from your phone, protected by institutional-grade risk management.
