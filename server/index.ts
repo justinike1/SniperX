@@ -14,6 +14,11 @@ app.get("/health", (_req, res) => {
   res.json({ status: "healthy", mode: "personal-trading-bot" });
 });
 
+// Serve landing page
+app.get("/", (_req, res) => {
+  res.sendFile("index.html", { root: "." });
+});
+
 // Register professional trading endpoints
 registerProfessionalRoutes(app);
 
