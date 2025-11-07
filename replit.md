@@ -9,7 +9,7 @@ SniperX is your personal autonomous cryptocurrency trading bot for Solana. Contr
 ## Control Interface
 **Telegram Bot Only** - All trading operations via @SupermanThatHoe_Bot
 
-Available Commands:
+### Traditional Commands:
 - `/buy SOL 10 USD` - Buy $10 worth of SOL
 - `/sell BONK ALL` - Liquidate all BONK (chunked for large positions)
 - `/sell SOL ALL` - Sell entire SOL position
@@ -17,6 +17,14 @@ Available Commands:
 - `/queue` - Check pending trades
 - `/status` - System health check
 - `/help` - Command reference
+
+### Intelligent Jarvis Interface (NEW):
+**Chat Naturally** - Just talk to your bot like a personal trading assistant!
+- **Natural Language Trading**: "Should I buy SOL right now?" or "What's happening with BONK?"
+- **Voice Commands**: Send voice messages - Jarvis transcribes and executes
+- **AI Market Analysis**: Get GPT-4 powered insights with real Pyth price data
+- **Portfolio Intelligence**: "How's my portfolio doing?" - Get AI-analyzed performance
+- **Proactive Alerts**: Jarvis watches markets 24/7 and alerts you to opportunities (5%+ moves)
 
 ## Core Systems
 
@@ -36,6 +44,14 @@ Available Commands:
 - **Smart Sell Routing**: 
   - BONK → Emergency liquidation endpoint (chunked selling)
   - Other tokens → Professional trading (full position only)
+
+### Intelligent Jarvis Assistant
+- **AI Market Analyst**: GPT-4 powered analysis with real-time Pyth price data
+- **Natural Language Processing**: Understands conversational messages, detects trade intent
+- **Voice Command Support**: Whisper transcription → intelligent text processing
+- **Portfolio Tracker**: Monitors Solana wallet, calculates 24h performance, identifies winners/losers
+- **Proactive Insights Engine**: Monitors markets every 5 minutes, triggers AI analysis only on 5%+ price movements
+- **Conversational Memory**: Remembers context across chat sessions
 
 ### Safety Systems
 - **Emergency Recovery**: Monitors for stuck positions, prevents disasters
@@ -65,6 +81,12 @@ Available Commands:
 - `server/worker/handlers.ts`: BUY/SELL trade handlers with smart routing
 - `server/utils/telegramBotEnhanced.ts`: Grammy Telegram bot with commands
 
+### Intelligent Jarvis System
+- `server/services/aiMarketAnalyst.ts`: GPT-4 market analysis with conversation history
+- `server/services/portfolioTracker.ts`: Wallet position tracking and performance metrics
+- `server/services/proactiveInsights.ts`: Smart market monitoring with price movement detection
+- `server/services/intelligentTelegramHandler.ts`: Natural language + voice command processing
+
 ### Core Systems
 - `server/index.ts`: Main bot entry point (bot-only mode)
 - `server/services/autonomous24x7TradingEngine.ts`: 24/7 trading automation
@@ -90,7 +112,16 @@ Optional (for enhanced features):
 5. **Emergency systems protect** your capital
 6. **Profit!**
 
-## Recent Updates (Nov 6, 2025)
+## Recent Updates (Nov 7, 2025)
+- **🤖 INTELLIGENT JARVIS ASSISTANT**: Complete AI upgrade with GPT-4 integration
+- **Natural Language Trading**: Chat naturally - "Should I buy SOL?" instead of rigid commands
+- **Voice Command Support**: Send voice messages, Jarvis transcribes and executes (Whisper API)
+- **AI Market Analysis**: Real-time GPT-4 insights using Pyth oracle price data
+- **Portfolio Intelligence**: Automatic tracking, 24h performance, AI-powered advice
+- **Proactive Market Monitoring**: Smart alerts on 5%+ price movements (cost-optimized)
+- **Conversational Memory**: Jarvis remembers context across your chat sessions
+
+## Previous Updates (Nov 6, 2025)
 - **🎯 PERSONAL BOT MODE**: Removed web app entirely, focused on personal profit trading
 - **Telegram-Only Control**: All operations via Telegram bot - no web UI needed
 - **Simplified Architecture**: Lean server focused on trading, not serving pages
@@ -128,4 +159,31 @@ Optional (for enhanced features):
 - **Safety First**: Multiple failsafes prevent catastrophic losses
 
 ## Mission
-**Make consistent profits through disciplined, automated cryptocurrency trading** - controlled entirely from your phone, protected by institutional-grade risk management.
+**Your personal AI-powered trading assistant making profits 24/7** - chat naturally via Telegram, get intelligent insights, trade with confidence. Professional risk management meets conversational AI.
+
+## Examples of Intelligent Trading
+
+**Old Way (Commands):**
+```
+/prices
+/buy SOL 10 USD
+/status
+```
+
+**New Way (Natural Conversation):**
+```
+You: "Hey, what's SOL doing right now?"
+Jarvis: "SOL is at $152.30, up 3.2% today. Market looks stable..."
+
+You: "Should I buy some?"
+Jarvis: "Based on current momentum... [AI analysis]... I suggest buying $10 worth."
+
+You: [Send voice message] "Buy 10 dollars of solana"
+Jarvis: [Transcribes] "Executing: Buy $10 SOL... Trade complete!"
+```
+
+**Proactive Alerts:**
+```
+Jarvis: "🚨 BONK just spiked 7.8%! Up from $0.000015 to $0.000016. 
+Should we take profits or ride the wave?"
+```
