@@ -1,13 +1,20 @@
 import { Bot } from 'grammy';
 import { tradeQueue } from '../worker/queue';
 import { pythPriceService } from '../services/pythPriceFeed';
+import { IntelligentTelegramHandler } from '../services/intelligentTelegramHandler';
+import { insightsEngine } from '../services/proactiveInsights';
+import { loadWallet } from './solanaAdapter';
 
 let bot: Bot | null = null;
 let botLaunched = false;
+let intelligentHandler: IntelligentTelegramHandler | null = null;
 
 if (process.env.TELEGRAM_BOT_TOKEN) {
   bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
   console.log('🤖 Grammy Telegram bot initialized');
+  
+  const wallet = loadWallet();
+  intelligentHandler = new IntelligentTelegramHandler(bot, wallet.publicKey.toString());
 }
 
 export async function sendTelegramAlert(message: string): Promise<void> {
@@ -36,7 +43,20 @@ export function setupTelegramCommands(): void {
       return;
     }
 
-    // OneDrop-style commands
+    // Activate intelligent Jarvis handler
+    if (intelligentHandler) {
+      intelligentHandler.setupHandlers();
+      intelligentHandler.setupCallbackHandlers();
+      console.log('🤖 Intelligent Jarvis assistant activated');
+    }
+
+    // Start proactive market monitoring
+    if (process.env.OPENAI_API_KEY) {
+      insightsEngine.startMonitoring();
+      console.log('🔍 Proactive insights monitoring started');
+    }
+
+    // Keep essential legacy commands for backwards compatibility
     bot.command('start', (ctx) => 
       ctx.reply('🎯 SniperX Prime online!\n\nCommands:\n/status - Portfolio & positions\n/buy - Buy tokens\n/sell - Sell tokens\n/prices - Live prices\n/queue - Trade queue status\n/risk - Risk settings')
     );
