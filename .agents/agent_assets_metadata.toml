@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "nhzVnOGDR8eYjBrRtmBZn"
+uri = "file://SniperX_Business_Plan.pdf"
+type = "pdf"
+title = "SniperX — Elite Trading Bot Business Plan"
