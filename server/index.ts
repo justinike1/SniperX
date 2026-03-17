@@ -4,6 +4,7 @@ import { registerProfessionalRoutes } from "./routes/professionalTrading";
 // ONEDROP INTEGRATION: Enhanced Telegram + Worker Queue + Pyth Feeds
 import { setupTelegramCommands } from "./utils/telegramBotEnhanced";
 import { registerTradeHandlers } from "./worker/handlers";
+import { brain } from "./brain/index";
 
 const app = express();
 app.use(express.json());
@@ -54,7 +55,15 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   // (Emergency recovery caused RPC rate limits with constant monitoring)
   // User controls all trades manually via Telegram - no auto-monitoring needed
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    try {
+      // Start the brain in monitor mode (no autopilot until user enables it)
+      await brain.start(false);
+      console.log("🧠 Brain: Online (autopilot OFF — use /autopilot on to enable)");
+    } catch (e) {
+      console.error("Brain startup error:", e);
+    }
+
     console.log("================================");
     console.log("🏆 SNIPERX ELITE - FULLY LOADED");
     console.log("================================");
@@ -65,10 +74,15 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.log("🐋 Whale Tracker: WATCHING");
     console.log("📊 Market Sentiment: CONNECTED");
     console.log("🔥 Trending Scanner: LIVE");
+    console.log("🧠 Brain: ACTIVE");
     console.log("================================");
     console.log("📱 Control via Telegram:");
-    console.log("   /help - Full command list");
-    console.log("   Or just chat naturally!");
+    console.log("   /brain   - Full brain status");
+    console.log("   /regime  - Market regime");
+    console.log("   /score SOL - Token score");
+    console.log("   /risk    - Risk manager");
+    console.log("   /paper   - Paper trading");
+    console.log("   /help    - Full command list");
     console.log("================================");
   }, 3000);
 

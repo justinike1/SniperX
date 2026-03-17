@@ -10,6 +10,7 @@ import { dcaManager, DCA_INTERVALS } from './dcaManager';
 import { pnlTracker } from './pnlTracker';
 import { marketSentiment } from './marketSentiment';
 import { whaleTracker } from './whaleTracker';
+import { brain, regimeDetector, decisionEngine, riskManager, tradeJournal, performanceTracker, backtester } from '../brain/index';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -397,6 +398,117 @@ export class IntelligentTelegramHandler {
         { parse_mode: 'Markdown' }
       )
     );
+
+    // ── BRAIN STATUS ──────────────────────────────────────────────────────────
+    this.bot.command('brain', async (ctx) => {
+      await ctx.replyWithChatAction('typing');
+      const status = await brain.getFullStatus();
+      ctx.reply(status, { parse_mode: 'Markdown' });
+    });
+
+    // ── REGIME ────────────────────────────────────────────────────────────────
+    this.bot.command('regime', async (ctx) => {
+      await ctx.replyWithChatAction('typing');
+      const r = await regimeDetector.getRegime();
+      const icons: Record<string, string> = { TREND_UP: '📈', TREND_DOWN: '📉', CHOP: '↔️', MANIA: '🔥', RISK_OFF: '🛡️' };
+      const mods = regimeDetector.getStrategyModifiers(r.regime);
+      ctx.reply(
+        `🌍 *Market Regime: ${icons[r.regime]} ${r.regime}*\n\n` +
+        `Confidence: ${r.confidence}%\n` +
+        `SOL: $${r.solPrice.toFixed(2)} | 1h: ${r.solChange1h >= 0 ? '+' : ''}${r.solChange1h.toFixed(1)}% | 24h: ${r.solChange24h >= 0 ? '+' : ''}${r.solChange24h.toFixed(1)}%\n` +
+        `Fear & Greed: ${r.fearGreed} | Volume: ${r.volumeTrend}\n\n` +
+        `📋 *Strategy Adjustments:*\n` +
+        `Size: ${mods.sizeMultiplier === 0 ? '❌ NO TRADES' : `${(mods.sizeMultiplier * 100).toFixed(0)}%`}\n` +
+        `TP multiplier: ${mods.tpMultiplier}x | SL multiplier: ${mods.slMultiplier}x\n` +
+        `Score bonus: ${mods.scoreBonus >= 0 ? '+' : ''}${mods.scoreBonus}\n\n` +
+        `📝 *Signals:*\n${r.signals.map(s => `• ${s}`).join('\n')}`,
+        { parse_mode: 'Markdown' }
+      );
+    });
+
+    // ── SCORE A TOKEN ─────────────────────────────────────────────────────────
+    this.bot.command('score', async (ctx) => {
+      const token = ctx.match?.toString().trim();
+      if (!token) return ctx.reply('Usage: /score SOL\nRuns the decision engine and returns a 0-100 confidence score.');
+      await ctx.replyWithChatAction('typing');
+      ctx.reply('🧠 Scoring ' + token.toUpperCase() + '...');
+      const result = await brain.manualScore(token);
+      ctx.reply(result, { parse_mode: 'Markdown' });
+    });
+
+    // ── RISK STATUS ───────────────────────────────────────────────────────────
+    this.bot.command('risk', (ctx) => {
+      ctx.reply(riskManager.getStatusText(), { parse_mode: 'Markdown' });
+    });
+
+    // ── RESUME AFTER HALT ─────────────────────────────────────────────────────
+    this.bot.command('resume', (ctx) => {
+      riskManager.resume();
+      ctx.reply('✅ Risk manager resumed. Trading re-enabled.\n\nBe careful — review why it halted before letting it run.', { parse_mode: 'Markdown' });
+    });
+
+    // ── TRADE JOURNAL ─────────────────────────────────────────────────────────
+    this.bot.command('journal', async (ctx) => {
+      const args = ctx.match?.toString().trim();
+      if (args) {
+        const entry = tradeJournal.getById(args.toUpperCase());
+        if (entry) {
+          const review = tradeJournal.selfReview(entry);
+          return ctx.reply(review, { parse_mode: 'Markdown' });
+        }
+      }
+      const summary = tradeJournal.getRecentSummary(10);
+      ctx.reply(summary, { parse_mode: 'Markdown' });
+    });
+
+    // ── PERFORMANCE ───────────────────────────────────────────────────────────
+    this.bot.command('performance', (ctx) => {
+      const summary = performanceTracker.compute(tradeJournal.getAll());
+      const report = performanceTracker.formatReport(summary);
+      ctx.reply(report, { parse_mode: 'Markdown' });
+    });
+
+    // ── PAPER TRADING ─────────────────────────────────────────────────────────
+    this.bot.command('paper', async (ctx) => {
+      const arg = ctx.match?.toString().trim().toLowerCase();
+      if (arg === 'on') {
+        backtester.enablePaperMode();
+        return ctx.reply('📄 *Paper mode ON* — trades are simulated, no real money spent.\nBuild your 10-trade track record before going live.', { parse_mode: 'Markdown' });
+      }
+      if (arg === 'live' || arg === 'go_live') {
+        const result = backtester.enableLiveMode();
+        if (result.allowed) {
+          return ctx.reply('🔴 *Switched to LIVE mode* — real money now.\n⚠️ Make sure your wallet is funded and SOLANA_PRIVATE_KEY is set.', { parse_mode: 'Markdown' });
+        }
+        return ctx.reply(`❌ *Not ready for live*\n${result.reason}\n\nKeep paper trading to build your track record.`, { parse_mode: 'Markdown' });
+      }
+      if (arg === 'reset') {
+        backtester.reset();
+        return ctx.reply('📄 Paper trading reset.', { parse_mode: 'Markdown' });
+      }
+      ctx.reply(backtester.getStatusText(), { parse_mode: 'Markdown' });
+    });
+
+    // ── AUTOPILOT ─────────────────────────────────────────────────────────────
+    this.bot.command('autopilot', async (ctx) => {
+      const arg = ctx.match?.toString().trim().toLowerCase();
+      if (arg === 'on') {
+        if (!brain.isRunning()) await brain.start(true);
+        else brain.enableAutoPilot();
+        return ctx.reply(
+          '🤖 *AutoPilot: ON*\n\nBrain will scan markets and execute trades automatically.\n' +
+          `Mode: ${backtester.getMode()}\n\n` +
+          `⚠️ Running in ${backtester.isPaper() ? 'PAPER mode — no real money' : 'LIVE mode — REAL MONEY'}`,
+          { parse_mode: 'Markdown' }
+        );
+      }
+      if (arg === 'off') {
+        brain.disableAutoPilot();
+        return ctx.reply('👀 *AutoPilot: OFF*\nBot will scan and alert but not execute.', { parse_mode: 'Markdown' });
+      }
+      const status = await brain.getFullStatus();
+      ctx.reply(status, { parse_mode: 'Markdown' });
+    });
   }
 
   // ── TEXT MESSAGE HANDLER ───────────────────────────────────────────────────

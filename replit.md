@@ -112,7 +112,36 @@ Optional (for enhanced features):
 5. **Emergency systems protect** your capital
 6. **Profit!**
 
-## Recent Updates (Mar 17, 2026) - ELITE UPGRADE
+## Recent Updates (Mar 17, 2026) - SUPER GENIUS BRAIN
+
+### The 9-Module Intelligence Architecture (`server/brain/`)
+- **🔍 Market Scanner**: Continuous DexScreener polling every 30s — momentum, volume, liquidity, volatility
+- **🌍 Regime Detector**: Classifies market as TREND_UP / TREND_DOWN / CHOP / MANIA / RISK_OFF, each with different strategy modifiers
+- **🧠 Decision Engine**: Weighted scoring model 0-100 across 8 categories (trend, momentum, volume, liquidity, volatility, slippage, token safety, regime) — only trades above 68/100
+- **🛡️ Risk Manager**: Hard rules — 2% max per trade, 5% daily loss cap, auto-halt after 3 consecutive losses, drawdown circuit breaker at 15%
+- **🚨 Safety Filters**: Scam keywords, minimum liquidity ($25K), token age, mint authority, holder concentration, price impact checks
+- **⚡ Execution Engine**: Jupiter v1 with quote → simulate → send (3 retries + backoff) — never silently fails
+- **📔 Trade Journal**: Every trade logged with full context: why entered, signals, confidence, regime, exit reason, P&L — plus self-review after every close
+- **📊 Performance Tracker**: Win rate, profit factor, Sharpe ratio, max drawdown, per-regime breakdown, streak analysis
+- **📄 Backtester/Paper Trading**: Safety gate — must achieve 10+ trades with positive expectancy before going live; live price monitoring for paper exits
+
+### New Telegram Commands
+- `/brain` — Full brain status (regime, risk, performance, mode)
+- `/regime` — Market regime with strategy adjustments
+- `/score TOKEN` — Run decision engine on any token (0-100 score)
+- `/risk` — Risk manager status + daily limits
+- `/resume` — Resume after halt
+- `/journal [ID]` — Trade journal + self-review
+- `/performance` — Full performance report with Sharpe ratio
+- `/paper [on/live/reset]` — Paper trading control
+- `/autopilot [on/off]` — Enable/disable autonomous trading
+
+### Architecture Changes
+- Jupiter API: All endpoints migrated from `quote-api.jup.ag` → `lite-api.jup.ag` (fixes network restrictions)
+- Brain starts in PAPER mode with AutoPilot OFF by default (safe launch)
+- Paper trading gate requires: 10 trades + >50% win rate + profit factor >1.2 before live allowed
+
+## Recent Updates (Mar 17, 2026) - ELITE UPGRADE (Previous)
 - **🎯 Token Sniper**: DexScreener-powered new token detection, auto-snipe with configurable filters
 - **🛡️ Auto TP/SL Manager**: Automatic take-profit and stop-loss execution with trailing stop support
 - **📅 DCA Manager**: Scheduled dollar-cost averaging (1h, 4h, 12h, daily, weekly intervals)
