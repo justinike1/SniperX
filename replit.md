@@ -112,7 +112,18 @@ Optional (for enhanced features):
 5. **Emergency systems protect** your capital
 6. **Profit!**
 
-## Recent Updates (Nov 7, 2025)
+## Recent Updates (Mar 17, 2026) - ELITE UPGRADE
+- **🎯 Token Sniper**: DexScreener-powered new token detection, auto-snipe with configurable filters
+- **🛡️ Auto TP/SL Manager**: Automatic take-profit and stop-loss execution with trailing stop support
+- **📅 DCA Manager**: Scheduled dollar-cost averaging (1h, 4h, 12h, daily, weekly intervals)
+- **📊 P&L Tracker**: Real-time profit/loss tracking across all trades with win rate analytics
+- **🧠 Market Sentiment**: Live Fear & Greed Index integration with AI trading signals
+- **🐋 Whale Tracker**: Monitor big wallets for copy-trading signals
+- **🔥 Trending Scanner**: Real-time DexScreener trending tokens on Solana
+- **💬 Enhanced Natural Language**: Understands sentiment/trending/pnl/whale queries conversationally
+- **AUTO_START_SNIPER**: Environment variable to auto-enable sniper on bot startup
+
+## Previous Updates (Nov 7, 2025)
 - **🤖 INTELLIGENT JARVIS ASSISTANT**: Complete AI upgrade with GPT-4 integration
 - **Natural Language Trading**: Chat naturally - "Should I buy SOL?" instead of rigid commands
 - **Voice Command Support**: Send voice messages, Jarvis transcribes and executes (Whisper API)

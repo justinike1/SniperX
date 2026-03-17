@@ -54,16 +54,21 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   // (Emergency recovery caused RPC rate limits with constant monitoring)
   // User controls all trades manually via Telegram - no auto-monitoring needed
 
-  // Autonomous trading disabled - manual Telegram control only
   setTimeout(() => {
     console.log("================================");
-    console.log("🎯 BOT READY - Manual Control Mode");
-    console.log("📱 Use Telegram to trade:");
-    console.log("   /buy SOL 10 USD");
-    console.log("   /sell BONK ALL");
-    console.log("   /prices");
-    console.log("   /status");
-    console.log("💰 Trade when YOU decide");
+    console.log("🏆 SNIPERX ELITE - FULLY LOADED");
+    console.log("================================");
+    console.log("🤖 Jarvis AI Assistant: ACTIVE");
+    console.log("🎯 Token Sniper: READY");
+    console.log("🛡️ Auto TP/SL: MONITORING");
+    console.log("📅 DCA Manager: ACTIVE");
+    console.log("🐋 Whale Tracker: WATCHING");
+    console.log("📊 Market Sentiment: CONNECTED");
+    console.log("🔥 Trending Scanner: LIVE");
+    console.log("================================");
+    console.log("📱 Control via Telegram:");
+    console.log("   /help - Full command list");
+    console.log("   Or just chat naturally!");
     console.log("================================");
   }, 3000);
 

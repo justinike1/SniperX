@@ -3,6 +3,10 @@ import { tradeQueue } from '../worker/queue';
 import { pythPriceService } from '../services/pythPriceFeed';
 import { IntelligentTelegramHandler } from '../services/intelligentTelegramHandler';
 import { insightsEngine } from '../services/proactiveInsights';
+import { tpSlManager } from '../services/autoTpSlManager';
+import { dcaManager } from '../services/dcaManager';
+import { whaleTracker } from '../services/whaleTracker';
+import { tokenSniper } from '../services/tokenSniper';
 import { loadWallet } from './solanaAdapter';
 
 let bot: Bot | null = null;
@@ -54,6 +58,25 @@ export function setupTelegramCommands(): void {
     if (process.env.OPENAI_API_KEY) {
       insightsEngine.startMonitoring();
       console.log('🔍 Proactive insights monitoring started');
+    }
+
+    // Start auto TP/SL monitoring
+    tpSlManager.startMonitoring();
+    console.log('🛡️ Auto TP/SL manager active');
+
+    // Start DCA manager
+    dcaManager.start();
+    console.log('📅 DCA manager active');
+
+    // Start whale tracking
+    whaleTracker.start();
+    console.log('🐋 Whale tracker active');
+
+    // Auto-start sniper if env var set
+    if (process.env.AUTO_START_SNIPER === 'true') {
+      tokenSniper.enable(false);
+      tokenSniper.startScanning();
+      console.log('🎯 Auto-sniper started (alerts mode)');
     }
 
     // Keep essential legacy commands for backwards compatibility
