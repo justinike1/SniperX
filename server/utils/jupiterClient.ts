@@ -12,7 +12,7 @@ export async function performJupiterSwap(
 ): Promise<string> {
   try {
     // Get quote from Jupiter API v6
-    const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint.toString()}&outputMint=${outputMint.toString()}&amount=${amountInLamports}&slippageBps=${slippageBps}`;
+    const quoteUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint.toString()}&outputMint=${outputMint.toString()}&amount=${amountInLamports}&slippageBps=${slippageBps}`;
     
     const quoteResponse = await fetch(quoteUrl);
     const quoteData = await quoteResponse.json();
@@ -22,7 +22,7 @@ export async function performJupiterSwap(
     }
 
     // Get swap transaction
-    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+    const swapResponse = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -124,7 +124,7 @@ export async function getBestRoute(
     const inputAmount = Math.floor(amount * (10 ** 9)); // Convert SOL to lamports
     
     const quoteResponse = await fetch(
-      `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${inputAmount}&slippageBps=50`
+      `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${inputAmount}&slippageBps=50`
     );
     
     if (!quoteResponse.ok) {
@@ -143,7 +143,7 @@ export async function getBestRoute(
 export async function executeSwap(quote: JupiterQuote): Promise<string> {
   try {
     // Get swap transaction
-    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+    const swapResponse = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

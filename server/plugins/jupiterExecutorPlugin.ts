@@ -78,7 +78,7 @@ export class JupiterExecutorPlugin implements TradingPlugin {
 
   async executeJupiterTrade(fromMint: string, toMint: string, amount: number): Promise<any> {
     try {
-      const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amount}&slippage=${this.slippage}`;
+      const quoteUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amount}&slippage=${this.slippage}`;
 
       console.log('🔍 Getting Jupiter quote...');
       const { data: quote } = await axios.get(quoteUrl);
@@ -116,7 +116,7 @@ export class JupiterExecutorPlugin implements TradingPlugin {
 
   async getQuote(fromMint: string, toMint: string, amount: number): Promise<any> {
     try {
-      const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amount}&slippage=${this.slippage}`;
+      const quoteUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amount}&slippage=${this.slippage}`;
       
       const { data: quote } = await axios.get(quoteUrl);
       

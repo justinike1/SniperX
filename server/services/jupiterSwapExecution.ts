@@ -235,7 +235,7 @@ class JupiterSwapExecution {
    */
   async checkJupiterHealth(): Promise<boolean> {
     try {
-      const response = await fetch('https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000');
+      const response = await fetch('https://lite-api.jup.ag/swap/v1/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000');
       return response.ok;
     } catch (error) {
       console.error('❌ Jupiter health check failed:', error);

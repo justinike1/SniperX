@@ -185,7 +185,7 @@ export class RealMarketDataService {
   async getJupiterQuote(inputMint: string, outputMint: string, amount: number) {
     try {
       const response = await fetch(
-        `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50`
+        `https://lite-api.jup.ag/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=50`
       );
       return await response.json();
     } catch (error) {

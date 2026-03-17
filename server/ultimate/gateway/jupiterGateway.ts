@@ -5,7 +5,7 @@ import { loadWallet, conn } from "../../utils/solanaAdapter";
 import type { TradeGateway, ExecResult } from "../types";
 import { simulateVtx, sendVtxWithRetry } from "./tx";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-function jupUrl(path: string, qs?: Record<string, string | number>){ const base = "https://quote-api.jup.ag/v6"; const url = new URL(`${base}/${path}`); if (qs) for (const [k,v] of Object.entries(qs)) url.searchParams.set(k, String(v)); return url.toString(); }
+function jupUrl(path: string, qs?: Record<string, string | number>){ const base = "https://lite-api.jup.ag/swap/v1"; const url = new URL(`${base}/${path}`); if (qs) for (const [k,v] of Object.entries(qs)) url.searchParams.set(k, String(v)); return url.toString(); }
 export class JupiterGateway implements TradeGateway {
   private connection: Connection; private wallet: Keypair; private directOnly: boolean; private priorityLamports?: number;
   constructor() { this.connection = conn(); this.wallet = loadWallet(); this.directOnly = (process.env.JUP_DIRECT_ONLY || "false") === "true"; const pf = process.env.PRIORITY_FEE_LAMPORTS; this.priorityLamports = pf ? Number(pf) : undefined; }

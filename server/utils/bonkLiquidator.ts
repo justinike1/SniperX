@@ -94,7 +94,7 @@ class BonkLiquidator {
       console.log(`🔄 Attempting to swap ${swapAmount.toLocaleString()} BONK to SOL...`);
 
       // Use Jupiter API v6 for the swap
-      const quoteUrl = `https://quote-api.jup.ag/v6/quote?` +
+      const quoteUrl = `https://lite-api.jup.ag/swap/v1/quote?` +
         `inputMint=${BONK_MINT.toString()}` +
         `&outputMint=${SOL_MINT.toString()}` +
         `&amount=${swapAmountLamports}` +
@@ -114,7 +114,7 @@ class BonkLiquidator {
       console.log(`💰 Expected output: ${expectedSol.toFixed(6)} SOL`);
 
       // Get swap transaction
-      const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+      const swapResponse = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

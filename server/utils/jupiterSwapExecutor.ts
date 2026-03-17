@@ -52,7 +52,7 @@ export async function jupiterSwap(fromMint: string, toMint: string, amountIn: nu
     const connection = getConnection();
 
     // Get Jupiter quote
-    const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amountIn}&slippageBps=${config.slippage * 100}`;
+    const quoteUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amountIn}&slippageBps=${config.slippage * 100}`;
     
     console.log('🔍 Getting Jupiter quote...');
     const quoteResponse = await fetch(quoteUrl);
@@ -63,7 +63,7 @@ export async function jupiterSwap(fromMint: string, toMint: string, amountIn: nu
     }
 
     // Get swap transaction
-    const swapResponse = await fetch('https://quote-api.jup.ag/v6/swap', {
+    const swapResponse = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -119,7 +119,7 @@ export async function jupiterSwap(fromMint: string, toMint: string, amountIn: nu
 
 export async function getJupiterQuote(fromMint: string, toMint: string, amountIn: number) {
   try {
-    const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amountIn}&slippageBps=${config.slippage * 100}`;
+    const quoteUrl = `https://lite-api.jup.ag/swap/v1/quote?inputMint=${fromMint}&outputMint=${toMint}&amount=${amountIn}&slippageBps=${config.slippage * 100}`;
     
     const response = await fetch(quoteUrl);
     const quote = await response.json();
