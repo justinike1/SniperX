@@ -77,7 +77,7 @@ class ExecutionEngine {
     }
   }
 
-  /** Full sell execution */
+  /** Full sell execution — amountTokens is in human-readable units (e.g. 1.5 tokens) */
   async sell(inputMint: string, amountTokens: number, slippageBps = 150): Promise<ExecutionResult> {
     const start = Date.now();
 
@@ -86,8 +86,18 @@ class ExecutionEngine {
     }
 
     try {
-      const q = await this.quote(inputMint, SOL_MINT, amountTokens, slippageBps);
-      return await this.executeSwap(q, amountTokens, parseInt(q.outAmount));
+      // Convert human-readable token amount to raw integer units
+      const { getMint } = await import('@solana/spl-token');
+      const { PublicKey } = await import('@solana/web3.js');
+      const mintInfo = await getMint(this.connection, new PublicKey(inputMint));
+      const rawAmount = Math.floor(amountTokens * (10 ** mintInfo.decimals));
+
+      if (rawAmount <= 0) {
+        return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 0, error: 'SELL_AMOUNT_TOO_SMALL', timestamp: start };
+      }
+
+      const q = await this.quote(inputMint, SOL_MINT, rawAmount, slippageBps);
+      return await this.executeSwap(q, rawAmount, parseInt(q.outAmount));
     } catch (e: any) {
       return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 1, error: e.message, timestamp: start };
     }
@@ -126,7 +136,7 @@ class ExecutionEngine {
         const tx = await this.buildTx(q.quoteResponse);
 
         // Sign
-        const { blockhash } = await this.connection.getLatestBlockhash('confirmed');
+        const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('confirmed');
         tx.message.recentBlockhash = blockhash;
         tx.sign([this.wallet!]);
 
@@ -138,7 +148,7 @@ class ExecutionEngine {
         });
 
         // Confirm
-        const conf = await this.connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight: (await this.connection.getBlockHeight()) + 150 }, 'confirmed');
+        const conf = await this.connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
 
         if (conf.value.err) throw new Error(`CONFIRM_ERROR: ${JSON.stringify(conf.value.err)}`);
 

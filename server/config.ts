@@ -15,15 +15,13 @@ export const config = {
   // Wallet settings
   userWalletAddress: "7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv",
   
-  // API settings - Using public RPC to bypass API key permission issues
-  rpcEndpoint: process.env.HELIUS_RPC_URL || 'https://mainnet.helius-rpc.com/?api-key=80be18ff-e15f-4821-a172-c1f85217ec16',
+  // RPC settings — configure via HELIUS_RPC_URL or SOLANA_RPC_URL env vars
+  rpcEndpoint: process.env.HELIUS_RPC_URL || process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
   
-  // Backup RPC endpoints for redundancy
+  // Backup RPC endpoints for redundancy (public, no API keys)
   backupRpcEndpoints: [
-    'https://mainnet.helius-rpc.com/?api-key=80be18ff-e15f-4821-a172-c1f85217ec16',
-    'https://solana-mainnet.g.alchemy.com/v2/demo',
-    'https://rpc.ankr.com/solana',
     'https://api.mainnet-beta.solana.com',
+    'https://rpc.ankr.com/solana',
     'https://solana.publicnode.com'
   ],
     

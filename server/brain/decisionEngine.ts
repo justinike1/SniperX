@@ -202,7 +202,8 @@ class DecisionEngine {
   // Liquidity (0-15): can we exit without destroying price?
   private scoreLiquidity(opp: TokenOpportunity, tradeUSD: number, notes: string[]): number {
     const liq = opp.liquidity;
-    const tradeToPool = tradeUSD / liq; // % of pool we're consuming
+    if (liq <= 0) { notes.push('Zero liquidity'); return 0; }
+    const tradeToPool = tradeUSD / liq;
     if (tradeToPool > 0.05) { notes.push(`Trade is ${(tradeToPool*100).toFixed(1)}% of pool`); return 3; }
     if (liq > 500_000) return 15;
     if (liq > 200_000) return 13;
@@ -214,7 +215,6 @@ class DecisionEngine {
 
   // Volatility (0-10): high vol is risk, not reward
   private scoreVolatility(opp: TokenOpportunity, notes: string[]): number {
-    const storedVol = marketScanner.getVolatility(opp.mint);
     const c1h = Math.abs(opp.priceChange1h);
     const c24h = Math.abs(opp.priceChange24h);
     const avg = (c1h + c24h / 24) / 2;
@@ -231,7 +231,7 @@ class DecisionEngine {
 
   // Slippage (0-10): estimated from liquidity depth
   private scoreSlippage(opp: TokenOpportunity, tradeUSD: number, notes: string[]): number {
-    // Approximate: impact ≈ tradeUSD / (liquidity * 2) * 100
+    if (opp.liquidity <= 0) { notes.push('No liquidity for slippage estimate'); return 0; }
     const estimatedImpact = (tradeUSD / (opp.liquidity * 2)) * 100;
     if (estimatedImpact < 0.1) return 10;
     if (estimatedImpact < 0.3) return 9;
@@ -245,9 +245,8 @@ class DecisionEngine {
   // Regime (0-10): market backdrop bonus/penalty
   private scoreRegime(regime: MarketRegime, confidence: number, notes: string[]): number {
     const mods = regimeDetector.getStrategyModifiers(regime);
-    const base = mods.scoreBonus + 10; // converts bonus to 0-20 range then we normalise to 0-10
-    const adjusted = Math.max(0, Math.min(10, (base + mods.scoreBonus * confidence / 100) / 2));
-    return adjusted;
+    const base = 5 + mods.scoreBonus / 2;
+    return Math.max(0, Math.min(10, Math.round(base * 10) / 10));
   }
 }
 

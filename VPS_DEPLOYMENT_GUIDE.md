@@ -1,208 +1,80 @@
-# SniperX VPS Deployment Guide
+# VPS Deployment Guide
 
-## Prerequisites
-- VPS server (DigitalOcean, Hetzner, AWS EC2, etc.)
-- Ubuntu 20.04+ or similar Linux distribution
-- Root or sudo access
-- At least 1GB RAM and 2GB storage
+## Requirements
 
-## Step 1: VPS Setup
+- Ubuntu 22.04+ VPS (1 GB RAM minimum)
+- SSH access
+- A funded Solana wallet keypair (`phantom_key.json`)
+- Telegram bot token and chat ID
 
-### Option A: DigitalOcean (Recommended)
-1. Create new droplet: Ubuntu 22.04, Basic plan ($6/month)
-2. SSH into your server: `ssh root@your-server-ip`
+## Deploy
 
-### Option B: Hetzner Cloud
-1. Create new server: Ubuntu 22.04, CX11 ($3.29/month)
-2. SSH into your server: `ssh root@your-server-ip`
-
-## Step 2: Project Upload
-
-### Method 1: Direct Upload (Recommended)
-1. Download your Replit project as ZIP
-2. Upload to VPS using SCP:
 ```bash
-scp sniperx.zip root@your-server-ip:/root/
-ssh root@your-server-ip
-cd /root && unzip sniperx.zip
-```
-
-### Method 2: GitHub Clone
-1. Push your Replit project to GitHub
-2. Clone on VPS:
-```bash
-git clone https://github.com/yourusername/sniperx.git
-cd sniperx
-```
-
-## Step 3: Automated Deployment
-
-Run the deployment script:
-```bash
+git clone <your-repo-url> sniperx && cd sniperx
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
-This script automatically:
-- Installs Node.js 20, npm, git
-- Installs PM2 process manager
-- Installs TypeScript and ts-node
-- Sets up project dependencies
-- Creates PM2 configuration
-- Starts the trading bot
+The script installs Node.js 20, PM2, and project dependencies.
 
-## Step 4: Environment Configuration
+## Configure
 
-Edit the `.env` file with your credentials:
-```bash
-nano .env
-```
+1. Edit `.env` (created from `.env.example` by the deploy script):
 
-Required variables:
 ```env
-DATABASE_URL=your_postgresql_url
-HELIUS_API_KEY=your_helius_key
-OPENAI_API_KEY=your_openai_key
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CHAT_ID=your_telegram_chat_id
-PHANTOM_PRIVATE_KEY=[your,private,key,array]
+TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_CHAT_ID=your_chat_id
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+OPENAI_API_KEY=sk-...          # optional — AI analysis
+DATABASE_URL=postgres://...     # optional — persistent storage
+ENABLE_LIVE_TRADING=false       # keep false until paper mode proves profitable
 ```
 
-## Step 5: Fund Your Wallet
+2. Place your Solana keypair file at `./phantom_key.json` (64-byte JSON array).
 
-Transfer at least 0.052 SOL to your trading wallet:
-`7d6PGMjrzTWFfQcMhZR9UZHYibPe2NjGqAQnjeLG1GSv`
-
-You can send SOL from:
-- Phantom wallet
-- Coinbase
-- Binance
-- Any major exchange
-
-## Step 6: Start Trading
-
-Start the bot with PM2:
-```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
-```
-
-## Management Commands
+3. Restart:
 
 ```bash
-# Check bot status
-pm2 status
-
-# View live logs
-pm2 logs sniperx-trading-bot
-
-# Restart bot
 pm2 restart sniperx-trading-bot
-
-# Stop bot
-pm2 stop sniperx-trading-bot
-
-# Monitor performance
-pm2 monit
-
-# View error logs
-tail -f logs/err.log
-
-# View output logs
-tail -f logs/out.log
 ```
 
-## Monitoring
+## PM2 commands
 
-### Telegram Notifications
-You'll receive alerts for:
-- Trade executions
-- System status
-- Emergency stops
-- Critical errors
-
-### Log Files
-- `logs/combined.log` - All activities
-- `logs/out.log` - Standard output
-- `logs/err.log` - Error messages
-
-## Security Best Practices
-
-1. **Firewall Setup:**
 ```bash
-ufw allow ssh
-ufw allow 5000
-ufw enable
+pm2 status                       # running?
+pm2 logs sniperx-trading-bot     # live output
+pm2 restart sniperx-trading-bot  # restart
+pm2 stop sniperx-trading-bot     # stop
+pm2 monit                        # CPU/memory
 ```
 
-2. **Regular Updates:**
+Log files: `logs/out.log`, `logs/err.log`, `logs/combined.log`.
+
+## Firewall
+
 ```bash
-apt update && apt upgrade -y
+sudo ufw allow ssh
+sudo ufw allow 5000
+sudo ufw enable
 ```
 
-3. **Backup Private Keys:**
-Store your wallet private key securely offline
+## How the bot starts
+
+PM2 runs `server/index.ts` via `tsx` (see `ecosystem.config.js`).  
+On startup:
+1. Express server listens on `:5000`
+2. Telegram bot connects (if token configured)
+3. Brain starts: regime detector, market scanner (30 s interval), paper trade monitor
+
+The bot starts in **PAPER** mode by default — no real trades until the paper
+gate is passed (10+ trades, WR > 50%, PF > 1.2) and you send `/go_live`.
 
 ## Troubleshooting
 
-### Bot Not Starting
-```bash
-pm2 logs sniperx-trading-bot
-```
-Check for missing environment variables or API key issues.
-
-### Insufficient Balance Error
-Ensure wallet has at least 0.052 SOL for trading operations.
-
-### API Rate Limits
-The bot includes automatic rate limiting protection and will pause when needed.
-
-### Database Connection Issues
-Verify DATABASE_URL is correct and accessible from your VPS.
-
-## Performance Optimization
-
-### For Higher Volume Trading
-- Upgrade to 2GB RAM VPS
-- Consider multiple trading instances
-- Monitor CPU usage with `pm2 monit`
-
-### Network Optimization
-- Choose VPS location closest to Solana RPC endpoints
-- Consider dedicated RPC endpoint for lower latency
-
-## Scaling
-
-### Multiple Bots
-Run multiple instances with different wallets:
-```bash
-# Copy project
-cp -r sniperx sniperx-bot2
-cd sniperx-bot2
-
-# Update wallet address in config
-# Start second instance
-pm2 start ecosystem.config.js --name sniperx-bot2
-```
-
-### Load Balancing
-Use nginx for multiple bot management and monitoring dashboard.
-
-## Support
-
-Monitor logs and Telegram notifications for real-time status. The 8-plugin system provides comprehensive trading automation with built-in safety features.
-
-## Cost Breakdown
-
-### Monthly VPS Costs:
-- Hetzner CX11: $3.29/month
-- DigitalOcean Basic: $6/month
-- AWS t3.micro: ~$8/month
-
-### Trading Costs:
-- Solana transaction fees: ~0.000005 SOL per trade
-- Jupiter DEX fees: 0.1-0.3% per swap
-- Minimum wallet balance: 0.052 SOL
-
-Total monthly cost: $3-8 for VPS + minimal trading fees for 24/7 autonomous operation.
+| Problem | Fix |
+|---------|-----|
+| Bot won't start | `pm2 logs sniperx-trading-bot` — check for missing env vars |
+| "phantom_key.json" error | Place your 64-byte keypair JSON array at repo root |
+| Telegram not responding | Verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` |
+| Trade rejected: LOW_WALLET | Fund your wallet with at least 0.02 SOL |
+| RPC errors | Set `SOLANA_RPC_URL` to a reliable endpoint (Helius, Triton, etc.) |

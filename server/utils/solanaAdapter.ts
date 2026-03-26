@@ -35,6 +35,7 @@ export function loadWallet(): Keypair {
 }
 
 export async function getBalance(pubkey: string): Promise<number> {
-  const lamports = await conn().getBalance(new Keypair.fromSeed(new Uint8Array(32)).publicKey, "confirmed");
+  const { PublicKey } = await import("@solana/web3.js");
+  const lamports = await conn().getBalance(new PublicKey(pubkey), "confirmed");
   return lamports / 1e9;
 }

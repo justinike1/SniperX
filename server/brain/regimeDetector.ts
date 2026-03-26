@@ -88,9 +88,21 @@ class RegimeDetector {
       fearGreed = await this.fetchFearGreed();
 
       // Record for trend calculation
-      this.priceHistory.push({ price: solPrice, ts: Date.now() });
-      if (this.priceHistory.length > 48) this.priceHistory.shift(); // keep 4h of 5min data
-    } catch {}
+      if (solPrice > 0) {
+        this.priceHistory.push({ price: solPrice, ts: Date.now() });
+        if (this.priceHistory.length > 48) this.priceHistory.shift();
+      }
+    } catch (e: any) {
+      console.warn('Regime Detector: data fetch failed:', e?.message || e);
+      // Carry forward previous reading if available rather than defaulting to 0
+      if (this.current) {
+        solPrice = this.current.solPrice;
+        solChange1h = this.current.solChange1h;
+        solChange24h = this.current.solChange24h;
+        fearGreed = this.current.fearGreed;
+        volumeTrend = this.current.volumeTrend;
+      }
+    }
 
     // ── Regime classification ──────────────────────────────────────
     let regime: MarketRegime;
