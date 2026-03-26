@@ -150,6 +150,13 @@ class LivePositionManager {
         }
       } else if (entry) {
         const realizedPnlUSD = exitResult.realizedPnlUSD;
+        const entryCostBasisUSD = Math.max(
+          0,
+          Number.isFinite(entry.sizeUSD) ? entry.sizeUSD : 0
+        );
+        const partialPnlPct =
+          entryCostBasisUSD > 0 ? (realizedPnlUSD / entryCostBasisUSD) * 100 : 0;
+        riskManager.onTradeClose(entry.id, realizedPnlUSD, partialPnlPct, { keepOpen: true });
         entry.execution = {
           ...entry.execution,
           success: true,

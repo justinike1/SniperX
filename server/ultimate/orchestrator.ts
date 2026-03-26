@@ -8,6 +8,7 @@ import type {
 } from "./types";
 import type { RiskBlockReason, RiskStateSnapshot } from "./risk";
 import { KellySizer, ProRiskController, VolatilityLimiter } from "./risk";
+import { canonicalRiskState } from "../risk/canonicalRiskState";
 
 interface RuntimeContext {
   lastPriceByMint: Map<string, number>;
@@ -57,10 +58,14 @@ export class UltimateOrchestrator {
     if (equitySOL > this.ctx.peakEquitySOL) {
       this.ctx.peakEquitySOL = equitySOL;
     }
+    // Keep canonical drawdown in a single shared store.
+    canonicalRiskState.updateDrawdown(equitySOL * 100);
   }
 
   getRiskState(): RiskStateSnapshot {
-    return this.riskController.getState();
+    const state = this.riskController.getState();
+    canonicalRiskState.setProSecondary({ ...state });
+    return state;
   }
 
   recordTradeOutcome(realizedPnlUSD: number): void {

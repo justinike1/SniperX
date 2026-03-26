@@ -1,3 +1,5 @@
+import { canonicalRiskState } from "../risk/canonicalRiskState";
+
 export type RiskBlockCode =
   | "NO_EXECUTABLE_SIGNAL"
   | "EXECUTION_FAILED"
@@ -46,6 +48,10 @@ export interface RiskStateSnapshot {
   cooldownRemainingMs: number;
   dailySpentSOL: number;
   dailyRealizedPnlUSD: number;
+  dailyTradeCount?: number;
+  currentDrawdownPct?: number;
+  peakPortfolioUSD?: number;
+  tradesOpenCount?: number;
   tradingDay: string;
 }
 
@@ -121,6 +127,17 @@ export class ProRiskController {
       this.state.isHalted = false;
       this.state.haltReason = undefined;
     }
+    canonicalRiskState.rollDayIfNeeded();
+    canonicalRiskState.syncFromPro({
+      tradingDay: this.state.tradingDay,
+      dailySpentSOL: this.state.dailySpentSOL,
+      dailyRealizedPnlUSD: this.state.dailyRealizedPnlUSD,
+      cooldownUntil: this.state.cooldownUntil,
+      lastExecutionFailedAt: this.state.lastExecutionFailedAt,
+      isHalted: this.state.isHalted,
+      haltReason: this.state.haltReason,
+      consecutiveLosses: this.state.consecutiveLosses,
+    });
   }
 
   evaluate(params: {
@@ -224,6 +241,17 @@ export class ProRiskController {
       this.state.haltReason = "Trading halted due to consecutive losses.";
     }
 
+    canonicalRiskState.syncFromPro({
+      tradingDay: this.state.tradingDay,
+      dailySpentSOL: this.state.dailySpentSOL,
+      dailyRealizedPnlUSD: this.state.dailyRealizedPnlUSD,
+      cooldownUntil: this.state.cooldownUntil,
+      lastExecutionFailedAt: this.state.lastExecutionFailedAt,
+      isHalted: this.state.isHalted,
+      haltReason: this.state.haltReason,
+      consecutiveLosses: this.state.consecutiveLosses,
+    });
+
     const allowed = reasons.length === 0;
     return {
       allowed,
@@ -239,6 +267,17 @@ export class ProRiskController {
   commitSpend(sizeSOL: number): void {
     this.onNewDayCheck();
     this.state.dailySpentSOL += Math.max(0, sizeSOL);
+    canonicalRiskState.addDailySpentSOL(Math.max(0, sizeSOL));
+    canonicalRiskState.syncFromPro({
+      tradingDay: this.state.tradingDay,
+      dailySpentSOL: this.state.dailySpentSOL,
+      dailyRealizedPnlUSD: this.state.dailyRealizedPnlUSD,
+      cooldownUntil: this.state.cooldownUntil,
+      lastExecutionFailedAt: this.state.lastExecutionFailedAt,
+      isHalted: this.state.isHalted,
+      haltReason: this.state.haltReason,
+      consecutiveLosses: this.state.consecutiveLosses,
+    });
   }
 
   recordExecutionResult(params: {
@@ -252,6 +291,17 @@ export class ProRiskController {
     if (!params.success) {
       this.state.cooldownUntil = now + this.opts.cooldownMsAfterFailure;
       this.state.lastExecutionFailedAt = now;
+      canonicalRiskState.setCooldownAfterFailure(this.opts.cooldownMsAfterFailure, now);
+      canonicalRiskState.syncFromPro({
+        tradingDay: this.state.tradingDay,
+        dailySpentSOL: this.state.dailySpentSOL,
+        dailyRealizedPnlUSD: this.state.dailyRealizedPnlUSD,
+        cooldownUntil: this.state.cooldownUntil,
+        lastExecutionFailedAt: this.state.lastExecutionFailedAt,
+        isHalted: this.state.isHalted,
+        haltReason: this.state.haltReason,
+        consecutiveLosses: this.state.consecutiveLosses,
+      });
       return;
     }
 
@@ -271,19 +321,46 @@ export class ProRiskController {
         this.state.isHalted = true;
         this.state.haltReason = "Trading halted due to consecutive losses.";
       }
+
+      canonicalRiskState.applyRealizedPnl(params.realizedPnlUSD);
+      canonicalRiskState.syncFromPro({
+        tradingDay: this.state.tradingDay,
+        dailySpentSOL: this.state.dailySpentSOL,
+        dailyRealizedPnlUSD: this.state.dailyRealizedPnlUSD,
+        cooldownUntil: this.state.cooldownUntil,
+        lastExecutionFailedAt: this.state.lastExecutionFailedAt,
+        isHalted: this.state.isHalted,
+        haltReason: this.state.haltReason,
+        consecutiveLosses: this.state.consecutiveLosses,
+      });
     }
   }
 
   getState(now = Date.now()): RiskStateSnapshot {
     this.onNewDayCheck();
-    return {
+    canonicalRiskState.syncFromPro({
+      tradingDay: this.state.tradingDay,
+      dailySpentSOL: this.state.dailySpentSOL,
+      dailyRealizedPnlUSD: this.state.dailyRealizedPnlUSD,
+      cooldownUntil: this.state.cooldownUntil,
+      lastExecutionFailedAt: this.state.lastExecutionFailedAt,
       isHalted: this.state.isHalted,
       haltReason: this.state.haltReason,
       consecutiveLosses: this.state.consecutiveLosses,
-      cooldownRemainingMs: Math.max(0, this.state.cooldownUntil - now),
-      dailySpentSOL: round4(this.state.dailySpentSOL),
-      dailyRealizedPnlUSD: round2(this.state.dailyRealizedPnlUSD),
-      tradingDay: this.state.tradingDay,
+    });
+    const canonical = canonicalRiskState.getCanonicalSnapshot(now);
+    return {
+      isHalted: canonical.isHalted,
+      haltReason: canonical.haltReason,
+      consecutiveLosses: canonical.consecutiveLosses,
+      cooldownRemainingMs: canonical.cooldownRemainingMs,
+      dailySpentSOL: canonical.dailySpentSOL,
+      dailyRealizedPnlUSD: canonical.dailyPnlUSD,
+      dailyTradeCount: canonical.dailyTradeCount,
+      currentDrawdownPct: canonical.currentDrawdownPct,
+      peakPortfolioUSD: canonical.peakPortfolioUSD,
+      tradesOpenCount: canonical.tradesOpenCount,
+      tradingDay: canonical.tradingDay,
     };
   }
 
