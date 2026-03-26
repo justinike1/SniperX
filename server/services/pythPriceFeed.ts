@@ -29,7 +29,6 @@ class PythPriceFeedService {
       priceFeedRequestConfig: { binary: true }
     });
     this.cache = new Map();
-    console.log('📊 Pyth Price Feed Service initialized');
   }
 
   async getPrice(symbol: string): Promise<PythPrice | null> {

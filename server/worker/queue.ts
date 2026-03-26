@@ -23,7 +23,6 @@ class TradeQueue extends EventEmitter {
 
   constructor() {
     super();
-    console.log('⚙️ Trade Queue initialized');
   }
 
   registerHandler(type: 'BUY' | 'SELL', handler: TaskHandler) {
