@@ -5,6 +5,8 @@ import { tradeJournal } from "./tradeJournal";
 import { riskManager } from "./riskManager";
 import { sendTelegramAlert } from "../utils/telegramBotEnhanced";
 
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+
 interface ExitRuleState {
   takeProfitPct: number;
   stopLossPct: number;
@@ -54,56 +56,136 @@ class LivePositionManager {
     const amountTokens = position.quantity * fraction;
     if (amountTokens <= 0) return { success: false, reason: "ZERO_POSITION_QTY" };
 
-    const mark = await marketScanner.fetchPriceByMint(position.mint);
     const sell = await executionEngine.sell(position.mint, amountTokens);
     if (!sell.success) {
       return { success: false, reason: sell.error || "SELL_EXEC_FAILED" };
     }
 
-    const exitPrice = mark > 0 ? mark : position.currentPriceUSD || position.entryPriceUSD;
-    const costBasis = position.entryPriceUSD * amountTokens;
-    const proceeds = exitPrice * amountTokens;
-    const realizedPnlUSD = proceeds - costBasis;
+    let reconciledSell = sell;
+    if (
+      sell.txHash &&
+      (!sell.filledInputAmount || !sell.filledOutputAmount || !sell.avgPriceUSD)
+    ) {
+      const lateFill = await executionEngine.reconcileExecutedSwap(
+        sell.txHash,
+        position.mint,
+        SOL_MINT
+      );
+      reconciledSell = { ...sell, ...lateFill };
+    }
 
-    portfolioManager.recordExit(position.mint, fraction, realizedPnlUSD);
+    const soldQuantity = Math.max(
+      0,
+      Number.isFinite(reconciledSell.filledInputAmount)
+        ? (reconciledSell.filledInputAmount as number)
+        : amountTokens
+    );
+    const mark = await marketScanner.fetchPriceByMint(position.mint);
+    const solPrice = await marketScanner.fetchPriceByMint(SOL_MINT);
+    const grossProceedsSOL = Math.max(
+      0,
+      Number.isFinite(reconciledSell.filledOutputAmount)
+        ? (reconciledSell.filledOutputAmount as number)
+        : reconciledSell.outputAmount > 0
+          ? reconciledSell.outputAmount / 1e9
+          : 0
+    );
+    const feeSOL = Math.max(
+      0,
+      Number.isFinite(reconciledSell.networkFeeSOL)
+        ? (reconciledSell.networkFeeSOL as number)
+        : reconciledSell.fee > 0
+          ? reconciledSell.fee / 1e9
+          : 0
+    );
+    const impliedExitPriceUSD =
+      soldQuantity > 0
+        ? Number.isFinite(reconciledSell.avgPriceUSD)
+          ? (reconciledSell.avgPriceUSD as number)
+          : mark > 0
+            ? mark
+            : position.currentPriceUSD || position.entryPriceUSD
+        : mark > 0
+          ? mark
+          : position.currentPriceUSD || position.entryPriceUSD;
+    const grossProceedsUSD =
+      grossProceedsSOL > 0 ? grossProceedsSOL * solPrice : soldQuantity * impliedExitPriceUSD;
+    const feeUSD = feeSOL * solPrice;
+
+    const exitResult = portfolioManager.recordExit({
+      mint: position.mint,
+      soldQuantity,
+      grossProceedsUSD,
+      feeUSD,
+    });
+    if (!exitResult) {
+      return { success: false, reason: "POSITION_UPDATE_FAILED" };
+    }
     await portfolioManager.refreshSnapshot();
 
     if (position.journalId) {
       tradeJournal.updateAnalytics(position.journalId, { exitReason: reason });
       const entry = tradeJournal.getById(position.journalId);
-      if (fraction >= 0.999) {
-        const closed = tradeJournal.close(position.journalId, exitPrice, reason, {
+      if (exitResult.closed) {
+        const closed = tradeJournal.close(position.journalId, exitResult.exitPriceUSD, reason, {
           success: true,
-          txHash: sell.txHash,
-          inputAmount: sell.inputAmount,
-          outputAmount: sell.outputAmount,
-          priceImpact: sell.priceImpact,
-          fee: sell.fee,
-          attempts: sell.attempts,
-          timestamp: sell.timestamp,
+          txHash: reconciledSell.txHash,
+          inputAmount: reconciledSell.inputAmount,
+          outputAmount: reconciledSell.outputAmount,
+          priceImpact: reconciledSell.priceImpact,
+          fee: reconciledSell.fee,
+          attempts: reconciledSell.attempts,
+          timestamp: reconciledSell.timestamp,
+          inputMint: reconciledSell.inputMint,
+          outputMint: reconciledSell.outputMint,
+          filledInputAmount: reconciledSell.filledInputAmount,
+          filledOutputAmount: reconciledSell.filledOutputAmount,
+          avgPriceUSD: reconciledSell.avgPriceUSD,
+          networkFeeLamports: reconciledSell.networkFeeLamports,
+          networkFeeSOL: reconciledSell.networkFeeSOL,
+          fillSource: reconciledSell.fillSource,
         });
         if (closed) {
           riskManager.onTradeClose(closed.id, closed.pnlUSD || 0, closed.pnlPct || 0);
         }
       } else if (entry) {
-        const pnlPct = entry.sizeUSD > 0 ? (realizedPnlUSD / entry.sizeUSD) * 100 : 0;
+        const realizedPnlUSD = exitResult.realizedPnlUSD;
+        entry.execution = {
+          ...entry.execution,
+          success: true,
+          txHash: reconciledSell.txHash,
+          inputAmount: reconciledSell.inputAmount,
+          outputAmount: reconciledSell.outputAmount,
+          priceImpact: reconciledSell.priceImpact,
+          fee: reconciledSell.fee,
+          attempts: reconciledSell.attempts,
+          timestamp: reconciledSell.timestamp,
+          inputMint: reconciledSell.inputMint,
+          outputMint: reconciledSell.outputMint,
+          filledInputAmount: reconciledSell.filledInputAmount,
+          filledOutputAmount: reconciledSell.filledOutputAmount,
+          avgPriceUSD: reconciledSell.avgPriceUSD,
+          networkFeeLamports: reconciledSell.networkFeeLamports,
+          networkFeeSOL: reconciledSell.networkFeeSOL,
+          fillSource: reconciledSell.fillSource,
+        };
         entry.notes +=
           `\nPartial exit ${reason}: ${(fraction * 100).toFixed(1)}%` +
+          ` | qty ${exitResult.soldQuantity.toFixed(6)}` +
           ` | realized ${realizedPnlUSD >= 0 ? "+" : ""}$${realizedPnlUSD.toFixed(2)}`;
-        riskManager.onTradeClose(entry.id, realizedPnlUSD, pnlPct);
       }
     }
 
     await sendTelegramAlert(
       `Live exit ${reason}\n${position.token} ${fraction >= 0.999 ? "full" : "partial"} close\n` +
-        `P&L: ${realizedPnlUSD >= 0 ? "+" : ""}$${realizedPnlUSD.toFixed(2)}\n` +
-        `tx: ${sell.txHash || "n/a"}`
+        `P&L: ${exitResult.realizedPnlUSD >= 0 ? "+" : ""}$${exitResult.realizedPnlUSD.toFixed(2)}\n` +
+        `tx: ${reconciledSell.txHash || "n/a"}`
     );
 
     return {
       success: true,
-      txHash: sell.txHash,
-      realizedPnlUSD,
+      txHash: reconciledSell.txHash,
+      realizedPnlUSD: exitResult.realizedPnlUSD,
     };
   }
 

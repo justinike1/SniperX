@@ -76,6 +76,14 @@ export interface ExecutionResult {
   attempts: number;
   error?: string;
   timestamp: number;
+  inputMint?: string;
+  outputMint?: string;
+  filledInputAmount?: number; // human units
+  filledOutputAmount?: number; // human units
+  avgPriceUSD?: number;
+  networkFeeLamports?: number;
+  networkFeeSOL?: number;
+  fillSource?: 'onchain' | 'quote';
 }
 
 export interface JournalEntry {

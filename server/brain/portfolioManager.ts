@@ -1,15 +1,17 @@
 import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, getMint } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { conn, loadWallet } from "../utils/solanaAdapter";
 import { marketScanner } from "./marketScanner";
 
-interface OpenPosition {
+export interface OpenPosition {
   id: string;
   token: string;
   mint: string;
   quantity: number;
   entryPriceUSD: number;
   entryNotionalUSD: number;
+  entryFeeUSD: number;
+  realizedFeesUSD: number;
   entryTime: number;
   currentPriceUSD: number;
   markValueUSD: number;
@@ -21,10 +23,12 @@ interface OpenPosition {
   highWatermarkPriceUSD: number;
   journalId?: string;
   strategy?: string;
+  fillSource?: "onchain" | "quote";
+  lastTxHash?: string;
   closed: boolean;
 }
 
-interface PortfolioSnapshot {
+export interface PortfolioSnapshot {
   asOf: number;
   cashSOL: number;
   cashUSD: number;
@@ -113,27 +117,78 @@ class PortfolioManager {
     trailingStopActivationPct: number;
     journalId?: string;
     strategy?: string;
+    executedQuantity?: number;
+    executedNotionalUSD?: number;
+    entryFeeUSD?: number;
+    fillSource?: "onchain" | "quote";
+    txHash?: string;
   }): Promise<OpenPosition> {
-    const quantity = params.entryPriceUSD > 0 ? params.usdNotional / params.entryPriceUSD : 0;
+    const entryFeeUSD = Math.max(0, params.entryFeeUSD || 0);
+    const executedNotionalUSD = Math.max(
+      0,
+      params.executedNotionalUSD && Number.isFinite(params.executedNotionalUSD)
+        ? params.executedNotionalUSD
+        : params.usdNotional
+    );
+    const entryNotionalUSD = executedNotionalUSD + entryFeeUSD;
+    const quantityFromInput =
+      params.executedQuantity && Number.isFinite(params.executedQuantity)
+        ? params.executedQuantity
+        : params.entryPriceUSD > 0
+          ? executedNotionalUSD / params.entryPriceUSD
+          : 0;
+    const quantity = Math.max(0, quantityFromInput);
+    const impliedEntryPriceUSD =
+      quantity > 0 && entryNotionalUSD > 0 ? entryNotionalUSD / quantity : params.entryPriceUSD;
+
+    const existing = this.positions.get(params.mint);
+    if (existing && !existing.closed) {
+      const prevQty = existing.quantity;
+      const prevNotional = existing.entryNotionalUSD;
+      const nextQty = Math.max(0, prevQty + quantity);
+      const nextNotional = Math.max(0, prevNotional + entryNotionalUSD);
+      existing.quantity = nextQty;
+      existing.entryNotionalUSD = nextNotional;
+      existing.entryFeeUSD += entryFeeUSD;
+      existing.entryPriceUSD = nextQty > 0 ? nextNotional / nextQty : existing.entryPriceUSD;
+      existing.currentPriceUSD = impliedEntryPriceUSD || existing.currentPriceUSD;
+      existing.markValueUSD = existing.currentPriceUSD * existing.quantity;
+      existing.unrealizedPnlUSD = existing.markValueUSD - existing.entryNotionalUSD;
+      existing.highWatermarkPriceUSD = Math.max(
+        existing.highWatermarkPriceUSD,
+        existing.currentPriceUSD
+      );
+      existing.journalId = params.journalId || existing.journalId;
+      existing.strategy = params.strategy || existing.strategy;
+      existing.fillSource = params.fillSource || existing.fillSource;
+      existing.lastTxHash = params.txHash || existing.lastTxHash;
+      await this.refreshSnapshot();
+      return { ...existing };
+    }
+
     const id = `L${String(this.idCounter++).padStart(4, "0")}`;
     const position: OpenPosition = {
       id,
       token: params.token,
       mint: params.mint,
       quantity,
-      entryPriceUSD: params.entryPriceUSD,
-      entryNotionalUSD: params.usdNotional,
+      entryPriceUSD: impliedEntryPriceUSD,
+      entryNotionalUSD,
+      entryFeeUSD,
+      realizedFeesUSD: 0,
       entryTime: Date.now(),
-      currentPriceUSD: params.entryPriceUSD,
-      markValueUSD: params.usdNotional,
+      currentPriceUSD: impliedEntryPriceUSD,
+      markValueUSD: entryNotionalUSD,
       unrealizedPnlUSD: 0,
       realizedPnlUSD: 0,
       takeProfitPct: params.takeProfitPct,
       stopLossPct: params.stopLossPct,
       trailingStopActivationPct: params.trailingStopActivationPct,
-      highWatermarkPriceUSD: params.entryPriceUSD,
+      highWatermarkPriceUSD: impliedEntryPriceUSD,
       journalId: params.journalId,
       strategy: params.strategy,
+      fillSource: params.fillSource,
+      lastTxHash: params.txHash,
       closed: false,
     };
 
@@ -163,31 +218,83 @@ class PortfolioManager {
     this.dailyRealizedPnlUSD += realizedPnlUSD;
   }
 
-  recordExit(mint: string, fraction: number, realizedPnlUSD: number): void {
+  recordExit(params: {
+    mint: string;
+    soldQuantity: number;
+    grossProceedsUSD: number;
+    feeUSD?: number;
+  }): {
+    realizedPnlUSD: number;
+    soldQuantity: number;
+    remainingQuantity: number;
+    costBasisSoldUSD: number;
+    netProceedsUSD: number;
+    exitPriceUSD: number;
+    closed: boolean;
+  } | null {
     this.rollDayIfNeeded();
-    const position = this.positions.get(mint);
+    const position = this.positions.get(params.mint);
     if (!position) {
-      this.dailyRealizedPnlUSD += realizedPnlUSD;
-      return;
+      return null;
     }
+
+    const requestedQty = Number.isFinite(params.soldQuantity) ? params.soldQuantity : 0;
+    const soldQuantity = Math.max(0, Math.min(position.quantity, requestedQty));
+    if (soldQuantity <= 0) {
+      return {
+        realizedPnlUSD: 0,
+        soldQuantity: 0,
+        remainingQuantity: position.quantity,
+        costBasisSoldUSD: 0,
+        netProceedsUSD: 0,
+        exitPriceUSD: position.currentPriceUSD,
+        closed: position.closed,
+      };
+    }
+
+    const feeUSD = Math.max(0, params.feeUSD || 0);
+    const grossProceedsUSD = Math.max(0, params.grossProceedsUSD || 0);
+    const netProceedsUSD = Math.max(0, grossProceedsUSD - feeUSD);
+    const costPerToken = position.quantity > 0 ? position.entryNotionalUSD / position.quantity : 0;
+    const costBasisSoldUSD = soldQuantity * costPerToken;
+    const realizedPnlUSD = netProceedsUSD - costBasisSoldUSD;
 
     position.realizedPnlUSD += realizedPnlUSD;
+    position.realizedFeesUSD += feeUSD;
     this.dailyRealizedPnlUSD += realizedPnlUSD;
 
-    const clampedFraction = Math.max(0, Math.min(1, fraction));
-    if (clampedFraction >= 0.999) {
+    const remainingQuantity = Math.max(0, position.quantity - soldQuantity);
+    if (remainingQuantity <= 0.00000001) {
       position.closed = true;
       position.quantity = 0;
+      position.entryNotionalUSD = 0;
       position.markValueUSD = 0;
       position.unrealizedPnlUSD = 0;
-      return;
+      return {
+        realizedPnlUSD,
+        soldQuantity,
+        remainingQuantity: 0,
+        costBasisSoldUSD,
+        netProceedsUSD,
+        exitPriceUSD: soldQuantity > 0 ? grossProceedsUSD / soldQuantity : position.currentPriceUSD,
+        closed: true,
+      };
     }
 
-    const remaining = 1 - clampedFraction;
-    position.entryNotionalUSD = Math.max(0, position.entryNotionalUSD * remaining);
-    position.quantity = Math.max(0, position.quantity * remaining);
-    position.markValueUSD = Math.max(0, position.markValueUSD * remaining);
+    position.quantity = remainingQuantity;
+    position.entryNotionalUSD = Math.max(0, position.entryNotionalUSD - costBasisSoldUSD);
+    position.markValueUSD = Math.max(0, position.currentPriceUSD * remainingQuantity);
     position.unrealizedPnlUSD = position.markValueUSD - position.entryNotionalUSD;
+
+    return {
+      realizedPnlUSD,
+      soldQuantity,
+      remainingQuantity,
+      costBasisSoldUSD,
+      netProceedsUSD,
+      exitPriceUSD: soldQuantity > 0 ? grossProceedsUSD / soldQuantity : position.currentPriceUSD,
+      closed: false,
+    };
   }
 
   closePosition(mint: string): void {

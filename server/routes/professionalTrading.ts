@@ -11,6 +11,8 @@ import {
   tradeJournal as brainTradeJournal,
   marketScanner,
   riskManager,
+  performanceTracker,
+  executionEngine,
 } from "../brain/index";
 import { tradeJournal } from "../services/tradeJournal";
 import { performanceReport } from "../services/performanceReport";
@@ -197,12 +199,67 @@ export function registerRoutes(app: Express) {
           ?.opportunities.find((o) => o.mint === mint);
 
         if (entryPriceUSD > 0 && sizeUSD > 0) {
+          const executionMeta = (decision.execution || {}) as {
+            txid?: string;
+            filledInputAmount?: number;
+            filledOutputAmount?: number;
+            avgPriceUSD?: number;
+            networkFeeSOL?: number;
+            networkFeeLamports?: number;
+            fee?: number;
+            fillSource?: "onchain" | "quote";
+          };
+          let fill =
+            executionMeta.filledInputAmount ||
+            executionMeta.filledOutputAmount ||
+            executionMeta.avgPriceUSD
+              ? executionMeta
+              : undefined;
+          if (!fill && executionMeta.txid) {
+            try {
+              const reconciled = await executionEngine.reconcileExecutedSwap(
+                executionMeta.txid,
+                SOL_MINT,
+                mint
+              );
+              fill = { ...executionMeta, ...reconciled };
+            } catch {
+              fill = executionMeta;
+            }
+          }
+          const executedQty =
+            fill?.filledOutputAmount && Number.isFinite(fill.filledOutputAmount)
+              ? fill.filledOutputAmount
+              : undefined;
+          const executedSolIn =
+            fill?.filledInputAmount && Number.isFinite(fill.filledInputAmount)
+              ? fill.filledInputAmount
+              : undefined;
+          const executedPrice =
+            fill?.avgPriceUSD && Number.isFinite(fill.avgPriceUSD)
+              ? fill.avgPriceUSD
+              : entryPriceUSD;
+          const feeSOL =
+            fill?.networkFeeSOL && Number.isFinite(fill.networkFeeSOL)
+              ? fill.networkFeeSOL
+              : fill?.fee
+                ? fill.fee / 1e9
+                : 0;
+          const executedNotionalUSD =
+            executedSolIn !== undefined
+              ? executedSolIn * (solPriceUSD > 0 ? solPriceUSD : 100)
+              : sizeUSD;
+          const entryFeeUSD = feeSOL * (solPriceUSD > 0 ? solPriceUSD : 100);
+          const fillSource =
+            fill?.fillSource === "onchain" || fill?.fillSource === "quote"
+              ? fill.fillSource
+              : "quote";
           const journalId = brainTradeJournal.open({
             token: tokenLabel,
             mint,
             action: "BUY",
             sizeUSD,
-            entryPrice: entryPriceUSD,
+            entryPrice: executedPrice,
             confidence: Math.round(normalizeConfidence(requestedSignal.confidence) * 100),
             regime: "CHOP",
             signals: [
@@ -212,13 +269,30 @@ export function registerRoutes(app: Express) {
             breakdown: {},
             execution: {
               success: true,
-              txHash: decision.execution?.txid,
+              txHash: executionMeta.txid,
               inputAmount: decision.sizeSOL,
-              outputAmount: 0,
+              outputAmount:
+                executedQty !== undefined && executedPrice > 0
+                  ? executedQty * executedPrice
+                  : 0,
               priceImpact: 0,
-              fee: 0,
+              fee:
+                fill?.networkFeeLamports && Number.isFinite(fill.networkFeeLamports)
+                  ? fill.networkFeeLamports
+                  : 0,
               attempts: 1,
               timestamp: Date.now(),
+              inputMint: SOL_MINT,
+              outputMint: mint,
+              filledInputAmount: executedSolIn,
+              filledOutputAmount: executedQty,
+              avgPriceUSD: executedPrice,
+              networkFeeLamports:
+                fill?.networkFeeLamports && Number.isFinite(fill.networkFeeLamports)
+                  ? fill.networkFeeLamports
+                  : undefined,
+              networkFeeSOL: feeSOL > 0 ? feeSOL : undefined,
+              fillSource,
             },
             analytics: {
               score: Math.round(normalizeConfidence(requestedSignal.confidence) * 100),
@@ -234,15 +308,20 @@ export function registerRoutes(app: Express) {
             token: tokenLabel,
             mint,
             usdNotional: sizeUSD,
-            entryPriceUSD,
+            entryPriceUSD: executedPrice,
             takeProfitPct: exits.tp,
             stopLossPct: exits.sl,
             trailingStopActivationPct: exits.trailingActivation,
             journalId,
             strategy: requestedSignal.strategy || "API",
+            executedQuantity: executedQty,
+            executedNotionalUSD,
+            entryFeeUSD,
+            fillSource,
+            txHash: executionMeta.txid,
           });
 
-          riskManager.onTradeOpen(journalId, sizeUSD, entryPriceUSD);
+          riskManager.onTradeOpen(journalId, executedNotionalUSD + entryFeeUSD, executedPrice);
         }
       }
 

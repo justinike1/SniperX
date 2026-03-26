@@ -28,6 +28,7 @@ import { sendTelegramAlert } from '../utils/telegramBotEnhanced';
 import { portfolioManager } from './portfolioManager';
 import { livePositionManager } from './livePositionManager';
 import { strategyAnalytics } from './strategyAnalytics';
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 class BrainOrchestrator {
   private running = false;
@@ -167,20 +168,39 @@ class BrainOrchestrator {
           },
         });
 
-        riskManager.onTradeOpen(journalId, finalSizeUSD, opp.price);
-
         if (execResult.success) {
+          const solPriceUSD = await marketScanner.fetchPriceByMint(SOL_MINT);
+          const executedQty =
+            Number.isFinite(execResult.filledOutputAmount) ? (execResult.filledOutputAmount as number) : undefined;
+          const executedNotionalUSD =
+            Number.isFinite(execResult.filledInputAmount) && Number.isFinite(execResult.avgPriceUSD)
+              ? (execResult.filledInputAmount as number) * (execResult.avgPriceUSD as number)
+              : finalSizeUSD;
+          const entryFeeUSD =
+            Number.isFinite(execResult.networkFeeSOL)
+              ? (execResult.networkFeeSOL as number) * (solPriceUSD > 0 ? solPriceUSD : 100)
+              : 0;
+          const effectiveEntryPrice =
+            Number.isFinite(execResult.avgPriceUSD) && (execResult.avgPriceUSD as number) > 0
+              ? (execResult.avgPriceUSD as number)
+              : opp.price;
           await portfolioManager.registerEntry({
             token: opp.token,
             mint: opp.mint,
             usdNotional: finalSizeUSD,
-            entryPriceUSD: opp.price,
+            entryPriceUSD: effectiveEntryPrice,
             takeProfitPct: exits.tp,
             stopLossPct: exits.sl,
             trailingStopActivationPct: exits.trailingActivation,
             journalId,
             strategy: "BRAIN",
+            executedQuantity: executedQty,
+            executedNotionalUSD,
+            entryFeeUSD,
+            fillSource: execResult.fillSource,
+            txHash: execResult.txHash,
           });
+          riskManager.onTradeOpen(journalId, executedNotionalUSD + entryFeeUSD, effectiveEntryPrice);
           await sendTelegramAlert(`Trade executed: ${opp.token}\n$${finalSizeUSD.toFixed(2)} | TX: ${execResult.txHash?.slice(0, 20)}...\nTP: +${exits.tp}% | SL: -${exits.sl}%`);
         } else {
           await sendTelegramAlert(`Trade failed: ${opp.token}\n${execResult.error}`);

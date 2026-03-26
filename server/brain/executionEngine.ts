@@ -78,7 +78,12 @@ class ExecutionEngine {
         return { success: false, inputAmount: lamports, outputAmount: 0, priceImpact: impact, fee: 0, attempts: 0, error: `IMPACT_TOO_HIGH: ${impact.toFixed(2)}%`, timestamp: start };
       }
 
-      return await this.executeSwap(q, lamports, parseInt(q.outAmount));
+      const result = await this.executeSwap(q, lamports, parseInt(q.outAmount));
+      if (result.success) {
+        const reconciled = await this.reconcileFill(SOL_MINT, outputMint, result.txHash!);
+        return this.mergeFill(result, reconciled);
+      }
+      return result;
     } catch (e: any) {
       return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 1, error: e.message, timestamp: start };
     }
@@ -104,7 +109,12 @@ class ExecutionEngine {
       }
 
       const q = await this.quote(inputMint, SOL_MINT, rawAmount, slippageBps);
-      return await this.executeSwap(q, rawAmount, parseInt(q.outAmount));
+      const result = await this.executeSwap(q, rawAmount, parseInt(q.outAmount));
+      if (result.success) {
+        const reconciled = await this.reconcileFill(inputMint, SOL_MINT, result.txHash!);
+        return this.mergeFill(result, reconciled);
+      }
+      return result;
     } catch (e: any) {
       return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 1, error: e.message, timestamp: start };
     }
@@ -132,6 +142,24 @@ class ExecutionEngine {
     } catch {
       return null;
     }
+  }
+
+  async reconcileExecutedSwap(
+    signature: string,
+    inputMint: string,
+    outputMint: string
+  ): Promise<Partial<ExecutionResult>> {
+    const fill = await this.reconcileFill(inputMint, outputMint, signature);
+    return {
+      inputMint: fill.inputMint,
+      outputMint: fill.outputMint,
+      filledInputAmount: fill.filledInputAmount,
+      filledOutputAmount: fill.filledOutputAmount,
+      avgPriceUSD: fill.avgPriceUSD,
+      networkFeeLamports: fill.networkFeeLamports,
+      networkFeeSOL: fill.networkFeeSOL,
+      fillSource: fill.fillSource,
+    };
   }
 
   /** Simulate without sending. Returns true if simulation passes. */
@@ -247,6 +275,131 @@ class ExecutionEngine {
   isReady(): boolean { return !!this.wallet; }
 
   private sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+  private async reconcileFill(
+    inputMint: string,
+    outputMint: string,
+    signature: string
+  ): Promise<{
+    filledInputAmount?: number;
+    filledOutputAmount?: number;
+    avgPriceUSD?: number;
+    networkFeeLamports?: number;
+    networkFeeSOL?: number;
+    inputMint: string;
+    outputMint: string;
+    fillSource: "onchain" | "quote";
+  }> {
+    if (!this.wallet) {
+      return { inputMint, outputMint, fillSource: "quote" };
+    }
+    try {
+      const tx = await this.connection.getTransaction(signature, {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      });
+      if (!tx || !tx.meta) {
+        return { inputMint, outputMint, fillSource: "quote" };
+      }
+
+      const pre = tx.meta.preTokenBalances || [];
+      const post = tx.meta.postTokenBalances || [];
+      const owner = this.wallet.publicKey.toBase58();
+
+      const tokenDeltaForMint = (mint: string): number => {
+        const byIndex = new Map<number, { pre: number; post: number }>();
+        for (const b of pre) {
+          if (b.owner !== owner || b.mint !== mint) continue;
+          const preAmt = Number(b.uiTokenAmount.uiAmountString || "0");
+          const slot = byIndex.get(b.accountIndex) || { pre: 0, post: 0 };
+          slot.pre = preAmt;
+          byIndex.set(b.accountIndex, slot);
+        }
+        for (const b of post) {
+          if (b.owner !== owner || b.mint !== mint) continue;
+          const postAmt = Number(b.uiTokenAmount.uiAmountString || "0");
+          const slot = byIndex.get(b.accountIndex) || { pre: 0, post: 0 };
+          slot.post = postAmt;
+          byIndex.set(b.accountIndex, slot);
+        }
+        let total = 0;
+        byIndex.forEach((slot) => {
+          total += slot.post - slot.pre;
+        });
+        return total;
+      };
+
+      const inputTokenDelta = tokenDeltaForMint(inputMint);
+      const outputTokenDelta = tokenDeltaForMint(outputMint);
+
+      const staticKeys = tx.transaction.message.staticAccountKeys || [];
+      let walletIndex = staticKeys.findIndex((k) => k.toBase58() === owner);
+      if (walletIndex < 0) walletIndex = 0;
+      const preLamports = tx.meta.preBalances?.[walletIndex] ?? 0;
+      const postLamports = tx.meta.postBalances?.[walletIndex] ?? 0;
+      const feeLamports = tx.meta.fee ?? 0;
+      const feeSOL = feeLamports / 1e9;
+      const walletSolDelta = (postLamports - preLamports) / 1e9;
+
+      let filledInputAmount = Math.max(0, -inputTokenDelta);
+      let filledOutputAmount = Math.max(0, outputTokenDelta);
+      if (inputMint === SOL_MINT) {
+        // Wallet delta includes fee: -input - fee
+        filledInputAmount = Math.max(0, -walletSolDelta - feeSOL);
+      }
+      if (outputMint === SOL_MINT) {
+        // Wallet delta includes fee: +output - fee
+        filledOutputAmount = Math.max(0, walletSolDelta + feeSOL);
+      }
+
+      const solPrice = await this.getSolPrice();
+      let avgPriceUSD: number | undefined;
+      if (outputMint === SOL_MINT && filledInputAmount > 0 && filledOutputAmount > 0) {
+        avgPriceUSD = solPrice * (filledOutputAmount / filledInputAmount);
+      } else if (inputMint === SOL_MINT && filledInputAmount > 0 && filledOutputAmount > 0) {
+        avgPriceUSD = solPrice * (filledInputAmount / filledOutputAmount);
+      }
+
+      return {
+        inputMint,
+        outputMint,
+        filledInputAmount: filledInputAmount > 0 ? filledInputAmount : undefined,
+        filledOutputAmount: filledOutputAmount > 0 ? filledOutputAmount : undefined,
+        avgPriceUSD,
+        networkFeeLamports: feeLamports,
+        networkFeeSOL: feeSOL,
+        fillSource: "onchain",
+      };
+    } catch {
+      return { inputMint, outputMint, fillSource: "quote" };
+    }
+  }
+
+  private mergeFill(
+    base: ExecutionResult,
+    fill: {
+      inputMint: string;
+      outputMint: string;
+      filledInputAmount?: number;
+      filledOutputAmount?: number;
+      avgPriceUSD?: number;
+      networkFeeLamports?: number;
+      networkFeeSOL?: number;
+      fillSource: "onchain" | "quote";
+    }
+  ): ExecutionResult {
+    return {
+      ...base,
+      inputMint: fill.inputMint,
+      outputMint: fill.outputMint,
+      filledInputAmount: fill.filledInputAmount,
+      filledOutputAmount: fill.filledOutputAmount,
+      avgPriceUSD: fill.avgPriceUSD,
+      networkFeeLamports: fill.networkFeeLamports,
+      networkFeeSOL: fill.networkFeeSOL,
+      fillSource: fill.fillSource,
+    };
+  }
 }
 
 export const executionEngine = new ExecutionEngine();
