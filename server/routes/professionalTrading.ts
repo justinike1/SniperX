@@ -1,9 +1,17 @@
-import type { Express } from "express";
+import type { Request, Response, Express } from "express";
 import { JupiterGateway } from "../ultimate/gateway/jupiterGateway";
 import { UltimateOrchestrator } from "../ultimate/orchestrator";
 import { loadWallet, conn } from "../utils/solanaAdapter";
 import type { Action, StrategySignal, UltConfig, WalletInfo } from "../ultimate/types";
-import { backtester } from "../brain/index";
+import {
+  backtester,
+  portfolioManager,
+  livePositionManager,
+  strategyAnalytics,
+  tradeJournal as brainTradeJournal,
+  marketScanner,
+  riskManager,
+} from "../brain/index";
 import { tradeJournal } from "../services/tradeJournal";
 import { performanceReport } from "../services/performanceReport";
 
@@ -20,21 +28,23 @@ const config: UltConfig = {
 
 const gateway = new JupiterGateway();
 const orchestrator = new UltimateOrchestrator(config, gateway);
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 type TradeRequestBody = {
   tokenMint?: string;
+  token?: string;
   action?: Action;
   confidence?: number;
   price?: number;
+  sellFraction?: number;
   signals?: StrategySignal[];
 };
 
 export function registerRoutes(app: Express) {
   app.get("/api/pro/status", async (_req, res) => {
     try {
+      const snapshot = await portfolioManager.refreshSnapshot();
       const wallet = loadWallet();
-      const lamports = await conn().getBalance(wallet.publicKey, "confirmed");
-      const balanceSOL = lamports / 1e9;
       const riskState = orchestrator.getRiskState();
       const summary = performanceReport.generate(tradeJournal.getEntries());
 
@@ -44,8 +54,14 @@ export function registerRoutes(app: Express) {
         mode: backtester.getMode(),
         wallet: {
           address: wallet.publicKey.toBase58(),
-          balanceSOL,
+          balanceSOL: snapshot.cashSOL,
           reserveSOL: config.minWalletSOL,
+        },
+        equity: {
+          cashUSD: snapshot.cashUSD,
+          positionsUSD: snapshot.positionsValueUSD,
+          totalUSD: snapshot.totalEquityUSD,
+          unrealizedPnlUSD: snapshot.totalUnrealizedPnlUSD,
         },
         risk: {
           halted: riskState.isHalted,
@@ -85,6 +101,32 @@ export function registerRoutes(app: Express) {
       const wallet = loadWallet();
       const lamports = await conn().getBalance(wallet.publicKey, "confirmed");
       const balanceSOL = lamports / 1e9;
+      const signalAction = normalizeAction(body.action);
+      const sellFraction = normalizeSellFraction(body.sellFraction);
+
+      const tokenMint = body.tokenMint || resolveTokenMint(body.token);
+      if (signalAction === "SELL" && tokenMint) {
+        const sell = await livePositionManager.forceSellByMint(
+          tokenMint,
+          sellFraction,
+          sellFraction >= 0.999 ? "API_SELL_FULL" : "API_SELL_PARTIAL"
+        );
+        if (!sell.success) {
+          return res.status(422).json({
+            success: false,
+            decision: "HOLD",
+            error: sell.reason || "SELL_FAILED",
+          });
+        }
+        return res.json({
+          success: true,
+          decision: "SELL",
+          tokenMint,
+          fraction: sellFraction,
+          txid: sell.txHash,
+          realizedPnlUSD: sell.realizedPnlUSD,
+        });
+      }
 
       const walletInfo: WalletInfo = {
         address: wallet.publicKey.toBase58(),
@@ -139,7 +181,72 @@ export function registerRoutes(app: Express) {
         });
       }
 
-      res.json({
+      if (decision.decided === "BUY") {
+        const mint = decision.selectedSignal?.tokenMint || requestedSignal.tokenMint;
+        const tokenLabel = body.token?.toUpperCase() || mint.slice(0, 6);
+        const entryPriceUSD =
+          typeof body.price === "number" && body.price > 0
+            ? body.price
+            : await marketScanner.fetchPriceByMint(mint);
+        const solPriceUSD = await marketScanner.fetchPriceByMint(SOL_MINT);
+        const sizeUSD = decision.sizeSOL * (solPriceUSD > 0 ? solPriceUSD : 100);
+        const vol = marketScanner.getVolatility(mint);
+        const exits = riskManager.calculateExits(normalizeConfidence(requestedSignal.confidence) * 100, vol);
+        const opp = marketScanner
+          .getLastScan()
+          ?.opportunities.find((o) => o.mint === mint);
+
+        if (entryPriceUSD > 0 && sizeUSD > 0) {
+          const journalId = brainTradeJournal.open({
+            token: tokenLabel,
+            mint,
+            action: "BUY",
+            sizeUSD,
+            entryPrice: entryPriceUSD,
+            confidence: Math.round(normalizeConfidence(requestedSignal.confidence) * 100),
+            regime: "CHOP",
+            signals: [
+              requestedSignal.strategy || "API",
+              requestedSignal.reason || "API trade request",
+            ],
+            breakdown: {},
+            execution: {
+              success: true,
+              txHash: decision.execution?.txid,
+              inputAmount: decision.sizeSOL,
+              outputAmount: 0,
+              priceImpact: 0,
+              fee: 0,
+              attempts: 1,
+              timestamp: Date.now(),
+            },
+            analytics: {
+              score: Math.round(normalizeConfidence(requestedSignal.confidence) * 100),
+              tokenAgeSec: opp?.tokenAgeSec,
+              liquidity: opp?.liquidity,
+              volume24h: opp?.volume24h,
+              priceImpactEstPct: opp?.priceImpactEstPct,
+              entryReason: requestedSignal.reason || "API trade request",
+            },
+          });
+
+          await portfolioManager.registerEntry({
+            token: tokenLabel,
+            mint,
+            usdNotional: sizeUSD,
+            entryPriceUSD,
+            takeProfitPct: exits.tp,
+            stopLossPct: exits.sl,
+            trailingStopActivationPct: exits.trailingActivation,
+            journalId,
+            strategy: requestedSignal.strategy || "API",
+          });
+
+          riskManager.onTradeOpen(journalId, sizeUSD, entryPriceUSD);
+        }
+      }
+
+      return res.json({
         success: true,
         decision: decision.decided,
         tokenMint: decision.selectedSignal?.tokenMint || requestedSignal.tokenMint,
@@ -161,12 +268,53 @@ export function registerRoutes(app: Express) {
     try {
       const entries = tradeJournal.getEntries();
       const summary = performanceReport.generate(entries);
+      const liveJournalPerformance = performanceTracker.compute(brainTradeJournal.getAll());
+      const analytics = strategyAnalytics.summarize(brainTradeJournal.getAll());
       res.json({
         success: true,
         report: summary,
+        liveJournalPerformance,
+        strategyAnalytics: analytics,
       });
     } catch (error) {
       res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.post("/api/pro/sell", async (req: Request, res: Response) => {
+    try {
+      const body = (req.body || {}) as TradeRequestBody;
+      const tokenMint = body.tokenMint || resolveTokenMint(body.token);
+      if (!tokenMint) {
+        return res.status(400).json({
+          success: false,
+          error: "tokenMint or known token symbol is required",
+        });
+      }
+
+      const sell = await livePositionManager.forceSellByMint(
+        tokenMint,
+        normalizeSellFraction(body.sellFraction),
+        "API_SELL_ENDPOINT"
+      );
+      if (!sell.success) {
+        return res.status(422).json({
+          success: false,
+          error: sell.reason || "SELL_FAILED",
+        });
+      }
+      return res.json({
+        success: true,
+        decision: "SELL",
+        tokenMint,
+        txid: sell.txHash,
+        realizedPnlUSD: sell.realizedPnlUSD,
+      });
+    } catch (error) {
+      return res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       });
@@ -215,6 +363,22 @@ function normalizeAction(action?: Action): Action {
 function normalizeConfidence(confidence?: number): number {
   if (typeof confidence !== "number" || !Number.isFinite(confidence)) return 0.7;
   return confidence > 1 ? Math.max(0, Math.min(1, confidence / 100)) : Math.max(0, Math.min(1, confidence));
+}
+
+function normalizeSellFraction(value?: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 1;
+  return Math.max(0.01, Math.min(1, value));
+}
+
+function resolveTokenMint(token?: string): string | undefined {
+  if (!token) return undefined;
+  const map: Record<string, string> = {
+    SOL: "So11111111111111111111111111111111111111112",
+    BONK: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    JUP: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    USDC: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  };
+  return map[token.toUpperCase()];
 }
 
 export { registerRoutes as registerProfessionalRoutes };

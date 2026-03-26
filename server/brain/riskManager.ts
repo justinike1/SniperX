@@ -1,32 +1,19 @@
-/**
- * RISK MANAGER — The most important system.
- * Controls position sizing, daily loss limits, consecutive loss shutoff,
- * and circuit breaker. Without this, the bot is just dangerous.
- *
- * Rules:
- *   1. Max 2% account risk per trade
- *   2. Max 5% total daily loss before shutdown
- *   3. Auto shutdown after 3 consecutive losses
- *   4. Position size scales with confidence and shrinks with drawdown
- *   5. Trailing stop activates once in profit
- *   6. Maximum 3 open positions simultaneously
- */
-import { RiskState, TradeDecision } from './types';
-import { sendTelegramAlert } from '../utils/telegramBotEnhanced';
+import { sendTelegramAlert } from "./../utils/telegramBotEnhanced";
+import { RiskState, TradeDecision } from "./types";
 
-const MAX_DAILY_LOSS_PCT = 5;      // % of starting balance
-const MAX_PER_TRADE_RISK_PCT = 2;  // % of portfolio per trade
-const MAX_CONSECUTIVE_LOSSES = 3;  // halt after this many in a row
-const MAX_OPEN_POSITIONS = 3;
-const MAX_DRAWDOWN_PCT = 15;       // hard stop, no override
-const DRAWDOWN_REDUCE_PCT = 10;    // reduce size at this level
+const MAX_DAILY_LOSS_PCT = 5;
+const MAX_PER_TRADE_RISK_PCT = 2;
+const MAX_CONSECUTIVE_LOSSES = 3;
+const MAX_OPEN_POSITIONS = 4;
+const MAX_DRAWDOWN_PCT = 15;
+const DRAWDOWN_REDUCE_PCT = 10;
 
 class RiskManager {
   private state: RiskState = {
     dailyPnlUSD: 0,
     dailyPnlPct: 0,
     consecutiveLosses: 0,
-    peakPortfolioSOL: 0,
+    peakPortfolioUSD: 0,
     currentDrawdownPct: 0,
     tradesOpenCount: 0,
     dailyTradeCount: 0,
@@ -35,104 +22,92 @@ class RiskManager {
     lastResetDate: this.todayStr(),
   };
 
-  private dailyStartUSD: number = 0;
+  private dailyStartUSD = 0;
   private openTrades: Map<string, { sizeUSD: number; entryPrice: number }> = new Map();
 
-  // ─── Public API ───────────────────────────────────────────────────
-
-  initSession(portfolioUSD: number, portfolioSOL: number) {
+  initSession(totalEquityUSD: number): void {
     this.checkDailyReset();
-    if (this.dailyStartUSD === 0) this.dailyStartUSD = portfolioUSD;
-    if (this.state.peakPortfolioSOL === 0) this.state.peakPortfolioSOL = portfolioSOL;
-    this.updateDrawdown(portfolioSOL);
+    if (this.dailyStartUSD === 0) this.dailyStartUSD = totalEquityUSD;
+    this.updateDrawdown(totalEquityUSD);
   }
 
-  /** Returns null if trade is allowed, or a string reason why it's rejected */
-  canTrade(decision: TradeDecision, portfolioSOL: number, solPrice: number): string | null {
+  canTrade(decision: TradeDecision, totalEquityUSD: number): string | null {
     this.checkDailyReset();
-
-    if (this.state.isHalted) return `HALTED: ${this.state.haltReason}`;
-    if (this.state.tradesOpenCount >= MAX_OPEN_POSITIONS) return `MAX_POSITIONS: ${MAX_OPEN_POSITIONS} already open`;
+    if (this.state.isHalted) return `HALTED:${this.state.haltReason}`;
+    if (this.state.tradesOpenCount >= MAX_OPEN_POSITIONS) {
+      return `MAX_POSITIONS:${MAX_OPEN_POSITIONS}`;
+    }
     if (this.state.currentDrawdownPct >= MAX_DRAWDOWN_PCT) {
-      this.halt(`Drawdown ${this.state.currentDrawdownPct.toFixed(1)}% exceeds hard limit ${MAX_DRAWDOWN_PCT}%`);
-      return `DRAWDOWN_LIMIT: ${this.state.currentDrawdownPct.toFixed(1)}%`;
+      this.halt(
+        `Drawdown ${this.state.currentDrawdownPct.toFixed(1)}% exceeds ${MAX_DRAWDOWN_PCT}%`
+      );
+      return `DRAWDOWN_LIMIT:${this.state.currentDrawdownPct.toFixed(1)}%`;
     }
 
-    const portfolioUSD = portfolioSOL * solPrice;
-    if (portfolioUSD < 0.5) return `LOW_WALLET: $${portfolioUSD.toFixed(2)}`;
+    if (totalEquityUSD < 2) return `LOW_EQUITY:$${totalEquityUSD.toFixed(2)}`;
 
-    const dailyLossPct = this.dailyStartUSD > 0
-      ? ((this.dailyStartUSD - portfolioUSD) / this.dailyStartUSD) * 100
-      : 0;
-
+    const dailyLossPct =
+      this.dailyStartUSD > 0
+        ? ((this.dailyStartUSD - totalEquityUSD) / this.dailyStartUSD) * 100
+        : 0;
     if (dailyLossPct >= MAX_DAILY_LOSS_PCT) {
-      this.halt(`Daily loss ${dailyLossPct.toFixed(1)}% ≥ ${MAX_DAILY_LOSS_PCT}% limit`);
-      return `DAILY_LOSS_LIMIT: ${dailyLossPct.toFixed(1)}%`;
+      this.halt(`Daily loss ${dailyLossPct.toFixed(1)}% exceeds ${MAX_DAILY_LOSS_PCT}%`);
+      return `DAILY_LOSS_LIMIT:${dailyLossPct.toFixed(1)}%`;
     }
 
-    return null; // allowed
+    return null;
   }
 
-  /** Calculate final position size based on confidence + regime + drawdown */
   sizeTrade(baseUSD: number, confidence: number, portfolioUSD: number): number {
-    // Hard cap: never risk more than MAX_PER_TRADE_RISK_PCT of portfolio
     const maxRisk = portfolioUSD * (MAX_PER_TRADE_RISK_PCT / 100);
-
-    // Scale by confidence: 68 → 0.7x, 80 → 0.9x, 90+ → 1.0x
-    const confMultiplier = Math.min(1, (confidence - 50) / 50);
-
-    // Drawdown penalty: at 10% drawdown we trade half size, shrinks linearly to 0
-    const drawdownMultiplier = this.state.currentDrawdownPct >= DRAWDOWN_REDUCE_PCT
-      ? Math.max(0, 0.5 - (this.state.currentDrawdownPct - DRAWDOWN_REDUCE_PCT) / 100)
-      : 1.0;
-
-    // Consecutive loss penalty
-    const lossMultiplier = this.state.consecutiveLosses >= 2 ? 0.5 : this.state.consecutiveLosses === 1 ? 0.75 : 1.0;
+    const confMultiplier = Math.min(1, Math.max(0.35, (confidence - 50) / 50));
+    const drawdownMultiplier =
+      this.state.currentDrawdownPct >= DRAWDOWN_REDUCE_PCT
+        ? Math.max(0.2, 0.55 - (this.state.currentDrawdownPct - DRAWDOWN_REDUCE_PCT) / 100)
+        : 1;
+    const lossMultiplier =
+      this.state.consecutiveLosses >= 2 ? 0.45 : this.state.consecutiveLosses === 1 ? 0.7 : 1;
 
     const sized = Math.min(baseUSD, maxRisk) * confMultiplier * drawdownMultiplier * lossMultiplier;
     if (sized <= 0) return 0;
     return Math.max(1, Math.round(sized * 100) / 100);
   }
 
-  /** Calculate TP/SL for this trade */
-  calculateExits(confidence: number, volatilityCv: number): { tp: number; sl: number; trailingActivation: number } {
-    // Higher confidence = we can afford wider TP
-    const baseTp = confidence >= 80 ? 20 : confidence >= 70 ? 15 : 10;
-    // Tighter stop in lower confidence
-    const baseSl = confidence >= 80 ? 8 : confidence >= 70 ? 6 : 5;
-    // Scale with volatility (more volatile = wider bands)
-    const volMult = 1 + Math.min(1.5, volatilityCv * 8);
-
+  calculateExits(
+    confidence: number,
+    volatilityCv: number
+  ): { tp: number; sl: number; trailingActivation: number } {
+    const baseTp = confidence >= 82 ? 18 : confidence >= 72 ? 14 : 10;
+    const baseSl = confidence >= 82 ? 7 : confidence >= 72 ? 6 : 5;
+    const volMult = 1 + Math.min(1.2, volatilityCv * 7);
     return {
       tp: Math.round(baseTp * volMult * 10) / 10,
       sl: Math.round(baseSl * volMult * 10) / 10,
-      trailingActivation: 5, // trailing kicks in at +5%
+      trailingActivation: 4,
     };
   }
 
-  // ─── Trade lifecycle ──────────────────────────────────────────────
-
-  onTradeOpen(id: string, sizeUSD: number, entryPrice: number) {
+  onTradeOpen(id: string, sizeUSD: number, entryPrice: number): void {
     this.openTrades.set(id, { sizeUSD, entryPrice });
     this.state.tradesOpenCount = this.openTrades.size;
-    this.state.dailyTradeCount++;
+    this.state.dailyTradeCount += 1;
   }
 
-  onTradeClose(id: string, pnlUSD: number, pnlPct: number) {
+  onTradeClose(id: string, pnlUSD: number, _pnlPct: number): void {
     this.openTrades.delete(id);
     this.state.tradesOpenCount = this.openTrades.size;
     this.state.dailyPnlUSD += pnlUSD;
 
     if (pnlUSD < 0) {
-      this.state.consecutiveLosses++;
+      this.state.consecutiveLosses += 1;
       if (this.state.consecutiveLosses >= MAX_CONSECUTIVE_LOSSES) {
-        this.halt(`${MAX_CONSECUTIVE_LOSSES} consecutive losses — cooling down`);
+        this.halt(`Consecutive loss halt (${MAX_CONSECUTIVE_LOSSES})`);
         sendTelegramAlert(
-          `🛑 *RISK: Trading Halted*\n${MAX_CONSECUTIVE_LOSSES} consecutive losses.\nBot paused for 1 hour to prevent further drawdown.\n/resume to restart manually.`
+          `Risk halt: ${MAX_CONSECUTIVE_LOSSES} consecutive losses. Trading paused.`
         );
       }
-    } else {
-      this.state.consecutiveLosses = 0; // reset on win
+    } else if (pnlUSD > 0) {
+      this.state.consecutiveLosses = 0;
     }
 
     if (this.dailyStartUSD > 0) {
@@ -140,76 +115,60 @@ class RiskManager {
     }
   }
 
-  updateDrawdown(currentSOL: number) {
-    if (currentSOL > this.state.peakPortfolioSOL) {
-      this.state.peakPortfolioSOL = currentSOL;
+  updateDrawdown(currentEquityUSD: number): void {
+    if (currentEquityUSD > this.state.peakPortfolioUSD) {
+      this.state.peakPortfolioUSD = currentEquityUSD;
     }
-    if (this.state.peakPortfolioSOL > 0) {
-      this.state.currentDrawdownPct = ((this.state.peakPortfolioSOL - currentSOL) / this.state.peakPortfolioSOL) * 100;
+    if (this.state.peakPortfolioUSD > 0) {
+      this.state.currentDrawdownPct =
+        ((this.state.peakPortfolioUSD - currentEquityUSD) / this.state.peakPortfolioUSD) * 100;
     }
   }
 
-  // ─── Circuit breaker ──────────────────────────────────────────────
-
-  halt(reason: string) {
+  halt(reason: string): void {
     this.state.isHalted = true;
     this.state.haltReason = reason;
-    console.error(`🛑 RISK MANAGER HALT: ${reason}`);
-    // Auto-resume after 1 hour for loss streaks, never for drawdown limit
-    if (!reason.includes('Drawdown') && !reason.includes('DRAWDOWN')) {
-      setTimeout(() => this.resume(), 60 * 60_000);
-    }
+    console.error(`[risk] HALT ${reason}`);
   }
 
-  resume() {
+  resume(): void {
     this.state.isHalted = false;
     this.state.haltReason = undefined;
-    console.log('✅ Risk Manager: Resumed');
+    console.log("[risk] resumed");
   }
 
-  getState(): RiskState { return { ...this.state }; }
+  getState(): RiskState {
+    return { ...this.state };
+  }
 
   getStatusText(): string {
     this.checkDailyReset();
     const s = this.state;
-    const drawdownBar = '█'.repeat(Math.round(s.currentDrawdownPct / 2)) + '░'.repeat(Math.max(0, 10 - Math.round(s.currentDrawdownPct / 2)));
-
     return (
-      `🛡️ *Risk Manager Status*\n\n` +
-      `${s.isHalted ? '🔴 HALTED: ' + s.haltReason : '🟢 ACTIVE — trading allowed'}\n\n` +
-      `📊 *Today's Stats:*\n` +
-      `Daily P&L: ${s.dailyPnlUSD >= 0 ? '+' : ''}$${s.dailyPnlUSD.toFixed(2)} (${s.dailyPnlPct.toFixed(1)}%)\n` +
-      `Daily trades: ${s.dailyTradeCount}\n` +
+      `Risk manager\n\n` +
+      `${s.isHalted ? `HALTED: ${s.haltReason}` : "ACTIVE"}\n` +
+      `Daily P&L: ${s.dailyPnlUSD >= 0 ? "+" : ""}$${s.dailyPnlUSD.toFixed(2)} (${s.dailyPnlPct.toFixed(2)}%)\n` +
       `Open positions: ${s.tradesOpenCount}/${MAX_OPEN_POSITIONS}\n` +
-      `Consecutive losses: ${s.consecutiveLosses}/${MAX_CONSECUTIVE_LOSSES}\n\n` +
-      `📉 *Drawdown:*\n` +
-      `[${drawdownBar}] ${s.currentDrawdownPct.toFixed(1)}%\n` +
-      `Reduce at: ${DRAWDOWN_REDUCE_PCT}% | Hard stop: ${MAX_DRAWDOWN_PCT}%\n\n` +
-      `⚙️ *Limits:*\n` +
-      `Max per trade: ${MAX_PER_TRADE_RISK_PCT}% | Daily max loss: ${MAX_DAILY_LOSS_PCT}%`
+      `Consecutive losses: ${s.consecutiveLosses}/${MAX_CONSECUTIVE_LOSSES}\n` +
+      `Drawdown: ${s.currentDrawdownPct.toFixed(2)}%`
     );
   }
 
-  // ─── Internal ─────────────────────────────────────────────────────
-
-  private checkDailyReset() {
+  private checkDailyReset(): void {
     const today = this.todayStr();
-    if (this.state.lastResetDate !== today) {
-      this.state.dailyPnlUSD = 0;
-      this.state.dailyPnlPct = 0;
-      this.state.dailyTradeCount = 0;
-      this.state.lastResetDate = today;
-      this.dailyStartUSD = 0;
-      // Don't reset consecutiveLosses or drawdown — those persist
-      if (this.state.isHalted && this.state.haltReason?.includes('Daily loss')) {
-        this.resume(); // new day, daily limits reset
-      }
-      console.log('📅 Risk Manager: Daily stats reset');
+    if (today === this.state.lastResetDate) return;
+    this.state.dailyPnlUSD = 0;
+    this.state.dailyPnlPct = 0;
+    this.state.dailyTradeCount = 0;
+    this.state.lastResetDate = today;
+    this.dailyStartUSD = 0;
+    if (this.state.isHalted && this.state.haltReason?.includes("Daily")) {
+      this.resume();
     }
   }
 
   private todayStr(): string {
-    return new Date().toISOString().split('T')[0];
+    return new Date().toISOString().split("T")[0];
   }
 }
 

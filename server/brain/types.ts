@@ -17,6 +17,13 @@ export interface TokenOpportunity {
   dexId?: string;
   source: 'scanner' | 'sniper' | 'manual' | 'whale';
   timestamp: number;
+  tokenAgeSec?: number;
+  volume5m?: number;
+  volume1h?: number;
+  boosted?: boolean;
+  discoveryScore?: number;
+  priceImpactEstPct?: number;
+  discoveryFlags?: string[];
 }
 
 export interface ScoreBreakdown {
@@ -50,6 +57,13 @@ export interface TradeDecision {
   signals: string[];
   regime: MarketRegime;
   timestamp: number;
+  breakdown?: ScoreBreakdown;
+  marketContext?: {
+    tokenAgeSec?: number;
+    liquidity?: number;
+    volume24h?: number;
+    priceImpactEstPct?: number;
+  };
 }
 
 export interface ExecutionResult {
@@ -85,13 +99,22 @@ export interface JournalEntry {
   closedAt?: number;
   durationMs?: number;
   notes: string;
+  analytics?: {
+    score?: number;
+    tokenAgeSec?: number;
+    liquidity?: number;
+    volume24h?: number;
+    priceImpactEstPct?: number;
+    entryReason?: string;
+    exitReason?: string;
+  };
 }
 
 export interface RiskState {
   dailyPnlUSD: number;
   dailyPnlPct: number;
   consecutiveLosses: number;
-  peakPortfolioSOL: number;
+  peakPortfolioUSD: number;
   currentDrawdownPct: number;
   tradesOpenCount: number;
   dailyTradeCount: number;
@@ -117,4 +140,12 @@ export interface PerformanceSummary {
   longestLossStreak: number;
   avgHoldTimeMs: number;
   regimeBreakdown: Record<MarketRegime, { trades: number; pnl: number }>;
+}
+
+export interface StrategyAnalyticsSummary {
+  scoreRanges: Record<string, { trades: number; wins: number; losses: number; pnlUSD: number }>;
+  liquidityRanges: Record<string, { trades: number; wins: number; losses: number; pnlUSD: number }>;
+  exitReasons: Record<string, { trades: number; wins: number; losses: number; pnlUSD: number }>;
+  regimes: Record<string, { trades: number; wins: number; losses: number; pnlUSD: number }>;
+  weightHints: string[];
 }

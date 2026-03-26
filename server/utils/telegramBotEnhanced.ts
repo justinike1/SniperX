@@ -9,6 +9,13 @@ import { whaleTracker } from '../services/whaleTracker';
 import { tokenSniper } from '../services/tokenSniper';
 import { loadWallet } from './solanaAdapter';
 
+const TOKEN_MINTS: Record<string, string> = {
+  SOL: "So11111111111111111111111111111111111111112",
+  BONK: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+  JUP: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+  USDC: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+};
+
 let bot: Bot | null = null;
 let botLaunched = false;
 let intelligentHandler: IntelligentTelegramHandler | null = null;
@@ -65,13 +72,15 @@ export function setupTelegramCommands(): void {
         
         if (data.success) {
           const r = data.risk || {};
+          const eq = data.equity || {};
           ctx.reply(
             `*Status*\n\n` +
-            `Balance: ${data.balance.toFixed(4)} SOL\n` +
+            `Balance: ${(data.wallet?.balanceSOL || 0).toFixed(4)} SOL\n` +
+            `Equity: $${(eq.totalUSD || 0).toFixed(2)} (cash: $${(eq.cashUSD || 0).toFixed(2)}, positions: $${(eq.positionsUSD || 0).toFixed(2)})\n` +
             `Mode: ${data.mode}\n` +
             `Risk: ${r.halted ? '🔴 HALTED — ' + r.haltReason : '🟢 Active'}\n` +
-            `Open: ${r.openPositions || 0} | Daily P&L: $${(r.dailyPnlUSD || 0).toFixed(2)}\n\n` +
-            `Limits: ${data.config.maxPerTrade} SOL/trade, ${data.config.maxDaily} SOL/day`,
+            `Daily realized: $${(r.dailyRealizedPnlUSD || 0).toFixed(2)}\n\n` +
+            `Limits: ${(data.riskConfig?.maxPerTradeSOL || 0).toFixed(4)} SOL/trade, ${(data.riskConfig?.maxDailySOL || 0).toFixed(4)} SOL/day`,
             { parse_mode: 'Markdown' }
           );
         } else {
@@ -128,10 +137,10 @@ export function setupTelegramCommands(): void {
       if (!token) {
         return ctx.reply(
           '📖 *Sell Usage:*\n\n' +
-          '/sell BONK ALL - Liquidate all BONK (chunked)\n' +
-          '/sell SOL ALL - Sell entire SOL position\n' +
-          '/sell JUP ALL - Sell entire JUP position\n\n' +
-          '_Note: Currently only supports selling entire positions_',
+          '/sell BONK ALL - Sell full tracked position\n' +
+          '/sell JUP 50 TOKEN - Sell 50 tokens from tracked position\n' +
+          '/sell BONK 100 USD - Sell $100 notional from tracked position\n\n' +
+          '_Requires an active tracked live position_',
           { parse_mode: 'Markdown' }
         );
       }
@@ -230,26 +239,34 @@ export function setupTelegramCommands(): void {
       const token = ctx.match?.toString().trim().toUpperCase();
       
       if (!token) {
-        return ctx.reply('Usage: /liquidate BONK');
+        return ctx.reply('Usage: /liquidate <TOKEN>');
       }
 
       try {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-        const res = await fetch(`${backendUrl}/api/pro/liquidate-bonk`, {
-          method: 'POST'
+        const res = await fetch(`${backendUrl}/api/pro/trade`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            tokenMint: TOKEN_MINTS[token] || token,
+            action: 'SELL',
+            sellFraction: 1
+          })
         });
         const data = await res.json();
         
-        if (data.success) {
+        if (data.success && data.decision === 'SELL') {
+          const txText = data.txid ? `https://solscan.io/tx/${data.txid}` : 'n/a';
           ctx.reply(
             `✅ *Emergency Liquidation*\n\n` +
-            `Amount: ${data.amount.toLocaleString()} ${token}\n` +
-            `Tx: \`${data.txid}\`\n\n` +
-            `View: https://solscan.io/tx/${data.txid}`,
+            `Token: ${token}\n` +
+            `Realized: ${data.realizedPnlUSD !== undefined ? (data.realizedPnlUSD >= 0 ? '+' : '') + '$' + Number(data.realizedPnlUSD).toFixed(2) : 'n/a'}\n` +
+            `Tx: \`${data.txid || 'n/a'}\`\n\n` +
+            `View: ${txText}`,
             { parse_mode: 'Markdown' }
           );
         } else {
-          ctx.reply(`❌ ${data.message || data.error}`);
+          ctx.reply(`❌ ${data.error || 'Liquidation failed'}`);
         }
       } catch (error) {
         console.error('Liquidate command error:', error);

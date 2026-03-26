@@ -25,7 +25,9 @@ import { performanceTracker } from './performanceTracker';
 import { backtester } from './backtester';
 import { TokenOpportunity, TradeDecision } from './types';
 import { sendTelegramAlert } from '../utils/telegramBotEnhanced';
-import { loadWallet, conn } from '../utils/solanaAdapter';
+import { portfolioManager } from './portfolioManager';
+import { livePositionManager } from './livePositionManager';
+import { strategyAnalytics } from './strategyAnalytics';
 
 class BrainOrchestrator {
   private running = false;
@@ -40,6 +42,7 @@ class BrainOrchestrator {
 
     regimeDetector.start();
     backtester.startMonitor();
+    livePositionManager.start();
 
     // Hook scanner to full pipeline
     marketScanner.start(async (opp) => {
@@ -54,6 +57,7 @@ class BrainOrchestrator {
     marketScanner.stop();
     regimeDetector.stop();
     backtester.stopMonitor();
+    livePositionManager.stop();
     this.running = false;
     console.log('Brain stopped');
   }
@@ -68,21 +72,12 @@ class BrainOrchestrator {
   async evaluate(opp: TokenOpportunity): Promise<void> {
     try {
       const regime = await regimeDetector.getRegime();
-
-      // Get real wallet balance for sizing
-      let solBalance = 0;
-      try {
-        const wallet = loadWallet();
-        const lamports = await conn().getBalance(wallet.publicKey, 'confirmed');
-        solBalance = lamports / 1e9;
-      } catch {
-        solBalance = 0;
-      }
-      const solPrice = regime.solPrice || 100;
-      const portfolioUSD = solBalance * solPrice;
+      const snapshot = await portfolioManager.refreshSnapshot();
+      const portfolioUSD = snapshot.totalEquityUSD;
 
       // Initialize risk session with real wallet values
-      riskManager.initSession(portfolioUSD, solBalance);
+      riskManager.initSession(portfolioUSD);
+      performanceTracker.recordEquityPoint(portfolioUSD);
 
       // Score it
       const decision = await decisionEngine.decide(opp, portfolioUSD);
@@ -90,7 +85,7 @@ class BrainOrchestrator {
       if (decision.action !== 'BUY') return; // not worth taking
 
       // Risk check
-      const block = riskManager.canTrade(decision, solBalance, solPrice);
+      const block = riskManager.canTrade(decision, portfolioUSD);
       if (block) {
         console.log(`Trade blocked for ${opp.token}: ${block}`);
         return;
@@ -120,8 +115,16 @@ class BrainOrchestrator {
           confidence: decision.confidence,
           regime: decision.regime,
           signals: decision.signals,
-          breakdown: {},
+          breakdown: decision.breakdown || {},
           execution: { success: true },
+          analytics: {
+            score: decision.confidence,
+            tokenAgeSec: decision.marketContext?.tokenAgeSec,
+            liquidity: decision.marketContext?.liquidity,
+            volume24h: decision.marketContext?.volume24h,
+            priceImpactEstPct: decision.marketContext?.priceImpactEstPct,
+            entryReason: decision.reason,
+          },
         });
 
         const pt = backtester.openPaperTrade({
@@ -152,13 +155,32 @@ class BrainOrchestrator {
           confidence: decision.confidence,
           regime: decision.regime,
           signals: decision.signals,
-          breakdown: {},
+          breakdown: decision.breakdown || {},
           execution: execResult,
+          analytics: {
+            score: decision.confidence,
+            tokenAgeSec: decision.marketContext?.tokenAgeSec,
+            liquidity: decision.marketContext?.liquidity,
+            volume24h: decision.marketContext?.volume24h,
+            priceImpactEstPct: decision.marketContext?.priceImpactEstPct,
+            entryReason: decision.reason,
+          },
         });
 
         riskManager.onTradeOpen(journalId, finalSizeUSD, opp.price);
 
         if (execResult.success) {
+          await portfolioManager.registerEntry({
+            token: opp.token,
+            mint: opp.mint,
+            usdNotional: finalSizeUSD,
+            entryPriceUSD: opp.price,
+            takeProfitPct: exits.tp,
+            stopLossPct: exits.sl,
+            trailingStopActivationPct: exits.trailingActivation,
+            journalId,
+            strategy: "BRAIN",
+          });
           await sendTelegramAlert(`Trade executed: ${opp.token}\n$${finalSizeUSD.toFixed(2)} | TX: ${execResult.txHash?.slice(0, 20)}...\nTP: +${exits.tp}% | SL: -${exits.sl}%`);
         } else {
           await sendTelegramAlert(`Trade failed: ${opp.token}\n${execResult.error}`);
@@ -206,6 +228,7 @@ class BrainOrchestrator {
 
   async getFullStatus(): Promise<string> {
     const regime = await regimeDetector.getRegime();
+    const snapshot = await portfolioManager.refreshSnapshot();
     const risk = riskManager.getState();
     const perf = performanceTracker.compute(tradeJournal.getAll());
     const scan = marketScanner.getLastScan();
@@ -217,6 +240,7 @@ class BrainOrchestrator {
       `Brain Status\n\n` +
       `${regimeEmoji[regime.regime]} Regime: ${regime.regime} (${regime.confidence}% conf)\n` +
       `SOL: $${regime.solPrice.toFixed(2)} | Fear&Greed: ${regime.fearGreed}\n\n` +
+      `Equity: $${snapshot.totalEquityUSD.toFixed(2)} (cash: $${snapshot.cashUSD.toFixed(2)}, positions: $${snapshot.positionsValueUSD.toFixed(2)})\n` +
       `Risk: ${risk.isHalted ? 'HALTED' : 'Active'}\n` +
       `Daily P&L: ${risk.dailyPnlUSD >= 0 ? '+' : ''}$${risk.dailyPnlUSD.toFixed(2)} | Losses: ${risk.consecutiveLosses}/${3}\n` +
       `Drawdown: ${risk.currentDrawdownPct.toFixed(1)}% | Open: ${risk.tradesOpenCount}\n\n` +
@@ -255,3 +279,6 @@ export { executionEngine } from './executionEngine';
 export { tradeJournal } from './tradeJournal';
 export { performanceTracker } from './performanceTracker';
 export { backtester } from './backtester';
+export { portfolioManager } from './portfolioManager';
+export { livePositionManager } from './livePositionManager';
+export { strategyAnalytics } from './strategyAnalytics';

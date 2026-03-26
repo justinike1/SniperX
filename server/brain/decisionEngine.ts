@@ -80,6 +80,13 @@ class DecisionEngine {
         signals: scored.notes,
         regime: regimeReading.regime,
         timestamp: Date.now(),
+        breakdown: scored.breakdown,
+        marketContext: {
+          tokenAgeSec: opp.tokenAgeSec,
+          liquidity: opp.liquidity,
+          volume24h: opp.volume24h,
+          priceImpactEstPct: opp.priceImpactEstPct,
+        },
       };
     }
 
@@ -115,6 +122,13 @@ class DecisionEngine {
       signals,
       regime: regimeReading.regime,
       timestamp: Date.now(),
+      breakdown: scored.breakdown,
+      marketContext: {
+        tokenAgeSec: opp.tokenAgeSec,
+        liquidity: opp.liquidity,
+        volume24h: opp.volume24h,
+        priceImpactEstPct: this.estimateImpactPct(opp, sizeUSD),
+      },
     };
   }
 
@@ -232,7 +246,7 @@ class DecisionEngine {
   // Slippage (0-10): estimated from liquidity depth
   private scoreSlippage(opp: TokenOpportunity, tradeUSD: number, notes: string[]): number {
     if (opp.liquidity <= 0) { notes.push('No liquidity for slippage estimate'); return 0; }
-    const estimatedImpact = (tradeUSD / (opp.liquidity * 2)) * 100;
+    const estimatedImpact = opp.priceImpactEstPct ?? this.estimateImpactPct(opp, tradeUSD);
     if (estimatedImpact < 0.1) return 10;
     if (estimatedImpact < 0.3) return 9;
     if (estimatedImpact < 0.5) return 8;
@@ -240,6 +254,11 @@ class DecisionEngine {
     if (estimatedImpact < 2.0) { notes.push(`High slippage ${estimatedImpact.toFixed(2)}%`); return 3; }
     notes.push(`Severe slippage ${estimatedImpact.toFixed(2)}%`);
     return 1;
+  }
+
+  private estimateImpactPct(opp: TokenOpportunity, tradeUSD: number): number {
+    if (opp.liquidity <= 0) return 100;
+    return (tradeUSD / (opp.liquidity * 2)) * 100;
   }
 
   // Regime (0-10): market backdrop bonus/penalty

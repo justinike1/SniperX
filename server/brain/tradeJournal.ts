@@ -23,6 +23,15 @@ class TradeJournal {
     signals: string[];
     breakdown: Partial<ScoreBreakdown>;
     execution: Partial<ExecutionResult>;
+    analytics?: {
+      score?: number;
+      tokenAgeSec?: number;
+      liquidity?: number;
+      volume24h?: number;
+      priceImpactEstPct?: number;
+      entryReason?: string;
+      exitReason?: string;
+    };
   }): string {
     const id = `T${String(this.nextId++).padStart(4, '0')}`;
     const entry: JournalEntry = {
@@ -31,6 +40,7 @@ class TradeJournal {
       outcome: 'OPEN',
       openedAt: Date.now(),
       notes: this.buildOpenNote(params),
+      analytics: params.analytics,
     };
     this.entries.push(entry);
     console.log(`📔 Journal: Opened ${id} — ${params.action} ${params.token} @ $${params.entryPrice.toFixed(6)} (confidence: ${params.confidence})`);
@@ -57,6 +67,7 @@ class TradeJournal {
     entry.durationMs = entry.closedAt - entry.openedAt;
     entry.outcome = pnlPct > 0.5 ? 'WIN' : pnlPct < -0.5 ? 'LOSS' : 'BREAK_EVEN';
     entry.execution = { ...entry.execution, ...execution };
+    entry.analytics = { ...(entry.analytics || {}), exitReason };
     entry.notes += '\n' + this.buildCloseNote(entry);
 
     console.log(`📔 Journal: Closed ${id} — ${entry.outcome} | P&L: ${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% ($${pnlUSD.toFixed(2)}) | ${exitReason}`);
@@ -78,6 +89,13 @@ class TradeJournal {
   }
 
   getAll(): JournalEntry[] { return [...this.entries]; }
+
+  updateAnalytics(id: string, analytics: JournalEntry["analytics"]): JournalEntry | null {
+    const entry = this.entries.find((e) => e.id === id);
+    if (!entry) return null;
+    entry.analytics = { ...(entry.analytics || {}), ...(analytics || {}) };
+    return entry;
+  }
 
   // ─── Self-review: post-trade analysis ─────────────────────────────
 

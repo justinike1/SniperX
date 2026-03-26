@@ -22,6 +22,13 @@ interface QuoteResult {
   quoteResponse: any; // pass directly to swap endpoint
 }
 
+interface PriceQuote {
+  priceUsd: number;
+  outAmount: number;
+  inAmount: number;
+  priceImpactPct: number;
+}
+
 class ExecutionEngine {
   private connection: Connection;
   private wallet: Keypair | null = null;
@@ -100,6 +107,30 @@ class ExecutionEngine {
       return await this.executeSwap(q, rawAmount, parseInt(q.outAmount));
     } catch (e: any) {
       return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 1, error: e.message, timestamp: start };
+    }
+  }
+
+  /** Quote sell to SOL without sending a transaction */
+  async quoteSellToSol(inputMint: string, amountTokens: number, slippageBps = 150): Promise<PriceQuote | null> {
+    try {
+      const { getMint } = await import('@solana/spl-token');
+      const { PublicKey } = await import('@solana/web3.js');
+      const mintInfo = await getMint(this.connection, new PublicKey(inputMint));
+      const rawAmount = Math.floor(amountTokens * (10 ** mintInfo.decimals));
+      if (rawAmount <= 0) return null;
+      const q = await this.quote(inputMint, SOL_MINT, rawAmount, slippageBps);
+      const outAmountLamports = Number(q.outAmount || 0);
+      const outSol = outAmountLamports / 1e9;
+      const inTokens = amountTokens;
+      const priceUsd = inTokens > 0 ? (await this.getSolPrice()) * (outSol / inTokens) : 0;
+      return {
+        priceUsd,
+        outAmount: outSol,
+        inAmount: inTokens,
+        priceImpactPct: parseFloat(q.priceImpactPct || "0") * 100,
+      };
+    } catch {
+      return null;
     }
   }
 
