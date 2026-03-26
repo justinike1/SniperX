@@ -12,7 +12,7 @@ export class JupiterGateway implements TradeGateway {
   private async quote(inputMint: string, outputMint: string, amount: number){
     const slippageBps = Math.round((env().MAX_SLIPPAGE || 5) * 100);
     const url = jupUrl("quote", { inputMint, outputMint, amount, slippageBps, onlyDirectRoutes: this.directOnly ? "true" : "false" });
-    const r = await fetch(url); if (!r.ok) throw new Error(`JUP_QUOTE_${r.status}`); const j = await r.json(); if (!j?.data?.length) throw new Error("JUP_NO_ROUTE"); return j.data[0];
+    const r = await fetch(url); if (!r.ok) throw new Error(`JUP_QUOTE_${r.status}`); const j = await r.json(); if (!j || (!j.outAmount && !j?.data?.length)) throw new Error("JUP_NO_ROUTE"); return j.data ? j.data[0] : j;
   }
   private async swapTx(quoteResponse: any){
     const body = { quoteResponse, userPublicKey: this.wallet.publicKey.toBase58(), wrapAndUnwrapSol: true, dynamicComputeUnitLimit: true, prioritizationFeeLamports: this.priorityLamports ?? "auto" };

@@ -81,15 +81,16 @@ class RiskManager {
     // Scale by confidence: 68 → 0.7x, 80 → 0.9x, 90+ → 1.0x
     const confMultiplier = Math.min(1, (confidence - 50) / 50);
 
-    // Drawdown penalty: at 10% drawdown we trade half size
+    // Drawdown penalty: at 10% drawdown we trade half size, shrinks linearly to 0
     const drawdownMultiplier = this.state.currentDrawdownPct >= DRAWDOWN_REDUCE_PCT
-      ? 0.5 - (this.state.currentDrawdownPct - DRAWDOWN_REDUCE_PCT) / 100
+      ? Math.max(0, 0.5 - (this.state.currentDrawdownPct - DRAWDOWN_REDUCE_PCT) / 100)
       : 1.0;
 
     // Consecutive loss penalty
     const lossMultiplier = this.state.consecutiveLosses >= 2 ? 0.5 : this.state.consecutiveLosses === 1 ? 0.75 : 1.0;
 
     const sized = Math.min(baseUSD, maxRisk) * confMultiplier * drawdownMultiplier * lossMultiplier;
+    if (sized <= 0) return 0;
     return Math.max(1, Math.round(sized * 100) / 100);
   }
 

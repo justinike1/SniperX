@@ -81,6 +81,9 @@ class BrainOrchestrator {
       const solPrice = regime.solPrice || 100;
       const portfolioUSD = solBalance * solPrice;
 
+      // Initialize risk session with real wallet values
+      riskManager.initSession(portfolioUSD, solBalance);
+
       // Score it
       const decision = await decisionEngine.decide(opp, portfolioUSD);
 
@@ -95,6 +98,10 @@ class BrainOrchestrator {
 
       // Size the position
       const finalSizeUSD = riskManager.sizeTrade(decision.sizeUSD, decision.confidence, portfolioUSD);
+      if (finalSizeUSD <= 0) {
+        console.log(`🛑 Brain: Zero size for ${opp.token} — risk limits prevent trade`);
+        return;
+      }
       const volatility = marketScanner.getVolatility(opp.mint);
       const exits = riskManager.calculateExits(decision.confidence, volatility);
 
