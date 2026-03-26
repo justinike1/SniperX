@@ -25,6 +25,7 @@ import { performanceTracker } from './performanceTracker';
 import { backtester } from './backtester';
 import { TokenOpportunity, TradeDecision } from './types';
 import { sendTelegramAlert } from '../utils/telegramBotEnhanced';
+import { loadWallet, conn } from '../utils/solanaAdapter';
 
 class BrainOrchestrator {
   private running = false;
@@ -68,8 +69,15 @@ class BrainOrchestrator {
     try {
       const regime = await regimeDetector.getRegime();
 
-      // Get SOL balance approximation for sizing
-      const solBalance = 0.001; // will be overridden when wallet is funded
+      // Get real wallet balance for sizing
+      let solBalance = 0;
+      try {
+        const wallet = loadWallet();
+        const lamports = await conn().getBalance(wallet.publicKey, 'confirmed');
+        solBalance = lamports / 1e9;
+      } catch {
+        solBalance = 0;
+      }
       const solPrice = regime.solPrice || 100;
       const portfolioUSD = solBalance * solPrice;
 
@@ -96,17 +104,6 @@ class BrainOrchestrator {
 
       if (backtester.isPaper()) {
         // Paper mode
-        const pt = backtester.openPaperTrade({
-          token: opp.token,
-          mint: opp.mint,
-          entryPrice: opp.price,
-          sizeUSD: finalSizeUSD,
-          tpPct: exits.tp,
-          slPct: exits.sl,
-          confidence: decision.confidence,
-          regime: decision.regime,
-        });
-
         const journalId = tradeJournal.open({
           token: opp.token,
           mint: opp.mint,
@@ -119,6 +116,18 @@ class BrainOrchestrator {
           breakdown: {},
           execution: { success: true },
         });
+
+        const pt = backtester.openPaperTrade({
+          token: opp.token,
+          mint: opp.mint,
+          entryPrice: opp.price,
+          sizeUSD: finalSizeUSD,
+          tpPct: exits.tp,
+          slPct: exits.sl,
+          confidence: decision.confidence,
+          regime: decision.regime,
+        });
+        pt.journalId = journalId;
 
         riskManager.onTradeOpen(journalId, finalSizeUSD, opp.price);
         await sendTelegramAlert(`📄 Paper trade opened: ${opp.token}\nTP: +${exits.tp}% | SL: -${exits.sl}%`);

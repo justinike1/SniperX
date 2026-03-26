@@ -25,11 +25,13 @@ chmod +x deploy.sh
 ```
 
 3. **Configure environment:**
-Edit `.env` with your actual credentials:
-- `PHANTOM_PRIVATE_KEY` - Your wallet private key
-- `TELEGRAM_BOT_TOKEN` - For trade notifications
-- `OPENAI_API_KEY` - For AI analysis
-- `HELIUS_API_KEY` - For Solana data
+Copy `.env.example` to `.env` and fill in credentials:
+- `DATABASE_URL` - PostgreSQL connection string (required for DB features)
+- `SOLANA_RPC_URL` - Solana RPC endpoint (defaults to public mainnet)
+- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` - For Telegram control interface
+- `OPENAI_API_KEY` - For AI analysis (optional, server starts without it)
+- `JWT_SECRET` / `SESSION_SECRET` - Auth secrets
+- Wallet: place your keypair in `phantom_key.json` (array of 64 bytes)
 
 ### PM2 Commands (VPS Management)
 
@@ -53,12 +55,14 @@ pm2 monit                     # Performance monitor
 - **Risk Scanner** - Safety verification
 - **Jupiter Executor** - Real DEX trading
 
-### Configuration
-- Trade Amount: 0.05 SOL per trade
-- Profit Target: 25%
-- Stop Loss: 10%
-- Trading Interval: 5 minutes
-- Confidence Threshold: 70%
+### Configuration (Brain + Risk Manager defaults)
+- Max per trade: 0.005 SOL (Kelly-sized)
+- Max daily: 0.05 SOL
+- Min wallet reserve: 0.015 SOL
+- Take Profit: 10–20% (confidence-scaled)
+- Stop Loss: 5–8% (confidence-scaled)
+- Brain scan interval: 30 seconds
+- Decision threshold: 68/100 confidence
 
 ### Wallet Requirements
 - Minimum: 0.052 SOL (0.05 SOL trade + 0.002 SOL fees)
@@ -71,11 +75,11 @@ pm2 monit                     # Performance monitor
 - Telegram alerts for all trades
 - Rate limiting protection
 
-## API Endpoints
-- `/api/plugins/status` - Plugin system status
-- `/api/trading/execute` - Manual trade execution
-- `/api/portfolio/balance` - Current balance
-- `/api/health` - System health check
+## API Endpoints (server/index.ts)
+- `/health` - System health check
+- `/api/pro/status` - Wallet balance, Kelly Criterion config, safety checks
+- `/api/pro/trade` - Professional trade execution (POST, Kelly-sized)
+- `/api/pro/liquidate-bonk` - Emergency BONK liquidation (POST)
 
 ## Support
 For issues or questions, monitor the logs and Telegram notifications for real-time trading status.

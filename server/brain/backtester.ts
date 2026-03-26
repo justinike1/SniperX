@@ -10,9 +10,13 @@
  * without an explicit override.
  */
 import { TokenOpportunity, MarketRegime } from './types';
+import { tradeJournal } from './tradeJournal';
+import { riskManager } from './riskManager';
+import { sendTelegramAlert } from '../utils/telegramBotEnhanced';
 
 interface PaperTrade {
   id: string;
+  journalId?: string;
   token: string;
   mint: string;
   action: 'BUY' | 'SELL';
@@ -110,8 +114,15 @@ class Backtester {
 
     this.virtualBalance += t.sizeUSD + (t.pnlUSD || 0);
 
+    if (t.journalId) {
+      tradeJournal.close(t.journalId, exitPrice, reason, { success: true });
+      riskManager.onTradeClose(t.journalId, t.pnlUSD || 0, t.pnlPct || 0);
+    }
+
     const icon = (t.pnlPct || 0) >= 0 ? '✅' : '❌';
-    console.log(`📄 Paper: ${id} closed ${icon} ${(t.pnlPct || 0).toFixed(2)}% ($${(t.pnlUSD || 0).toFixed(2)}) | ${reason}`);
+    const pnlStr = `${(t.pnlPct || 0) >= 0 ? '+' : ''}${(t.pnlPct || 0).toFixed(2)}%`;
+    console.log(`📄 Paper: ${id} closed ${icon} ${pnlStr} ($${(t.pnlUSD || 0).toFixed(2)}) | ${reason}`);
+    sendTelegramAlert(`📄 *Paper Close:* ${t.token} ${icon}\nP&L: ${pnlStr} ($${(t.pnlUSD || 0).toFixed(2)})\nReason: ${reason}`);
     return t;
   }
 
