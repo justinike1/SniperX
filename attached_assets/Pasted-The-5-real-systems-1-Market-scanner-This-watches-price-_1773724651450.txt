@@ -1,0 +1,131 @@
+The 5 real systems
+
+1. Market scanner
+This watches:
+	•	price momentum
+	•	volume spikes
+	•	liquidity
+	•	wallet activity
+	•	volatility
+
+Its only job is to find possible opportunities.
+
+2. Decision engine
+This is the “brain.”
+It scores trades based on multiple factors, like:
+	•	trend strength
+	•	volume confirmation
+	•	spread/slippage
+	•	market regime
+	•	risk level
+	•	token safety
+
+Then it gives each setup a score, like:
+	•	85/100 = take trade
+	•	60/100 = watch only
+	•	40/100 = reject
+
+3. Risk engine
+This is the most important part.
+It decides:
+	•	max size per trade
+	•	max daily loss
+	•	stop loss
+	•	trailing stop
+	•	when to shut down for the day
+
+Without this, the bot is not genius. It is just dangerous.
+
+4. Execution engine
+This handles:
+	•	wallet balances
+	•	Jupiter quotes
+	•	route selection
+	•	transaction sending
+	•	failed trade retry logic
+	•	confirmation logging
+
+This is where most bots break.
+
+5. Learning/reporting layer
+After every trade it should log:
+	•	why it entered
+	•	why it exited
+	•	PnL
+	•	win/loss
+	•	market conditions
+	•	what worked and what failed
+
+That’s how it becomes smarter over time.
+
+⸻
+
+What you should tell Replit next
+
+Paste this:
+
+Turn this into an actual production architecture for SniperX in Node.js.
+Break it into modules:
+	1.	marketScanner.js
+	2.	regimeDetector.js
+	3.	decisionEngine.js
+	4.	riskManager.js
+	5.	safetyFilters.js
+	6.	executionEngine.js
+	7.	tradeJournal.js
+	8.	performanceTracker.js
+	9.	backtester.js
+	10.	telegramBot.js
+
+For each module, define:
+	•	its purpose
+	•	inputs
+	•	outputs
+	•	main functions
+	•	how it connects to the others
+
+Then generate a clean folder structure and starter code for each file.
+
+⸻
+
+Then after that, paste this
+
+Build the decision engine so trades are only taken when multiple conditions align.
+Use a weighted scoring model with these categories:
+	•	trend
+	•	momentum
+	•	volume
+	•	liquidity
+	•	volatility
+	•	slippage
+	•	token safety
+	•	overall market regime
+
+Output a confidence score from 0 to 100 and only allow trades above a threshold.
+
+⸻
+
+Then this for risk
+
+Build a risk manager that enforces:
+	•	max 1–2% account risk per trade
+	•	max 5% daily loss
+	•	auto shutdown after 3 consecutive losses
+	•	position sizing based on confidence and volatility
+	•	stop loss and take profit logic
+	•	trailing stop once trade is in profit
+
+⸻
+
+The key thing
+
+A super genius bot is not just:
+	•	AI
+	•	cool words
+	•	sentiment
+	•	whale tracking
+
+It is:
+good entries + hard risk control + clean execution + constant review
+
+That is the formula.

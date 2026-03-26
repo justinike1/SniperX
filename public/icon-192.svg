@@ -1,0 +1,15 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="192" height="192" rx="32" fill="#0a0a0a"/>
+<circle cx="96" cy="96" r="64" fill="url(#gradient)"/>
+<path d="M96 48L112 80H80L96 48Z" fill="#10b981"/>
+<path d="M96 144L80 112H112L96 144Z" fill="#10b981"/>
+<path d="M48 96L80 80V112L48 96Z" fill="#10b981"/>
+<path d="M144 96L112 112V80L144 96Z" fill="#10b981"/>
+<circle cx="96" cy="96" r="12" fill="#ffffff"/>
+<defs>
+<radialGradient id="gradient" cx="96" cy="96" r="64" gradientUnits="userSpaceOnUse">
+<stop offset="0%" stop-color="#10b981"/>
+<stop offset="100%" stop-color="#065f46"/>
+</radialGradient>
+</defs>
+</svg>

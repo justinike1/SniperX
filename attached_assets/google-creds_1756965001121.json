@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "sniperx-logger",
+  "private_key_id": "c443a178f3ecc179f5f67fd75f22b2cf80474471",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC8qV7jMWiO1S33\nATYy1NLp0bjKBk0acddzkEGNVDGKFlwc5tC9kYmo3/CeSGeNwQOHQzjZvY36cSna\nb3ykYxfq4xJ5UeVn+5KK+xPk7r+z1TufA69GfM8R+rEwiLAtaAKsgQxcZr8SEuIb\nrb53AbIWfO2zJzzJmLwaIaesdVJg3xlqubu6d+q0qNZe9tV1pqr3/pAJ/u+3uk80\n+NNzI6DtEIxELR8IgkEHQhpAhyNy/qia9pxInfUnV2tp6KYKecsYjywoUGmMp3PM\nbkE+wXMRbi/P4kzr0BDwdf1cGZ99hM15NBgwIiW6ZgaI+aBajXHMPFlxHhz+TpVi\nnXEBzW0zAgMBAAECggEASMTxlyNjJ5i9ooUioSeq9MpSgwY8LkOT7XzKdBdyBkfK\nntE+2aft16gNGRhnbOtyj3VT09TEE0Ib+SfAhW29d3m/kfEPUfTc2OOwkECwy84n\nMZYLwN36Rv6R4t0OS21PfrdGC8wLzg5fjXqOOTv7s6XbT5uGXGIfx9qMYL5eGIO6\nDVxvpuSBAYhP/oKSKvQP8PnKTnP9H9oQ5qMFFhGzoTdf7S/piU0G5tMtuC5fE4ri\nYeqroNxlYX488mJyOeJtiEtlyXEJuLnPSAAuvQ9btKKCsHOwudWMoO1iPM3vLaUF\nea4zbKRCoOc0qFfYkR5oqPS3rl10jdkuMjNRi2aWkQKBgQD8k5Ao4AUllHS1Idhs\n8VqXiQK3tmlW3I89UphOfOYbtl+Nq8cNR4XZpUtxTIfWojObhFV68C66SsYuYBSy\nJ0JnPw/onRMJ/aNGGqNs2LLGpUcZRI9vqpKUs3T4UXEBFTXWRrM5TeeOYBebGGcs\n9qyEZ+4JJKMQugxf59dMxi/hwwKBgQC/OAYiKOWfmWHdKmXk7dHxckHv/cN81fiX\n6l5A8mJOKwzWJEMFn9gXPNYhifWtN5WgPQauHOv+j3Z7p005flAHwshV8Qo6tppo\n/bdWZhtisQu0uJk2AREFtHWEHZmOBVf2X/uYiW1ChVAmnB5x3H5d4sz892VPjG7E\nn5s9hKqf0QKBgQD3U8xTqmJ/1SqfgD/9Fi5euwSVPyNRsnL1Wp7YJMfzlRdmlDI7\n17DDWnBQxt8xlu2wONq3ouAu/i+ok99QQM9uaLs8Tiupmdw7NrSXTm9pw8imfpNy\nhnY49K3yx1U/+TQZ2muADsBTk9cpwbCuv/JZSag2/dBL/dNGSrFydZPHnwKBgQCL\niYZwRwfJf1Q64EWa2TDq0EXtq3CMGFhgA1bkbfvurtufKLb/07UMwAhCUTpGPNmj\nJOVLCS/tgyMi+OMRoWslPq6SiGK+laH4G60+DyTM0AWKy2qCTiTt1NIspqz3Rk76\nKvCeTyq78CydAC/3Rr+wI2ES+DWl5wSt1wqhyb35AQKBgBOJhDxLMVTXvyS9ZS9Y\nOlRpx4aLU4ic3OrtaaGRtiTYyxNN4MGczB0ItaR0wXGzRqTK9kyHUVYrZRIpjN0n\nVnh2lGDIFHJuGgon5/gGQk3krp0IlF6cBcjyoBYHF/6g16acN5lXpWNXP6PqUINk\nUgWAuB/CQud/tbORIuwUrvA9\n-----END PRIVATE KEY-----\n",
+  "client_email": "sheets-logger@sniperx-logger.iam.gserviceaccount.com",
+  "client_id": "105563305294879996460",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sheets-logger%40sniperx-logger.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
