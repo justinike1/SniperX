@@ -46,8 +46,8 @@ class BrainOrchestrator {
       if (this.autoPilot) await this.evaluate(opp);
     });
 
-    console.log(`🧠 Brain: Started | AutoPilot: ${autoPilot ? 'ON' : 'OFF'} | Mode: ${backtester.getMode()}`);
-    sendTelegramAlert(`🧠 *Brain Online*\nAutoPilot: ${autoPilot ? 'ON 🤖' : 'OFF 👀'} | Mode: ${backtester.getMode()}`);
+    console.log(`Brain started | autopilot=${autoPilot ? 'ON' : 'OFF'} | mode=${backtester.getMode()}`);
+    sendTelegramAlert(`Brain online\nAutoPilot: ${autoPilot ? 'ON' : 'OFF'} | Mode: ${backtester.getMode()}`);
   }
 
   stop() {
@@ -55,11 +55,11 @@ class BrainOrchestrator {
     regimeDetector.stop();
     backtester.stopMonitor();
     this.running = false;
-    console.log('🧠 Brain: Stopped');
+    console.log('Brain stopped');
   }
 
-  enableAutoPilot() { this.autoPilot = true; console.log('🤖 AutoPilot: ON'); }
-  disableAutoPilot() { this.autoPilot = false; console.log('👀 AutoPilot: OFF'); }
+  enableAutoPilot() { this.autoPilot = true; console.log('AutoPilot enabled'); }
+  disableAutoPilot() { this.autoPilot = false; console.log('AutoPilot disabled'); }
   isRunning() { return this.running; }
   isAutoPilot() { return this.autoPilot; }
 
@@ -92,14 +92,14 @@ class BrainOrchestrator {
       // Risk check
       const block = riskManager.canTrade(decision, solBalance, solPrice);
       if (block) {
-        console.log(`🛑 Brain: Blocked ${opp.token} — ${block}`);
+        console.log(`Trade blocked for ${opp.token}: ${block}`);
         return;
       }
 
       // Size the position
       const finalSizeUSD = riskManager.sizeTrade(decision.sizeUSD, decision.confidence, portfolioUSD);
       if (finalSizeUSD <= 0) {
-        console.log(`🛑 Brain: Zero size for ${opp.token} — risk limits prevent trade`);
+        console.log(`Trade skipped for ${opp.token}: risk-sized amount is zero`);
         return;
       }
       const volatility = marketScanner.getVolatility(opp.mint);
@@ -137,7 +137,7 @@ class BrainOrchestrator {
         pt.journalId = journalId;
 
         riskManager.onTradeOpen(journalId, finalSizeUSD, opp.price);
-        await sendTelegramAlert(`📄 Paper trade opened: ${opp.token}\nTP: +${exits.tp}% | SL: -${exits.sl}%`);
+        await sendTelegramAlert(`Paper trade opened: ${opp.token}\nTP: +${exits.tp}% | SL: -${exits.sl}%`);
 
       } else {
         // Live mode
@@ -159,14 +159,14 @@ class BrainOrchestrator {
         riskManager.onTradeOpen(journalId, finalSizeUSD, opp.price);
 
         if (execResult.success) {
-          await sendTelegramAlert(`✅ *Trade Executed:* ${opp.token}\n$${finalSizeUSD.toFixed(2)} | TX: ${execResult.txHash?.slice(0, 20)}...\nTP: +${exits.tp}% | SL: -${exits.sl}%`);
+          await sendTelegramAlert(`Trade executed: ${opp.token}\n$${finalSizeUSD.toFixed(2)} | TX: ${execResult.txHash?.slice(0, 20)}...\nTP: +${exits.tp}% | SL: -${exits.sl}%`);
         } else {
-          await sendTelegramAlert(`❌ *Trade Failed:* ${opp.token}\n${execResult.error}`);
+          await sendTelegramAlert(`Trade failed: ${opp.token}\n${execResult.error}`);
         }
       }
 
     } catch (e: any) {
-      console.error(`🧠 Brain error evaluating ${opp.token}:`, e.message);
+      console.error(`Brain evaluation error for ${opp.token}:`, e.message);
     }
   }
 
@@ -183,7 +183,7 @@ class BrainOrchestrator {
         const r = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${token}`, { signal: AbortSignal.timeout(8000) });
         const d = await r.json();
         const pair = (d.pairs || []).find((p: any) => p.chainId === 'solana' && (p.baseToken?.symbol?.toUpperCase() === token.toUpperCase() || p.baseToken?.address === token));
-        if (!pair) return `❌ Token "${token}" not found on Solana DEXes`;
+        if (!pair) return `Token "${token}" not found on Solana DEX pairs`;
 
         const manualOpp: TokenOpportunity = {
           token: pair.baseToken.symbol,
@@ -199,7 +199,7 @@ class BrainOrchestrator {
           timestamp: Date.now(),
         };
         return await decisionEngine.explain(manualOpp);
-      } catch { return `❌ Could not find "${token}"`; }
+      } catch { return `Could not find "${token}"`; }
     }
     return await decisionEngine.explain(opp);
   }
@@ -211,21 +211,21 @@ class BrainOrchestrator {
     const scan = marketScanner.getLastScan();
     const paperStats = backtester.getStats();
 
-    const regimeEmoji: Record<string, string> = { TREND_UP: '📈', TREND_DOWN: '📉', CHOP: '↔️', MANIA: '🔥', RISK_OFF: '🛡️' };
+    const regimeEmoji: Record<string, string> = { TREND_UP: 'UP', TREND_DOWN: 'DOWN', CHOP: 'CHOP', MANIA: 'MANIA', RISK_OFF: 'RISK_OFF' };
 
     return (
-      `🧠 *Brain Status*\n\n` +
-      `${regimeEmoji[regime.regime]} Regime: *${regime.regime}* (${regime.confidence}% conf)\n` +
+      `Brain Status\n\n` +
+      `${regimeEmoji[regime.regime]} Regime: ${regime.regime} (${regime.confidence}% conf)\n` +
       `SOL: $${regime.solPrice.toFixed(2)} | Fear&Greed: ${regime.fearGreed}\n\n` +
-      `🛡️ Risk: ${risk.isHalted ? '🔴 HALTED' : '🟢 Active'}\n` +
+      `Risk: ${risk.isHalted ? 'HALTED' : 'Active'}\n` +
       `Daily P&L: ${risk.dailyPnlUSD >= 0 ? '+' : ''}$${risk.dailyPnlUSD.toFixed(2)} | Losses: ${risk.consecutiveLosses}/${3}\n` +
       `Drawdown: ${risk.currentDrawdownPct.toFixed(1)}% | Open: ${risk.tradesOpenCount}\n\n` +
-      `📊 Performance (all-time):\n` +
+      `Performance (all-time):\n` +
       `${perf.totalTrades} trades | ${perf.winRate.toFixed(0)}% WR | PF: ${perf.profitFactor === Infinity ? '∞' : perf.profitFactor.toFixed(2)}\n\n` +
-      `📄 Mode: *${backtester.getMode()}*\n` +
+      `Mode: ${backtester.getMode()}\n` +
       (backtester.isPaper() ? `Paper: ${paperStats.totalTrades} trades | Ready: ${paperStats.isReadyForLive ? 'YES ✅' : 'NO ⏳'}\n\n` : '\n') +
-      `🔍 Last scan: ${scan ? `${scan.tokenCount} tokens` : 'none'}\n` +
-      `🤖 AutoPilot: ${this.autoPilot ? 'ON' : 'OFF'}`
+      `Last scan: ${scan ? `${scan.tokenCount} tokens` : 'none'}\n` +
+      `AutoPilot: ${this.autoPilot ? 'ON' : 'OFF'}`
     );
   }
 
@@ -233,12 +233,12 @@ class BrainOrchestrator {
 
   private buildTradeAlert(opp: TokenOpportunity, decision: TradeDecision, sizeUSD: number, exits: { tp: number; sl: number }): string {
     return (
-      `🧠 *Brain Signal: ${opp.token}*\n\n` +
+      `Brain signal: ${opp.token}\n\n` +
       `Score: ${decision.confidence}/100 | Regime: ${decision.regime}\n` +
       `Price: $${opp.price.toFixed(6)}\n` +
       `Size: $${sizeUSD.toFixed(2)} (${backtester.getMode()})\n` +
       `TP: +${exits.tp}% | SL: -${exits.sl}%\n\n` +
-      `📝 ${decision.reason}`
+      `Reason: ${decision.reason}`
     );
   }
 }

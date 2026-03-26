@@ -2,9 +2,10 @@ import type { Express } from "express";
 import { JupiterGateway } from "../ultimate/gateway/jupiterGateway";
 import { UltimateOrchestrator } from "../ultimate/orchestrator";
 import { loadWallet, conn } from "../utils/solanaAdapter";
-import { sendTelegramAlert } from "../utils/telegramBotEnhanced";
-import type { StrategySignal, UltConfig, WalletInfo } from "../ultimate/types";
-import { backtester, riskManager, tradeJournal, performanceTracker } from "../brain/index";
+import type { Action, StrategySignal, UltConfig, WalletInfo } from "../ultimate/types";
+import { backtester } from "../brain/index";
+import { tradeJournal } from "../services/tradeJournal";
+import { performanceReport } from "../services/performanceReport";
 
 const config: UltConfig = {
   maxPerTradeSOL: 0.005,
@@ -12,176 +13,208 @@ const config: UltConfig = {
   minWalletSOL: 0.015,
   maxVolPct: 25,
   maxSlippagePct: 5,
-  kellyCapPct: 0.10,
+  kellyCapPct: 0.1,
   riskOffDDPct: 10,
   blockDDPct: 15,
 };
 
 const gateway = new JupiterGateway();
 const orchestrator = new UltimateOrchestrator(config, gateway);
-let currentEquity = 0;
+
+type TradeRequestBody = {
+  tokenMint?: string;
+  action?: Action;
+  confidence?: number;
+  price?: number;
+  signals?: StrategySignal[];
+};
 
 export function registerRoutes(app: Express) {
-
-  app.post('/api/pro/trade', async (req, res) => {
-    try {
-      const { signals, tokenMint, action, confidence } = req.body;
-
-      const wallet = loadWallet();
-      const balance = await conn().getBalance(wallet.publicKey);
-      const balanceSOL = balance / 1e9;
-      currentEquity = balanceSOL;
-
-      const walletInfo: WalletInfo = {
-        address: wallet.publicKey.toString(),
-        balanceSOL,
-        dailySpentSOL: 0,
-      };
-
-      let strategySignals: StrategySignal[];
-      if (signals) {
-        strategySignals = signals;
-      } else {
-        strategySignals = [{
-          strategy: "MANUAL",
-          tokenMint: tokenMint || "unknown",
-          action: action || "BUY",
-          confidence: confidence || 0.7,
-          reason: "Manual trade request",
-        }];
-      }
-
-      if (tokenMint && req.body.price) {
-        orchestrator.onCandle(tokenMint, req.body.price, currentEquity);
-      }
-
-      const decision = await orchestrator.onSignals(walletInfo, strategySignals);
-
-      res.json({
-        success: decision.decided !== "HOLD",
-        decision: decision.decided,
-        sizeSOL: decision.sizeSOL,
-        reason: decision.reason,
-        config: {
-          maxPerTrade: config.maxPerTradeSOL,
-          maxDaily: config.maxDailySOL,
-          minWallet: config.minWalletSOL,
-        },
-        wallet: {
-          balance: balanceSOL,
-          decision: decision.decided,
-          size: decision.sizeSOL,
-        },
-      });
-    } catch (error) {
-      console.error('Trade error:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
-
-  app.post('/api/pro/liquidate-bonk', async (req, res) => {
-    try {
-      const BONK_MINT = 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
-
-      const wallet = loadWallet();
-      const { getAccount, getAssociatedTokenAddress } = await import('@solana/spl-token');
-      const { PublicKey } = await import('@solana/web3.js');
-
-      let bonkAmount = 0;
-      try {
-        const bonkMint = new PublicKey(BONK_MINT);
-        const ata = await getAssociatedTokenAddress(bonkMint, wallet.publicKey);
-        const account = await getAccount(conn(), ata);
-        bonkAmount = Number(account.amount) / (10 ** 5);
-      } catch {
-        return res.json({ success: false, message: 'No BONK tokens to liquidate' });
-      }
-
-      if (bonkAmount === 0) {
-        return res.json({ success: false, message: 'No BONK tokens to liquidate' });
-      }
-
-      const result = await gateway.sell(BONK_MINT, bonkAmount);
-
-      if (result.success) {
-        sendTelegramAlert(
-          `BONK liquidated: ${bonkAmount.toLocaleString()} BONK\nTx: https://solscan.io/tx/${result.txid}`
-        );
-        res.json({
-          success: true,
-          amount: bonkAmount,
-          txid: result.txid,
-          message: `Liquidated ${bonkAmount.toLocaleString()} BONK`,
-        });
-      } else {
-        res.json({
-          success: false,
-          error: result.reason,
-          message: `Failed: ${result.reason}`,
-        });
-      }
-    } catch (error) {
-      console.error('BONK liquidation failed:', error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  });
-
-  app.get('/api/pro/status', async (req, res) => {
+  app.get("/api/pro/status", async (_req, res) => {
     try {
       const wallet = loadWallet();
-      const balance = await conn().getBalance(wallet.publicKey);
-      const balanceSOL = balance / 1e9;
-      const risk = riskManager.getState();
-      const paperStats = backtester.getStats();
-      const perf = performanceTracker.compute(tradeJournal.getAll());
+      const lamports = await conn().getBalance(wallet.publicKey, "confirmed");
+      const balanceSOL = lamports / 1e9;
+      const riskState = orchestrator.getRiskState();
+      const summary = performanceReport.generate(tradeJournal.getEntries());
 
       res.json({
         success: true,
-        wallet: wallet.publicKey.toString(),
-        balance: balanceSOL,
+        product: "SniperX Pro Trading",
         mode: backtester.getMode(),
-        risk: {
-          halted: risk.isHalted,
-          haltReason: risk.haltReason,
-          dailyPnlUSD: risk.dailyPnlUSD,
-          drawdownPct: risk.currentDrawdownPct,
-          consecutiveLosses: risk.consecutiveLosses,
-          openPositions: risk.tradesOpenCount,
+        wallet: {
+          address: wallet.publicKey.toBase58(),
+          balanceSOL,
+          reserveSOL: config.minWalletSOL,
         },
-        paper: {
-          trades: paperStats.totalTrades,
-          winRate: paperStats.winRate,
-          profitFactor: paperStats.profitFactor,
-          readyForLive: paperStats.isReadyForLive,
+        risk: {
+          halted: riskState.isHalted,
+          haltReason: riskState.haltReason,
+          consecutiveLosses: riskState.consecutiveLosses,
+          cooldownRemainingMs: riskState.cooldownRemainingMs,
+          dailySpentSOL: riskState.dailySpentSOL,
+          dailyRealizedPnlUSD: riskState.dailyRealizedPnlUSD,
         },
         performance: {
-          totalTrades: perf.totalTrades,
-          winRate: perf.winRate,
-          totalPnlUSD: perf.totalPnlUSD,
-          profitFactor: perf.profitFactor,
+          totalTrades: summary.totalTrades,
+          winRatePct: summary.winRatePct,
+          netPnlUSD: summary.netPnlUSD,
+          maxDrawdownUSD: summary.drawdown.maxDrawdownUSD,
         },
-        config: {
-          maxPerTrade: config.maxPerTradeSOL,
-          maxDaily: config.maxDailySOL,
-          minWallet: config.minWalletSOL,
-          maxVolatility: config.maxVolPct,
-          maxSlippage: config.maxSlippagePct,
-          kellyCapPct: config.kellyCapPct,
+        riskConfig: {
+          maxPerTradeSOL: config.maxPerTradeSOL,
+          maxDailySOL: config.maxDailySOL,
+          maxVolatilityPct: config.maxVolPct,
+          maxSlippagePct: config.maxSlippagePct,
+          maxPositionPctOfWallet: 0.12,
+          consecutiveLossHalt: 3,
+          executionCooldownMs: 60_000,
         },
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
+
+  app.post("/api/pro/trade", async (req, res) => {
+    try {
+      const body = (req.body || {}) as TradeRequestBody;
+      const wallet = loadWallet();
+      const lamports = await conn().getBalance(wallet.publicKey, "confirmed");
+      const balanceSOL = lamports / 1e9;
+
+      const walletInfo: WalletInfo = {
+        address: wallet.publicKey.toBase58(),
+        balanceSOL,
+        dailySpentSOL: orchestrator.getRiskState().dailySpentSOL,
+      };
+
+      const normalizedSignals = normalizeSignals(body);
+      if (!normalizedSignals.length) {
+        return res.status(400).json({
+          success: false,
+          error: "At least one valid signal is required.",
+        });
+      }
+
+      if (body.tokenMint && typeof body.price === "number" && body.price > 0) {
+        orchestrator.onCandle(body.tokenMint, body.price, balanceSOL);
+      }
+
+      const requestedSignal = normalizedSignals[0];
+      const attemptId = tradeJournal.logAttempt({
+        tokenMint: requestedSignal.tokenMint,
+        action: requestedSignal.action,
+        requestedSizeSOL: 0,
+        confidence: normalizeConfidence(requestedSignal.confidence),
+        reason: requestedSignal.reason || "API trade request",
+      });
+
+      const decision = await orchestrator.onSignals(walletInfo, normalizedSignals);
+      const succeeded = decision.decided !== "HOLD";
+      if (succeeded) {
+        orchestrator.recordTradeOutcome(0);
+      }
+      tradeJournal.completeAttempt(attemptId, {
+        success: succeeded,
+        executedAction: decision.decided,
+        executedSizeSOL: decision.sizeSOL,
+        txid: decision.execution?.txid,
+        blockReasons: decision.reasons,
+        executionReason:
+          decision.execution?.reason ||
+          decision.reasons.map((r) => `${r.code}:${r.message}`).join(" | "),
+      });
+
+      if (!succeeded) {
+        return res.status(422).json({
+          success: false,
+          decision: "HOLD",
+          reasons: decision.reasons,
+          risk: decision.risk,
+          attemptId,
+        });
+      }
+
+      res.json({
+        success: true,
+        decision: decision.decided,
+        tokenMint: decision.selectedSignal?.tokenMint || requestedSignal.tokenMint,
+        sizeSOL: decision.sizeSOL,
+        txid: decision.execution?.txid,
+        risk: decision.risk,
+        attemptId,
+      });
+    } catch (error) {
+      console.error("Professional trade endpoint error:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.get("/api/pro/report", (_req, res) => {
+    try {
+      const entries = tradeJournal.getEntries();
+      const summary = performanceReport.generate(entries);
+      res.json({
+        success: true,
+        report: summary,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+}
+
+function normalizeSignals(body: TradeRequestBody): StrategySignal[] {
+  if (Array.isArray(body.signals) && body.signals.length > 0) {
+    return body.signals
+      .filter((signal) => signal && typeof signal.tokenMint === "string")
+      .map((signal) => ({
+        strategy: signal.strategy || "API",
+        tokenMint: signal.tokenMint,
+        action: normalizeAction(signal.action),
+        confidence: normalizeConfidence(signal.confidence),
+        sizeHintPct: signal.sizeHintPct,
+        reason: signal.reason || "Signal from API payload",
+        ts: signal.ts || Date.now(),
+      }));
+  }
+
+  if (!body.tokenMint) {
+    return [];
+  }
+
+  return [
+    {
+      strategy: "MANUAL_API",
+      tokenMint: body.tokenMint,
+      action: normalizeAction(body.action),
+      confidence: normalizeConfidence(body.confidence),
+      reason: "Manual trade request",
+      ts: Date.now(),
+    },
+  ];
+}
+
+function normalizeAction(action?: Action): Action {
+  if (action === "BUY" || action === "SELL" || action === "SHORT" || action === "COVER") {
+    return action;
+  }
+  return "BUY";
+}
+
+function normalizeConfidence(confidence?: number): number {
+  if (typeof confidence !== "number" || !Number.isFinite(confidence)) return 0.7;
+  return confidence > 1 ? Math.max(0, Math.min(1, confidence / 100)) : Math.max(0, Math.min(1, confidence));
 }
 
 export { registerRoutes as registerProfessionalRoutes };

@@ -1,4 +1,4 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import { registerRoutes } from "./routes/professionalTrading";
 import { setupTelegramCommands } from "./utils/telegramBotEnhanced";
 import { registerTradeHandlers } from "./worker/handlers";
@@ -42,26 +42,25 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const port = Number(process.env.PORT) || 5000;
 
   app.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
-    console.log(`SniperX listening on :${port}`);
+    console.log(`[startup] SniperX API listening on :${port}`);
   });
 
   try {
     registerTradeHandlers();
     setupTelegramCommands();
     telegramReady = true;
+    console.log("[startup] Telegram command handlers initialized");
   } catch (error) {
-    console.error("Telegram init failed:", error);
+    console.error("[startup] Telegram initialization failed:", error);
   }
 
   try {
     await brain.start(false);
     brainReady = true;
-    console.log(
-      `Brain online | mode=${backtester.getMode()} | autopilot=OFF`
-    );
+    console.log(`[startup] Brain online | mode=${backtester.getMode()} | autopilot=OFF`);
   } catch (e) {
-    console.error("Brain startup error:", e);
+    console.error("[startup] Brain startup error:", e);
   }
 
-  console.log("Ready — control via Telegram: /help /brain /paper /risk");
+  console.log("[startup] API ready. Primary flow: GET /api/pro/status -> POST /api/pro/trade -> GET /api/pro/report");
 })();

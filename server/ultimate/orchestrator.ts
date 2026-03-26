@@ -1,25 +1,190 @@
+import type {
+  Action,
+  ExecResult,
+  StrategySignal,
+  TradeGateway,
+  UltConfig,
+  WalletInfo,
+} from "./types";
+import type { RiskBlockReason, RiskStateSnapshot } from "./risk";
+import { KellySizer, ProRiskController, VolatilityLimiter } from "./risk";
 
-import { StrategySignal, UltConfig, WalletInfo, TradeGateway, ExecResult } from "./types";
-import { KellySizer, DrawdownGuard, BudgetManager, VolatilityLimiter, AdaptiveSlippage } from "./risk";
-function softmax(ws:number[], t=0.5){ const m=Math.max(...ws); const ex=ws.map(w=>Math.exp((w-m)/Math.max(0.05,t))); const s=ex.reduce((a,b)=>a+b,0); return ex.map(x=>x/s); }
-interface Ctx { last: Map<string, number>; equity: number; }
+interface RuntimeContext {
+  lastPriceByMint: Map<string, number>;
+  currentEquitySOL: number;
+  peakEquitySOL: number;
+}
+
+export interface OrchestratorDecision {
+  decided: Action;
+  sizeSOL: number;
+  selectedSignal?: StrategySignal;
+  reasons: RiskBlockReason[];
+  risk: RiskStateSnapshot;
+  execution?: ExecResult;
+}
+
 export class UltimateOrchestrator {
-  private k: KellySizer; private dd: DrawdownGuard; private b: BudgetManager; private v: VolatilityLimiter; private s: AdaptiveSlippage; private ctx: Ctx={ last:new Map(), equity:0 };
-  constructor(private cfg: UltConfig, private gw: TradeGateway){ this.k=new KellySizer(cfg.kellyCapPct); this.dd=new DrawdownGuard(cfg.riskOffDDPct/100, cfg.blockDDPct/100); this.b=new BudgetManager(cfg.maxDailySOL, cfg.maxPerTradeSOL); this.v=new VolatilityLimiter(cfg.maxVolPct); this.s=new AdaptiveSlippage(cfg.maxSlippagePct); }
-  onCandle(token:string, price:number, equitySOL:number){ this.ctx.last.set(token, price); this.v.push(price); this.dd.update(equitySOL); this.ctx.equity=equitySOL; }
-  async onSignals(wallet:WalletInfo, sigs:StrategySignal[]){ const usable=sigs.filter(s=>s.action!=="HOLD"); if(!usable.length) return { decided:"HOLD", sizeSOL:0, reason:"NO_SIGNAL" as const };
-    if(!this.v.allowed()) return { decided:"HOLD", sizeSOL:0, reason:"VOL_TOO_HIGH" as const };
-    if(wallet.balanceSOL < this.cfg.minWalletSOL) return { decided:"HOLD", sizeSOL:0, reason:"LOW_WALLET" as const };
-    const probs=softmax(usable.map(s=>Math.max(0.01,s.confidence))); const pick=usable[probs.indexOf(Math.max(...probs))];
-    const scale=this.dd.scale(); const kf=this.k.fraction(pick.confidence); const maxSpendable=Math.max(0, wallet.balanceSOL - this.cfg.minWalletSOL); let size=Math.max(0, Math.min(this.cfg.maxPerTradeSOL, this.ctx.equity*kf*scale, maxSpendable)); if(pick.sizeHintPct) size=Math.min(size, this.ctx.equity*pick.sizeHintPct);
-    const chk=this.b.canSpend(size); if(!chk.ok) return { decided:"HOLD", sizeSOL:0, reason:chk.reason as const };
-    const last=this.ctx.last.get(pick.tokenMint); if(!last) return { decided:"HOLD", sizeSOL:0, reason:"NO_PRICE" as const };
-    let res:ExecResult={ success:true };
-    if (pick.action==="BUY") res=await this.gw.buy(pick.tokenMint, size);
-    else if (pick.action==="SELL") res=await this.gw.sell(pick.tokenMint, size/last);
-    else if (pick.action==="SHORT") res=await this.gw.short(pick.tokenMint, size, 2);
-    else if (pick.action==="COVER") res=await this.gw.cover(pick.tokenMint, size);
-    if(!res.success) return { decided:"HOLD", sizeSOL:0, reason:res.reason || "EXEC_FAIL" as const };
-    this.b.commit(size); return { decided: pick.action, sizeSOL:size, reason: pick.reason || "ORCHESTRATED" };
+  private readonly kellySizer: KellySizer;
+  private readonly volatilityLimiter: VolatilityLimiter;
+  private readonly riskController: ProRiskController;
+  private readonly ctx: RuntimeContext = {
+    lastPriceByMint: new Map(),
+    currentEquitySOL: 0,
+    peakEquitySOL: 0,
+  };
+
+  constructor(private readonly cfg: UltConfig, private readonly gateway: TradeGateway) {
+    this.kellySizer = new KellySizer(cfg.kellyCapPct);
+    this.volatilityLimiter = new VolatilityLimiter(cfg.maxVolPct);
+    this.riskController = new ProRiskController({
+      minWalletSOL: cfg.minWalletSOL,
+      maxPerTradeSOL: cfg.maxPerTradeSOL,
+      maxDailySOL: cfg.maxDailySOL,
+      maxVolPct: cfg.maxVolPct,
+      maxPositionPctOfWallet: 0.12, // stricter than previous broad sizing
+      maxConsecutiveLosses: 3,
+      cooldownMsAfterFailure: 60_000,
+      dailyLossCapUSD: 35,
+      minTradeSizeSOL: 0.0001,
+    });
+  }
+
+  onCandle(tokenMint: string, price: number, equitySOL: number): void {
+    this.ctx.lastPriceByMint.set(tokenMint, price);
+    this.volatilityLimiter.push(price);
+    this.ctx.currentEquitySOL = equitySOL;
+    if (equitySOL > this.ctx.peakEquitySOL) {
+      this.ctx.peakEquitySOL = equitySOL;
+    }
+  }
+
+  getRiskState(): RiskStateSnapshot {
+    return this.riskController.getState();
+  }
+
+  recordTradeOutcome(realizedPnlUSD: number): void {
+    this.riskController.recordExecutionResult({ success: true, realizedPnlUSD });
+  }
+
+  async onSignals(wallet: WalletInfo, signals: StrategySignal[]): Promise<OrchestratorDecision> {
+    const executableSignals = signals.filter((signal) => signal.action !== "HOLD");
+    if (executableSignals.length === 0) {
+      return this.blockedDecision("NO_EXECUTABLE_SIGNAL", "No executable signal in request.");
+    }
+
+    const selected = this.selectSignal(executableSignals);
+    const price = this.ctx.lastPriceByMint.get(selected.tokenMint);
+
+    const drawdownScale = this.computeDrawdownScale();
+    const kellyFraction = this.kellySizer.fraction(this.normalizeConfidence(selected.confidence));
+    const baseEquity = this.ctx.currentEquitySOL > 0 ? this.ctx.currentEquitySOL : wallet.balanceSOL;
+    const maxSpendable = Math.max(0, wallet.balanceSOL - this.cfg.minWalletSOL);
+
+    let requestedSizeSOL = Math.max(
+      0,
+      Math.min(this.cfg.maxPerTradeSOL, baseEquity * kellyFraction * drawdownScale, maxSpendable)
+    );
+
+    if (selected.sizeHintPct && selected.sizeHintPct > 0) {
+      requestedSizeSOL = Math.min(requestedSizeSOL, baseEquity * selected.sizeHintPct);
+    }
+
+    const riskDecision = this.riskController.evaluate({
+      walletBalanceSOL: wallet.balanceSOL,
+      requestedSizeSOL,
+      hasPrice: typeof price === "number" && price > 0,
+      volatilityPct: this.volatilityLimiter.getVolatilityPct(),
+    });
+
+    if (!riskDecision.allowed) {
+      return {
+        decided: "HOLD",
+        sizeSOL: 0,
+        selectedSignal: selected,
+        reasons: riskDecision.reasons,
+        risk: this.riskController.getState(),
+      };
+    }
+
+    const approvedSizeSOL = riskDecision.proposal.approvedSizeSOL;
+    const execution = await this.executeSignal(selected, approvedSizeSOL, price);
+    if (!execution.success) {
+      this.riskController.recordExecutionResult({ success: false });
+      return {
+        decided: "HOLD",
+        sizeSOL: 0,
+        selectedSignal: selected,
+        reasons: [
+          {
+            code: "EXECUTION_FAILED",
+            message: execution.reason || "Execution failed.",
+          },
+        ],
+        risk: this.riskController.getState(),
+        execution,
+      };
+    }
+
+    this.riskController.commitSpend(approvedSizeSOL);
+    return {
+      decided: selected.action,
+      sizeSOL: approvedSizeSOL,
+      selectedSignal: selected,
+      reasons: [],
+      risk: this.riskController.getState(),
+      execution,
+    };
+  }
+
+  private async executeSignal(
+    signal: StrategySignal,
+    sizeSOL: number,
+    lastPrice?: number
+  ): Promise<ExecResult> {
+    if (signal.action === "BUY") {
+      return this.gateway.buy(signal.tokenMint, sizeSOL);
+    }
+    if (signal.action === "SELL") {
+      if (!lastPrice || lastPrice <= 0) {
+        return { success: false, reason: "Missing token price for SELL conversion." };
+      }
+      return this.gateway.sell(signal.tokenMint, sizeSOL / lastPrice);
+    }
+    return {
+      success: false,
+      reason: `Action ${signal.action} is not enabled in current gateway.`,
+    };
+  }
+
+  private selectSignal(signals: StrategySignal[]): StrategySignal {
+    return [...signals].sort(
+      (a, b) => this.normalizeConfidence(b.confidence) - this.normalizeConfidence(a.confidence)
+    )[0];
+  }
+
+  private normalizeConfidence(confidence: number): number {
+    if (confidence > 1) return Math.max(0, Math.min(1, confidence / 100));
+    return Math.max(0, Math.min(1, confidence));
+  }
+
+  private computeDrawdownScale(): number {
+    if (this.ctx.peakEquitySOL <= 0 || this.ctx.currentEquitySOL <= 0) return 1;
+
+    const drawdownPct =
+      ((this.ctx.peakEquitySOL - this.ctx.currentEquitySOL) / this.ctx.peakEquitySOL) * 100;
+
+    if (drawdownPct >= this.cfg.blockDDPct) return 0;
+    if (drawdownPct >= this.cfg.riskOffDDPct) return 0.35;
+    return 1;
+  }
+
+  private blockedDecision(code: RiskBlockReason["code"], message: string): OrchestratorDecision {
+    return {
+      decided: "HOLD",
+      sizeSOL: 0,
+      reasons: [{ code, message }],
+      risk: this.riskController.getState(),
+    };
   }
 }
