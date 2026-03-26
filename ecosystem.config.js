@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'sniperx-trading-bot',
     script: 'server/index.ts',
-    interpreter: 'ts-node',
+    interpreter: './node_modules/.bin/tsx',
     instances: 1,
     autorestart: true,
     watch: false,
