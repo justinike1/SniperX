@@ -1,89 +1,135 @@
 # SniperX
 
-Telegram-controlled Solana trading bot. Scans tokens via DexScreener, scores
-them 0–100, applies risk checks (Kelly sizing, drawdown guards, daily limits),
-and executes through Jupiter. Starts in paper mode; must prove profitability
-before live trading is allowed.
+SniperX is a Solana trading system with a canonical **Pro Trading API** for
+controlled execution, risk gating, and performance reporting.
+
+The goal is practical reliability: every trade attempt is logged, risk decisions
+return explicit reasons, and status/report endpoints expose current operating state.
 
 ## Quick start
 
 ```bash
 npm install
-cp .env.example .env   # then edit with your values
-npm run dev             # starts on :5000
+cp .env.example .env
+npm run dev
 ```
 
-Control the bot through Telegram (`/help` for commands) or through the HTTP API.
+Server starts on `:5000` by default.
 
-## How it works
+## What SniperX is
 
-1. **Scan** — Market scanner polls DexScreener every 30 s for Solana tokens
-2. **Score** — Decision engine scores 0–100 across 8 categories (trend, momentum, volume, liquidity, volatility, slippage, safety, regime)
-3. **Risk check** — Risk manager enforces daily loss limit (5%), max drawdown (15%), consecutive-loss halt (3), and position count cap (3)
-4. **Size** — Kelly Criterion sizes the position, capped at 0.005 SOL per trade / 0.05 SOL per day
-5. **Execute** — Paper mode logs virtual trades; live mode swaps through Jupiter with simulation + 3-retry + confirmation
-6. **Log** — Trade journal records entry/exit with full context; performance tracker computes win rate, profit factor, Sharpe
-7. **Notify** — Telegram alerts on every trade open, close, and risk halt
+SniperX combines:
 
-## Configuration
+- market data + strategy signals
+- centralized risk controls
+- Jupiter execution gateway
+- in-memory journaling and performance reporting
+- Telegram + HTTP interfaces
 
-Set these in `.env` (see `.env.example` for all options):
+The **clean canonical flow** is the `/api/pro` route set.
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `TELEGRAM_BOT_TOKEN` | Yes (for control) | Grammy bot token |
-| `TELEGRAM_CHAT_ID` | Yes (for alerts) | Chat to send alerts to |
-| `SOLANA_RPC_URL` | No (defaults to public) | Solana RPC endpoint |
-| `OPENAI_API_KEY` | No | AI analysis features |
-| `DATABASE_URL` | No | PostgreSQL for persistent storage |
-| `ENABLE_LIVE_TRADING` | No (default: false) | Must be `true` for real trades |
+## Current architecture
 
-Wallet: place your Solana keypair in `phantom_key.json` (JSON array of 64 bytes).
+Core server components:
+
+- `server/routes/professionalTrading.ts`
+  - canonical pro endpoints:
+    - `GET /api/pro/status`
+    - `POST /api/pro/trade`
+    - `GET /api/pro/report`
+- `server/ultimate/orchestrator.ts`
+  - signal selection, sizing, risk checks, execution
+- `server/ultimate/risk.ts`
+  - centralized risk policy and structured block reasons
+- `server/services/tradeJournal.ts`
+  - trade attempt/outcome journal (in-memory)
+- `server/services/performanceReport.ts`
+  - derived metrics from journal entries
+- `server/brain/*`
+  - broader scanning/scoring/autopilot pipeline (still available)
+
+## Core end-to-end pro flow
+
+1. Client submits `POST /api/pro/trade` with `tokenMint`, `action`, `confidence`
+   or explicit `signals`.
+2. Orchestrator selects the executable signal and computes requested size.
+3. Risk controller evaluates policy (wallet reserve, volatility, daily cap,
+   consecutive-loss halt, cooldown, position sizing caps).
+4. If blocked, API returns `422` with **structured block reasons**.
+5. If approved, execution is attempted via Jupiter gateway.
+6. Trade journal records attempt + outcome (executed/blocked/failed, tx id/reason).
+7. `GET /api/pro/status` and `GET /api/pro/report` expose current state and
+   performance metrics.
+
+## Risk controls (current)
+
+- wallet reserve floor (`minWalletSOL`)
+- stricter max position sizing (`maxPositionPctOfWallet`)
+- max per-trade notional (`maxPerTradeSOL`)
+- daily spend cap (`maxDailySOL`)
+- daily realized loss cap (USD)
+- consecutive loss halt
+- cooldown after failed execution
+- volatility threshold gate
+- explicit machine-readable block reasons in API responses
+
+## Reporting and metrics
+
+`GET /api/pro/report` returns:
+
+- total trades
+- wins / losses
+- win rate
+- gross pnl
+- net pnl
+- drawdown (`maxDrawdownUSD`, `maxDrawdownPctFromPeak`)
+- last 10 trades
+
+All metrics are derived from journal entries in memory.
 
 ## API endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/health` | Uptime, mode, brain/telegram/risk state |
-| GET | `/api/pro/status` | Wallet balance, risk state, paper stats, config |
-| POST | `/api/pro/trade` | Submit trade signal (Kelly-sized) |
-| POST | `/api/pro/liquidate-bonk` | Emergency BONK liquidation |
+| GET | `/health` | Process health and startup state |
+| GET | `/api/pro/status` | Canonical pro status, risk snapshot, key metrics |
+| POST | `/api/pro/trade` | Canonical pro trade execution flow |
+| GET | `/api/pro/report` | Derived performance report from journal |
 
-## Telegram commands
+## Maturity assessment
 
-`/status` `/buy` `/sell` `/prices` `/brain` `/paper` `/score` `/risk` `/autopilot` `/help`
+### Production-ready
 
-## VPS deployment
+- structured pro endpoints and JSON status/reporting
+- centralized risk checks with explicit block reasons
+- deterministic attempt logging for each pro trade
+- startup and runtime logs with production-oriented wording
 
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
+### Experimental / requires verification
 
-Uses PM2 with `tsx` as the TypeScript interpreter. See `ecosystem.config.js`.
+- real wallet execution behavior under live liquidity conditions
+- exact fee + slippage accounting for realized net PnL
+- reconciliation between on-chain fills and in-memory outcomes
+- long-run reliability of strategy signal quality
 
-```bash
-pm2 status                       # check status
-pm2 logs sniperx-trading-bot     # live logs
-pm2 restart sniperx-trading-bot  # restart
-```
+## Configuration
+
+Set values in `.env` (see `.env.example`):
+
+| Variable | Purpose |
+|----------|---------|
+| `TELEGRAM_BOT_TOKEN` | Telegram control integration |
+| `TELEGRAM_CHAT_ID` | Telegram alert destination |
+| `SOLANA_RPC_URL` | Solana RPC endpoint |
+| `ENABLE_LIVE_TRADING` | Enables live execution when `true` |
+
+Wallet keypair path remains `phantom_key.json` (JSON byte array).
 
 ## Scripts
 
 | Command | Purpose |
 |---------|---------|
-| `npm run dev` | Development server (tsx, hot reload) |
-| `npm run build` | Bundle server to `dist/` (esbuild) |
-| `npm start` | Production start from `dist/index.js` |
+| `npm run dev` | Development server |
+| `npm run build` | Build server bundle |
+| `npm start` | Run production bundle |
 | `npm run check` | TypeScript type check |
-| `npm run db:push` | Push Drizzle schema to PostgreSQL |
-
-## Risk defaults
-
-- Max per trade: 0.005 SOL
-- Max daily: 0.05 SOL
-- Gas reserve: 0.015 SOL (always kept)
-- Drawdown: scale at 10%, halt at 15%
-- Consecutive losses: halt after 3
-- Confidence threshold: 68/100
-- Paper gate: 10 trades with PF > 1.2 and WR > 50% before live is allowed
