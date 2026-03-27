@@ -8,6 +8,11 @@
 import { Connection, Keypair, VersionedTransaction } from '@solana/web3.js';
 import { ExecutionResult } from './types';
 import { conn, loadWallet } from '../utils/solanaAdapter';
+import {
+  assertLiveTradingEnabled,
+  isLiveTradingDisabledError,
+  LIVE_TRADING_DISABLED_REASON,
+} from '../utils/liveTradingGuard';
 
 const JUPITER_QUOTE = 'https://lite-api.jup.ag/swap/v1/quote';
 const JUPITER_SWAP  = 'https://lite-api.jup.ag/swap/v1/swap';
@@ -62,6 +67,7 @@ class ExecutionEngine {
     }
 
     try {
+      assertLiveTradingEnabled("executionEngine.buy");
       // Convert USD → lamports (approximate via SOL price)
       const solPrice = await this.getSolPrice();
       const solAmount = amountUSD / solPrice;
@@ -85,6 +91,18 @@ class ExecutionEngine {
       }
       return result;
     } catch (e: any) {
+      if (isLiveTradingDisabledError(e)) {
+        return {
+          success: false,
+          inputAmount: 0,
+          outputAmount: 0,
+          priceImpact: 0,
+          fee: 0,
+          attempts: 0,
+          error: LIVE_TRADING_DISABLED_REASON,
+          timestamp: start,
+        };
+      }
       return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 1, error: e.message, timestamp: start };
     }
   }
@@ -98,6 +116,7 @@ class ExecutionEngine {
     }
 
     try {
+      assertLiveTradingEnabled("executionEngine.sell");
       // Convert human-readable token amount to raw integer units
       const { getMint } = await import('@solana/spl-token');
       const { PublicKey } = await import('@solana/web3.js');
@@ -116,6 +135,18 @@ class ExecutionEngine {
       }
       return result;
     } catch (e: any) {
+      if (isLiveTradingDisabledError(e)) {
+        return {
+          success: false,
+          inputAmount: 0,
+          outputAmount: 0,
+          priceImpact: 0,
+          fee: 0,
+          attempts: 0,
+          error: LIVE_TRADING_DISABLED_REASON,
+          timestamp: start,
+        };
+      }
       return { success: false, inputAmount: 0, outputAmount: 0, priceImpact: 0, fee: 0, attempts: 1, error: e.message, timestamp: start };
     }
   }

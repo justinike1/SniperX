@@ -4,6 +4,7 @@ import { portfolioManager } from "./portfolioManager";
 import { tradeJournal } from "./tradeJournal";
 import { riskManager } from "./riskManager";
 import { sendTelegramAlert } from "../utils/telegramBotEnhanced";
+import { queueProStateSave } from "../services/proStateCheckpoint";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -175,6 +176,8 @@ class LivePositionManager {
           ` | realized ${realizedPnlUSD >= 0 ? "+" : ""}$${realizedPnlUSD.toFixed(2)}`;
       }
     }
+
+    queueProStateSave();
 
     await sendTelegramAlert(
       `Live exit ${reason}\n${position.token} ${fraction >= 0.999 ? "full" : "partial"} close\n` +

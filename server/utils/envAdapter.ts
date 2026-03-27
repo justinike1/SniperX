@@ -1,6 +1,4 @@
 // Environment adapter for SniperX Prime
-import type { Env } from '../ultimate/types';
-
 export function env(): any {
   return {
     NODE_ENV: process.env.NODE_ENV || 'development',
@@ -9,12 +7,15 @@ export function env(): any {
     // Solana settings
     SOLANA_NETWORK: 'mainnet-beta',
     SOLANA_RPC_URLS: (process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com').split(','),
-    WALLET_PRIVATE_KEY_PATH: './phantom_key.json',
+    WALLET_PRIVATE_KEY_PATH: process.env.WALLET_PRIVATE_KEY_PATH || './phantom_key.json',
+    WALLET_PRIVATE_KEY_BASE58: process.env.WALLET_PRIVATE_KEY_BASE58,
     
     // Trading safety
     DRY_RUN: process.env.ENABLE_LIVE_TRADING !== 'true',
     ENABLE_SPOT_LIVE: process.env.ENABLE_LIVE_TRADING === 'true',
     ENABLE_PERP_LIVE: false,
+    ENABLE_LIVE_TRADING: process.env.ENABLE_LIVE_TRADING === 'true',
+    LIVE_TRADING_CONFIRMATION: process.env.LIVE_TRADING_CONFIRMATION || '',
     
     // Risk limits - ULTRA CONSERVATIVE after BONK disaster
     MAX_SPEND_PER_TRADE: 0.005, // 0.005 SOL max per trade

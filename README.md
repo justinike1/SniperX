@@ -121,9 +121,16 @@ Set values in `.env` (see `.env.example`):
 | `TELEGRAM_BOT_TOKEN` | Telegram control integration |
 | `TELEGRAM_CHAT_ID` | Telegram alert destination |
 | `SOLANA_RPC_URL` | Solana RPC endpoint |
-| `ENABLE_LIVE_TRADING` | Enables live execution when `true` |
+| `WALLET_PRIVATE_KEY_PATH` | Local wallet file path (default `./phantom_key.json`) |
+| `WALLET_PRIVATE_KEY_BASE58` | Optional base58 secret fallback (prefer file path) |
+| `ENABLE_LIVE_TRADING` | Enables live execution only when set to `true` |
+| `LIVE_TRADING_CONFIRMATION` | Must be `I_UNDERSTAND` to allow live sends |
 
-Wallet keypair path remains `phantom_key.json` (JSON byte array).
+Local wallet secret handling:
+
+- Keep wallet key files local-only and untracked (`phantom_key.json`, `wallets/`, `secrets/` are ignored).
+- Do **not** commit private key material to the repo.
+- Default behavior is safe/off for live transaction sending until both live flags are explicitly set.
 
 ## Scripts
 

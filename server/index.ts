@@ -4,6 +4,7 @@ import { setupTelegramCommands } from "./utils/telegramBotEnhanced";
 import { registerTradeHandlers } from "./worker/handlers";
 import { brain } from "./brain/index";
 import { backtester, riskManager } from "./brain/index";
+import { initializeProStateCheckpoint } from "./services/proStateCheckpoint";
 
 const app = express();
 app.use(express.json());
@@ -40,6 +41,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 (async () => {
   const port = Number(process.env.PORT) || 5000;
+  initializeProStateCheckpoint();
 
   app.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
     console.log(`[startup] SniperX API listening on :${port}`);
