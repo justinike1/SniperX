@@ -17,7 +17,6 @@ import {
 import { tradeJournal } from "../services/tradeJournal";
 import { performanceReport } from "../services/performanceReport";
 import { canonicalRiskState } from "../risk/canonicalRiskState";
-import { queueProStateSave } from "../services/proStateCheckpoint";
 
 function toRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
@@ -45,7 +44,6 @@ type TradeRequestBody = {
   confidence?: number;
   price?: number;
   sellFraction?: number;
-  requestedSizeSOL?: number;
   signals?: StrategySignal[];
 };
 
@@ -98,6 +96,75 @@ export function registerRoutes(app: Express) {
       });
     } catch (error) {
       res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  app.get("/api/pro/risk-audit", async (_req, res) => {
+    try {
+      const canonical = canonicalRiskState.getCanonicalSnapshot();
+      const proRisk = orchestrator.getRiskState();
+      const brainRisk = riskManager.getState();
+      const secondary = canonicalRiskState.getSecondarySnapshots();
+      const brainSecondary = toRecord(secondary.brain);
+      const proSecondary = toRecord(secondary.pro);
+
+      const dailyPnlDrift =
+        Math.abs(canonical.dailyPnlUSD - brainRisk.dailyPnlUSD) > 0.01 ||
+        Math.abs(
+          canonical.dailyPnlUSD -
+            (typeof proSecondary.dailyRealizedPnlUSD === "number"
+              ? proSecondary.dailyRealizedPnlUSD
+              : proRisk.dailyRealizedPnlUSD)
+        ) > 0.01;
+      const drawdownDrift = Math.abs(canonical.currentDrawdownPct - brainRisk.currentDrawdownPct) > 0.01;
+      const openTradeDrift = canonical.tradesOpenCount !== brainRisk.tradesOpenCount;
+      const haltStateDrift =
+        canonical.isHalted !== brainRisk.isHalted ||
+        canonical.isHalted !==
+          (typeof proSecondary.isHalted === "boolean" ? proSecondary.isHalted : proRisk.isHalted);
+
+      const mismatchCount = [
+        dailyPnlDrift,
+        drawdownDrift,
+        openTradeDrift,
+        haltStateDrift,
+      ].filter(Boolean).length;
+
+      return res.json({
+        success: true,
+        driftDetected: mismatchCount > 0,
+        mismatchCount,
+        drift: {
+          dailyPnlDrift,
+          drawdownDrift,
+          openTradeDrift,
+          haltStateDrift,
+        },
+        canonical,
+        secondary: {
+          proOrchestrator: {
+            isHalted: proRisk.isHalted,
+            haltReason: proRisk.haltReason,
+            consecutiveLosses: proRisk.consecutiveLosses,
+            cooldownRemainingMs: proRisk.cooldownRemainingMs,
+            dailySpentSOL: proRisk.dailySpentSOL,
+            dailyRealizedPnlUSD: proRisk.dailyRealizedPnlUSD,
+            tradingDay: proRisk.tradingDay,
+          },
+          brainRiskManager: {
+            ...brainRisk,
+          },
+          sourceSnapshots: {
+            brain: secondary.brain || null,
+            pro: secondary.pro || null,
+          },
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       });
@@ -179,7 +246,6 @@ export function registerRoutes(app: Express) {
           decision.execution?.reason ||
           decision.reasons.map((r) => `${r.code}:${r.message}`).join(" | "),
       });
-      queueProStateSave();
 
       if (!succeeded) {
         return res.status(422).json({
@@ -330,7 +396,6 @@ export function registerRoutes(app: Express) {
           });
 
           riskManager.onTradeOpen(journalId, executedNotionalUSD + entryFeeUSD, executedPrice);
-          queueProStateSave();
         }
       }
 
@@ -420,10 +485,6 @@ function normalizeSignals(body: TradeRequestBody): StrategySignal[] {
         action: normalizeAction(signal.action),
         confidence: normalizeConfidence(signal.confidence),
         sizeHintPct: signal.sizeHintPct,
-        requestedSizeSOL:
-          typeof signal.requestedSizeSOL === "number" && Number.isFinite(signal.requestedSizeSOL)
-            ? signal.requestedSizeSOL
-            : undefined,
         reason: signal.reason || "Signal from API payload",
         ts: signal.ts || Date.now(),
       }));
@@ -439,10 +500,6 @@ function normalizeSignals(body: TradeRequestBody): StrategySignal[] {
       tokenMint: body.tokenMint,
       action: normalizeAction(body.action),
       confidence: normalizeConfidence(body.confidence),
-      requestedSizeSOL:
-        typeof body.requestedSizeSOL === "number" && Number.isFinite(body.requestedSizeSOL)
-          ? Math.max(0, body.requestedSizeSOL)
-          : undefined,
       reason: "Manual trade request",
       ts: Date.now(),
     },
