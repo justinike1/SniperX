@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import bs58 from "bs58";
+import { Keypair } from "@solana/web3.js";
 
 import {
   isLiveTradingEnabled,
@@ -64,7 +65,7 @@ async function withTempWallet<T>(
 }
 
 async function testWalletLoadsFromConfiguredPath(): Promise<void> {
-  const bytes64 = Array.from({ length: 64 }, (_, i) => (i + 11) % 255);
+  const bytes64 = Array.from(Keypair.generate().secretKey);
   await withTempWallet(bytes64, async (walletPath) => {
     withEnv(
       {
@@ -81,10 +82,11 @@ async function testWalletLoadsFromConfiguredPath(): Promise<void> {
 }
 
 async function testWalletBase58Fallback(): Promise<void> {
+  const secret = Keypair.generate().secretKey;
   withEnv(
     {
       WALLET_PRIVATE_KEY_PATH: "./missing-wallet-for-test.json",
-      WALLET_PRIVATE_KEY_BASE58: bs58.encode(Uint8Array.from(Array.from({ length: 64 }, (_, i) => (i + 23) % 255))),
+      WALLET_PRIVATE_KEY_BASE58: bs58.encode(secret),
     },
     () => {
       resetWalletCacheForTests();

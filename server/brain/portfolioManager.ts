@@ -358,6 +358,67 @@ class PortfolioManager {
     position.closed = true;
   }
 
+  seedPositionForTests(params: {
+    token: string;
+    mint: string;
+    quantity: number;
+    entryPriceUSD: number;
+    entryNotionalUSD: number;
+    entryFeeUSD?: number;
+    journalId?: string;
+    strategy?: string;
+  }): OpenPosition {
+    const id = `L${String(this.idCounter++).padStart(4, "0")}`;
+    const position: OpenPosition = {
+      id,
+      token: params.token,
+      mint: params.mint,
+      quantity: params.quantity,
+      entryPriceUSD: params.entryPriceUSD,
+      entryNotionalUSD: params.entryNotionalUSD,
+      entryFeeUSD: Math.max(0, params.entryFeeUSD || 0),
+      realizedFeesUSD: 0,
+      entryTime: Date.now(),
+      currentPriceUSD: params.entryPriceUSD,
+      markValueUSD: params.quantity * params.entryPriceUSD,
+      unrealizedPnlUSD: params.quantity * params.entryPriceUSD - params.entryNotionalUSD,
+      realizedPnlUSD: 0,
+      takeProfitPct: 15,
+      stopLossPct: 6,
+      trailingStopActivationPct: 4,
+      highWatermarkPriceUSD: params.entryPriceUSD,
+      journalId: params.journalId,
+      strategy: params.strategy || "TEST",
+      fillSource: "quote",
+      lastTxHash: "TEST_TX",
+      closed: false,
+    };
+    this.positions.set(params.mint, position);
+    this.lastSnapshot = {
+      ...this.lastSnapshot,
+      asOf: Date.now(),
+      openPositions: this.getOpenPositions(),
+    };
+    return { ...position };
+  }
+
+  resetForTests(): void {
+    this.positions.clear();
+    this.idCounter = 1;
+    this.dailyRealizedPnlUSD = 0;
+    this.dailyStamp = this.today();
+    this.lastSnapshot = {
+      asOf: Date.now(),
+      cashSOL: 0,
+      cashUSD: 0,
+      positionsValueUSD: 0,
+      totalEquityUSD: 0,
+      dailyRealizedPnlUSD: 0,
+      totalUnrealizedPnlUSD: 0,
+      openPositions: [],
+    };
+  }
+
   private async getWalletTokenBalance(mint: string): Promise<number> {
     try {
       const wallet = loadWallet();
