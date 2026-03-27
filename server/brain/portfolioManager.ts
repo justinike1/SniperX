@@ -107,6 +107,61 @@ class PortfolioManager {
     };
   }
 
+  exportState(): {
+    positions: OpenPosition[];
+    dailyRealizedPnlUSD: number;
+    idCounter: number;
+    dailyStamp: string;
+    lastSnapshot: PortfolioSnapshot;
+  } {
+    return {
+      positions: Array.from(this.positions.values()).map((p) => ({ ...p })),
+      dailyRealizedPnlUSD: this.dailyRealizedPnlUSD,
+      idCounter: this.idCounter,
+      dailyStamp: this.dailyStamp,
+      lastSnapshot: this.getSnapshotSync(),
+    };
+  }
+
+  hydrate(state: {
+    positions: OpenPosition[];
+    dailyRealizedPnlUSD?: number;
+    idCounter?: number;
+    dailyStamp?: string;
+    lastSnapshot?: PortfolioSnapshot;
+  }): void {
+    this.positions.clear();
+    for (const position of state.positions || []) {
+      if (position?.mint) {
+        this.positions.set(position.mint, { ...position });
+      }
+    }
+    if (typeof state.dailyRealizedPnlUSD === "number" && Number.isFinite(state.dailyRealizedPnlUSD)) {
+      this.dailyRealizedPnlUSD = state.dailyRealizedPnlUSD;
+    }
+    if (typeof state.idCounter === "number" && Number.isFinite(state.idCounter) && state.idCounter > 0) {
+      this.idCounter = Math.floor(state.idCounter);
+    } else {
+      const maxId = Array.from(this.positions.values()).reduce((max, pos) => {
+        const n = Number((pos.id || "").replace(/^L/, ""));
+        return Number.isFinite(n) ? Math.max(max, n) : max;
+      }, 0);
+      this.idCounter = maxId + 1;
+    }
+    this.dailyStamp = state.dailyStamp || this.today();
+    this.lastSnapshot = state.lastSnapshot
+      ? {
+          ...state.lastSnapshot,
+          openPositions: (state.lastSnapshot.openPositions || []).map((p) => ({ ...p })),
+        }
+      : {
+          ...this.lastSnapshot,
+          asOf: Date.now(),
+          dailyRealizedPnlUSD: this.dailyRealizedPnlUSD,
+          openPositions: this.getOpenPositions(),
+        };
+  }
+
   async registerEntry(params: {
     token: string;
     mint: string;

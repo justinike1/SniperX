@@ -2,6 +2,7 @@ import { tradeQueue, type TradeTask } from "./queue";
 import { pythPriceService } from "../services/pythPriceFeed";
 import { sendTelegramAlert } from "../utils/telegramBotEnhanced";
 import { livePositionManager, portfolioManager } from "../brain/index";
+import { queueProStateSave } from "../services/proStateCheckpoint";
 
 const TOKEN_MINTS: Record<string, string> = {
   SOL: "So11111111111111111111111111111111111111112",
@@ -51,7 +52,7 @@ async function buyHandler(task: TradeTask): Promise<void> {
           action: "BUY",
           confidence: 0.8,
           reason: `Telegram buy: ${task.amount} ${task.denom}`,
-          sizeHintPct: solAmount / 1.0
+          requestedSizeSOL: solAmount
         }],
         tokenMint,
         action: "BUY",
@@ -63,6 +64,7 @@ async function buyHandler(task: TradeTask): Promise<void> {
 
     if (result.success && result.decision === "BUY") {
       task.result = result;
+      queueProStateSave();
       await sendTelegramAlert(
         `✅ *BUY EXECUTED*\n\n` +
         `Token: ${task.token}\n` +
@@ -119,6 +121,7 @@ async function sellHandler(task: TradeTask): Promise<void> {
     }
 
     task.result = sell;
+    queueProStateSave();
     await sendTelegramAlert(
       `✅ *SELL EXECUTED*\n\n` +
         `Token: ${task.token}\n` +

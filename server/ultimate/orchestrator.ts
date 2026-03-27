@@ -91,6 +91,10 @@ export class UltimateOrchestrator {
       Math.min(this.cfg.maxPerTradeSOL, baseEquity * kellyFraction * drawdownScale, maxSpendable)
     );
 
+    if (selected.requestedSizeSOL && selected.requestedSizeSOL > 0) {
+      requestedSizeSOL = Math.min(requestedSizeSOL, selected.requestedSizeSOL);
+    }
+
     if (selected.sizeHintPct && selected.sizeHintPct > 0) {
       requestedSizeSOL = Math.min(requestedSizeSOL, baseEquity * selected.sizeHintPct);
     }

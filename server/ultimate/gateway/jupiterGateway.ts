@@ -4,6 +4,11 @@ import { env } from "../../utils/envAdapter";
 import { loadWallet, conn } from "../../utils/solanaAdapter";
 import type { TradeGateway, ExecResult } from "../types";
 import { simulateVtx, sendVtxWithRetry } from "./tx";
+import {
+  assertLiveTradingEnabled,
+  isLiveTradingDisabledError,
+  LIVE_TRADING_DISABLED_REASON,
+} from "../../utils/liveTradingGuard";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 function jupUrl(path: string, qs?: Record<string, string | number>){ const base = "https://lite-api.jup.ag/swap/v1"; const url = new URL(`${base}/${path}`); if (qs) for (const [k,v] of Object.entries(qs)) url.searchParams.set(k, String(v)); return url.toString(); }
 export class JupiterGateway implements TradeGateway {
@@ -21,12 +26,28 @@ export class JupiterGateway implements TradeGateway {
     const j = await r.json(); const txBuf = Buffer.from(j.swapTransaction, "base64"); const tx = VersionedTransaction.deserialize(txBuf); tx.sign([this.wallet]); return tx;
   }
   async buy(tokenMint: string, amountSol: number): Promise<ExecResult> {
-    try { const lamports = Math.floor(amountSol * 1_000_000_000); const route = await this.quote(SOL_MINT, tokenMint, lamports); const tx = await this.swapTx(route); const sim = await simulateVtx(this.connection, tx); if (!sim.ok) return { success: false, reason: `SIM_FAIL:${sim.err}` }; const send = await sendVtxWithRetry(this.connection, tx, "confirmed"); if (!send.ok) return { success: false, reason: send.err }; return { success: true, txid: send.sig }; }
-    catch (e: any) { return { success: false, reason: e?.message || "JUP_BUY_ERR" }; }
+    try {
+      assertLiveTradingEnabled("JupiterGateway.buy");
+      const lamports = Math.floor(amountSol * 1_000_000_000); const route = await this.quote(SOL_MINT, tokenMint, lamports); const tx = await this.swapTx(route); const sim = await simulateVtx(this.connection, tx); if (!sim.ok) return { success: false, reason: `SIM_FAIL:${sim.err}` }; const send = await sendVtxWithRetry(this.connection, tx, "confirmed"); if (!send.ok) return { success: false, reason: send.err }; return { success: true, txid: send.sig };
+    }
+    catch (e: any) {
+      if (isLiveTradingDisabledError(e)) {
+        return { success: false, reason: LIVE_TRADING_DISABLED_REASON };
+      }
+      return { success: false, reason: e?.message || "JUP_BUY_ERR" };
+    }
   }
   async sell(tokenMint: string, amountTokens: number): Promise<ExecResult> {
-    try { const { getMint } = await import("@solana/spl-token"); const info = await getMint(this.connection, new PublicKey(tokenMint)); const amount = Math.floor(amountTokens * 10 ** info.decimals); const route = await this.quote(tokenMint, SOL_MINT, amount); const tx = await this.swapTx(route); const sim = await simulateVtx(this.connection, tx); if (!sim.ok) return { success: false, reason: `SIM_FAIL:${sim.err}` }; const send = await sendVtxWithRetry(this.connection, tx, "confirmed"); if (!send.ok) return { success: false, reason: send.err }; return { success: true, txid: send.sig }; }
-    catch (e: any) { return { success: false, reason: e?.message || "JUP_SELL_ERR" }; }
+    try {
+      assertLiveTradingEnabled("JupiterGateway.sell");
+      const { getMint } = await import("@solana/spl-token"); const info = await getMint(this.connection, new PublicKey(tokenMint)); const amount = Math.floor(amountTokens * 10 ** info.decimals); const route = await this.quote(tokenMint, SOL_MINT, amount); const tx = await this.swapTx(route); const sim = await simulateVtx(this.connection, tx); if (!sim.ok) return { success: false, reason: `SIM_FAIL:${sim.err}` }; const send = await sendVtxWithRetry(this.connection, tx, "confirmed"); if (!send.ok) return { success: false, reason: send.err }; return { success: true, txid: send.sig };
+    }
+    catch (e: any) {
+      if (isLiveTradingDisabledError(e)) {
+        return { success: false, reason: LIVE_TRADING_DISABLED_REASON };
+      }
+      return { success: false, reason: e?.message || "JUP_SELL_ERR" };
+    }
   }
   async short(): Promise<ExecResult> { return { success: false, reason: "SPOT_NO_SHORT" }; }
   async cover(): Promise<ExecResult> { return { success: false, reason: "SPOT_NO_COVER" }; }

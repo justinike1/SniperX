@@ -15,7 +15,24 @@ export interface CanonicalRiskSnapshot {
   lastExecutionFailedAt?: number;
   dailyStartEquityUSD: number;
 }
-
+export interface CanonicalRiskPersistedState {
+  state: {
+    tradingDay: string;
+    dailyPnlUSD: number;
+    dailyPnlPct: number;
+    dailySpentSOL: number;
+    consecutiveLosses: number;
+    peakPortfolioUSD: number;
+    currentDrawdownPct: number;
+    dailyTradeCount: number;
+    isHalted: boolean;
+    haltReason?: string;
+    cooldownUntil: number;
+    lastExecutionFailedAt?: number;
+    dailyStartEquityUSD: number;
+  };
+  openTrades: Array<{ id: string; sizeUSD: number; entryPrice: number }>;
+}
 type SecondarySnapshot = Record<string, unknown> | undefined;
 
 interface OpenTradeMeta {
@@ -167,7 +184,63 @@ class CanonicalRiskStateStore {
       pro: this.proSecondary,
     };
   }
+  exportState(): CanonicalRiskPersistedState {
+    return {
+      state: {
+        tradingDay: this.state.tradingDay,
+        dailyPnlUSD: this.state.dailyPnlUSD,
+        dailyPnlPct: this.state.dailyPnlPct,
+        dailySpentSOL: this.state.dailySpentSOL,
+        consecutiveLosses: this.state.consecutiveLosses,
+        peakPortfolioUSD: this.state.peakPortfolioUSD,
+        currentDrawdownPct: this.state.currentDrawdownPct,
+        dailyTradeCount: this.state.dailyTradeCount,
+        isHalted: this.state.isHalted,
+        haltReason: this.state.haltReason,
+        cooldownUntil: this.state.cooldownUntil,
+        lastExecutionFailedAt: this.state.lastExecutionFailedAt,
+        dailyStartEquityUSD: this.state.dailyStartEquityUSD,
+      },
+      openTrades: Array.from(this.openTrades.entries()).map(([id, meta]) => ({
+        id,
+        sizeUSD: meta.sizeUSD,
+        entryPrice: meta.entryPrice,
+      })),
+    };
+  }
 
+  hydrate(input: Partial<CanonicalRiskPersistedState> | undefined): void {
+    if (!input || typeof input !== "object") return;
+    const state = input.state || {};
+    this.state = {
+      tradingDay:
+        typeof state.tradingDay === "string" && state.tradingDay.length > 0
+          ? state.tradingDay
+          : this.dayStamp(),
+      dailyPnlUSD: this.safeNumber(state.dailyPnlUSD),
+      dailyPnlPct: this.safeNumber(state.dailyPnlPct),
+      dailySpentSOL: this.safeNumber(state.dailySpentSOL),
+      consecutiveLosses: Math.max(0, Math.floor(this.safeNumber(state.consecutiveLosses))),
+      peakPortfolioUSD: this.safeNumber(state.peakPortfolioUSD),
+      currentDrawdownPct: this.safeNumber(state.currentDrawdownPct),
+      dailyTradeCount: Math.max(0, Math.floor(this.safeNumber(state.dailyTradeCount))),
+      isHalted: state.isHalted === true,
+      haltReason: typeof state.haltReason === "string" ? state.haltReason : undefined,
+      cooldownUntil: this.safeNumber(state.cooldownUntil),
+      lastExecutionFailedAt: this.safeOptionalNumber(state.lastExecutionFailedAt),
+      dailyStartEquityUSD: this.safeNumber(state.dailyStartEquityUSD),
+    };
+
+    this.openTrades.clear();
+    for (const item of input.openTrades || []) {
+      if (!item || typeof item.id !== "string" || !item.id) continue;
+      this.openTrades.set(item.id, {
+        sizeUSD: this.safeNumber(item.sizeUSD),
+        entryPrice: this.safeNumber(item.entryPrice),
+      });
+    }
+    this.refreshDailyPnlPct();
+  }
   resetForTests(): void {
     this.openTrades.clear();
     this.brainSecondary = undefined;
@@ -207,6 +280,14 @@ class CanonicalRiskStateStore {
 
   private round4(value: number): number {
     return Math.round(value * 10000) / 10000;
+  }
+
+  private safeNumber(value: unknown): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  }
+
+  private safeOptionalNumber(value: unknown): number | undefined {
+    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
   }
 }
 

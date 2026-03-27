@@ -106,6 +106,21 @@ class TradeJournalService {
     return this.getEntries().slice(-limit).reverse();
   }
 
+  hydrate(entries: TradeJournalEntry[]): void {
+    this.entries.length = 0;
+    for (const entry of entries) {
+      this.entries.push({
+        ...entry,
+        blockReasons: Array.isArray(entry.blockReasons) ? [...entry.blockReasons] : [],
+      });
+    }
+    const maxId = this.entries.reduce((max, entry) => {
+      const n = Number(entry.id.replace(/^PRO-/, ""));
+      return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 0);
+    this.nextId = maxId + 1;
+  }
+
   private normalizeConfidence(confidence: number): number {
     const normalized = confidence > 1 ? confidence / 100 : confidence;
     return Math.max(0, Math.min(1, normalized));
