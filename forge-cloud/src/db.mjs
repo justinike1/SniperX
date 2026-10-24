@@ -59,6 +59,20 @@ export function openStore(filename) {
       UNIQUE(mission_id,worker_user_id)
     );
     CREATE INDEX IF NOT EXISTS idx_mission_interests_worker ON mission_interests(worker_user_id,status);
+    CREATE TABLE IF NOT EXISTS employment_shift_intakes (
+      id TEXT PRIMARY KEY,
+      buyer_user_id TEXT NOT NULL REFERENCES users(id),
+      data TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_shift_intakes_buyer ON employment_shift_intakes(buyer_user_id,created_at);
+    CREATE TABLE IF NOT EXISTS earn_availability (
+      worker_user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK(status IN ('ON','OFF')),
+      expires_at INTEGER NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_earn_availability_active ON earn_availability(status,expires_at);
     CREATE TABLE IF NOT EXISTS external_jobs (
       source_key TEXT PRIMARY KEY, source TEXT NOT NULL, employer TEXT NOT NULL,
       title TEXT NOT NULL, location TEXT NOT NULL, apply_url TEXT NOT NULL,
@@ -69,6 +83,36 @@ export function openStore(filename) {
     CREATE INDEX IF NOT EXISTS idx_missions_buyer ON missions(buyer_user_id);
     CREATE INDEX IF NOT EXISTS idx_missions_worker ON missions(worker_user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
+    CREATE TABLE IF NOT EXISTS sandbox_mission_funding (
+      mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE RESTRICT,
+      amount_cents INTEGER NOT NULL CHECK(amount_cents BETWEEN 100 AND 1000000),
+      worker_cents INTEGER NOT NULL CHECK(worker_cents>0),
+      platform_fee_cents INTEGER NOT NULL CHECK(platform_fee_cents>=0),
+      status TEXT NOT NULL CHECK(status IN ('RESERVED','RELEASED','VOIDED_SIMULATED')),
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL, released_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS sandbox_payouts (
+      id TEXT PRIMARY KEY,
+      worker_user_id TEXT NOT NULL REFERENCES users(id),
+      idempotency_key TEXT NOT NULL,
+      method TEXT NOT NULL CHECK(method IN ('STANDARD','INSTANT')),
+      amount_cents INTEGER NOT NULL CHECK(amount_cents BETWEEN 500 AND 1000000),
+      fee_cents INTEGER NOT NULL CHECK(fee_cents>=0),
+      net_cents INTEGER NOT NULL CHECK(net_cents>0),
+      status TEXT NOT NULL CHECK(status IN ('REQUESTED_SIMULATED','PAID_SIMULATED','FAILED_SIMULATED')),
+      requested_at TEXT NOT NULL,completed_at TEXT,
+      UNIQUE(worker_user_id,idempotency_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_sandbox_payouts_worker ON sandbox_payouts(worker_user_id,requested_at);
+    CREATE TABLE IF NOT EXISTS sandbox_wallet_ledger (
+      id TEXT PRIMARY KEY,worker_user_id TEXT NOT NULL REFERENCES users(id),
+      mission_id TEXT REFERENCES missions(id),payout_id TEXT REFERENCES sandbox_payouts(id),
+      kind TEXT NOT NULL CHECK(kind IN ('MISSION_RELEASE','PAYOUT_RESERVED','PAYOUT_REFUNDED')),
+      amount_cents INTEGER NOT NULL CHECK(amount_cents!=0),
+      event_key TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sandbox_wallet_worker ON sandbox_wallet_ledger(worker_user_id,created_at);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
   `);
   try{fs.chmodSync(absolute,0o600)}catch{}

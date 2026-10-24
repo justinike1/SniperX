@@ -28,7 +28,7 @@ export function publicOpportunity(m){
   illustrativeWorkerPayCents:split.workerPayCents,
   illustrativePlatformFeeCents:split.platformFeeCents,
   createdAt:m.createdAt,
-  demonstrationOnly:true,
+  demonstrationOnly:true,engagementIntent:'SERVICE_PROJECT',laborClassification:'NOT_DETERMINED',
   liveAssignmentAvailable:false,
   paymentEnabled:false,
   payoutTiming:'NOT_CONFIGURED',
@@ -92,14 +92,14 @@ export function handleEarn(ctx){
     if(!fit.eligible)fail(409,fit.reasons.join('; '));
    }
    const previous=store.one('SELECT status FROM mission_interests WHERE mission_id=? AND worker_user_id=?',missionId,ctx.user.id);
-   if(raw==='WITHDRAW'&&(!previous||previous.status==='WITHDRAWN'))return {status:'WITHDRAWN',demonstrationOnly:true,changed:false};
-   if(raw==='EXPRESS'&&previous?.status==='INTERESTED')return {status:'INTERESTED',demonstrationOnly:true,changed:false};
+   if(raw==='WITHDRAW'&&(!previous||previous.status==='WITHDRAWN'))return {status:'WITHDRAWN',demonstrationOnly:true,engagementIntent:'SERVICE_PROJECT',laborClassification:'NOT_DETERMINED',changed:false};
+   if(raw==='EXPRESS'&&previous?.status==='INTERESTED')return {status:'INTERESTED',demonstrationOnly:true,engagementIntent:'SERVICE_PROJECT',laborClassification:'NOT_DETERMINED',changed:false};
    const now=new Date().toISOString(), next=raw==='EXPRESS'?'INTERESTED':'WITHDRAWN';
    store.run(`INSERT INTO mission_interests(id,mission_id,worker_user_id,status,created_at,updated_at)
      VALUES(?,?,?,?,?,?) ON CONFLICT(mission_id,worker_user_id) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at`,
      randomUUID(),missionId,ctx.user.id,next,now,now);
    store.audit(ctx.user.id,next==='INTERESTED'?'DEMO_MISSION_INTERESTED':'DEMO_MISSION_INTEREST_WITHDRAWN','mission',missionId,{workerUserId:ctx.user.id});
-   return {status:next,demonstrationOnly:true,changed:true,assignmentCreated:false,paymentInitiated:false};
+   return {status:next,demonstrationOnly:true,engagementIntent:'SERVICE_PROJECT',laborClassification:'NOT_DETERMINED',changed:true,assignmentCreated:false,paymentInitiated:false};
   });
  }
  return undefined;

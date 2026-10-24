@@ -25,7 +25,7 @@ test('responsive mobile styles and reduced-motion support',()=>{
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
 
-test('Earn view passes feed and services in correct order and binds existing handler',()=>{
- assert.match(app,/state\.view==='earn'[\s\S]*earnContent\(feed,services\);bindEarn\(feed\)/);
+test('Earn view passes feed, services and the Fast Lane discovery response and binds their handlers',()=>{
+ assert.match(app,/state\.view==='earn'[\s\S]*earnTodayContent\(feed,services,discovery\);bindFastLane\(discovery\);bindEarn\(feed\)/);
  assert.doesNotMatch(app,/bindRadar\(/);
 });
