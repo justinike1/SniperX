@@ -43,7 +43,7 @@ export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolv
         checkOrigin(req,publicOrigin);
         body=await readBody(req);
       }
-      const ctx={store,method,path:pathname,body,res,secure,cookies:{},session:null,user:null,sessionToken:null,
+      const ctx={store,method,path:pathname,query:requestURL.searchParams,body,res,secure,cookies:{},session:null,user:null,sessionToken:null,
         sessionCookie:token=>sessionCookie(token,secure),clearCookie:()=>clearCookie(secure)};
       // Session tokens must be HttpOnly cookies, never carried in query strings.
       const cookieHeader=req.headers.cookie||'';

@@ -4,6 +4,9 @@ import {fail,secret,hashSecret,hashPassword,normalizeEmail,verifyPassword,displa
 import {listCurrentJobs,refreshJobs} from './jobs.mjs';
 import {handleVerification} from './verification.mjs';
 import {handleEarn} from './earn.mjs';
+import {handleDiscover} from './discover.mjs';
+import {handleQuickPost} from './quickpost.mjs';
+import {handlePayouts,releaseSandboxEarnings,voidSandboxFunding} from './payouts.mjs';
 import {INDUSTRIES,SERVICES,catalogSummary,searchIndustries} from './marketplace.mjs';
 
 // Return expected state-machine violations as conflicts, not internal server failures.
@@ -36,6 +39,12 @@ export function currentSession(ctx){
  return user?{user,csrf:sess.csrf,session:sess,token:cookie}:null;
 }
 export async function handle(ctx){const {store,method,path,body,res,secure}=ctx;
+ const payoutResponse=handlePayouts(ctx);
+ if(payoutResponse!==undefined)return payoutResponse;
+ const quickPostResponse=handleQuickPost(ctx);
+ if(quickPostResponse!==undefined)return quickPostResponse;
+ const discoveryResponse=handleDiscover(ctx);
+ if(discoveryResponse!==undefined)return discoveryResponse;
  const earnResponse=handleEarn(ctx);
  if(earnResponse!==undefined)return earnResponse;
  const verificationResponse=handleVerification(ctx);
@@ -153,7 +162,8 @@ export async function handle(ctx){const {store,method,path,body,res,secure}=ctx;
   if(!['TODAY','NEXT_48H','FLEXIBLE'].includes(urgency))fail(422,'Choose a valid urgency');
   const estimatedMinutes=body.estimatedMinutes===undefined?60:Number(body.estimatedMinutes);
   if(!Number.isInteger(estimatedMinutes)||estimatedMinutes<15||estimatedMinutes>480)fail(422,'Estimated duration must be between 15 and 480 minutes');
-  const mission={...outcome.value,urgency,estimatedMinutes,buyerUserId:ctx.user.id,workerUserId:null};
+  const mission={...outcome.value,urgency,estimatedMinutes,buyerUserId:ctx.user.id,workerUserId:null,
+   engagementIntent:'SERVICE_PROJECT',laborClassification:'NOT_DETERMINED',classificationReviewRequired:true,fundsCollected:false};
   store.transaction(()=>{store.run('INSERT INTO missions VALUES(?,?,?,?,?,?)',mission.id,ctx.user.id,null,json(store.stripRelations(mission)),mission.createdAt,mission.updatedAt);store.audit(ctx.user.id,'MISSION_CREATED','mission',mission.id,{category:mission.category})});
   return {mission:publicMission(mission)};
  }
@@ -188,12 +198,26 @@ export async function handle(ctx){const {store,method,path,body,res,secure}=ctx;
  }
  const accept=path.match(/^\/api\/missions\/([^/]+)\/accept$/);
  if(method==='POST'&&accept){requireRole(ctx,'buyer');const m=actorMission(ctx,accept[1]);if(m.buyerUserId!==ctx.user.id)fail(403,'Not your request');
-  const changed=changeMission(m,'COMPLETED',{buyerAccepted:true});saveWithAudit(ctx,changed,'BUYER_ACCEPTED_SIMULATED',{});return {mission:publicMission(changed),paymentCaptured:false,payoutSent:false};
+  const changed=changeMission(m,'COMPLETED',{buyerAccepted:true});
+  const payoutTest=store.transaction(()=>{
+    store.saveMission(changed);
+    const release=releaseSandboxEarnings(store,changed);
+    store.audit(ctx.user.id,'BUYER_ACCEPTED_SIMULATED','mission',m.id,{sandboxCreditReleased:release.released});
+    return release;
+  });
+  return {mission:publicMission(changed),sandboxEarnings:payoutTest,paymentCaptured:false,payoutSent:false};
  }
  const cancel=path.match(/^\/api\/missions\/([^/]+)\/cancel$/);
  if(method==='POST'&&cancel){requireRole(ctx,'admin','buyer');const m=actorMission(ctx,cancel[1]);
   if(ctx.user.role==='buyer'&&m.buyerUserId!==ctx.user.id)fail(403,'Not your request');
-  const changed=changeMission(m,'CANCELLED',{reason:cleanNote(body.reason,8,250)});saveWithAudit(ctx,changed,'MISSION_CANCELLED',{});return {mission:publicMission(changed)};
+  const changed=changeMission(m,'CANCELLED',{reason:cleanNote(body.reason,8,250)});
+  const funding=store.transaction(()=>{
+    store.saveMission(changed);
+    const result=voidSandboxFunding(store,changed);
+    store.audit(ctx.user.id,'MISSION_CANCELLED','mission',m.id,{sandboxFundsVoided:result.voided});
+    return result;
+  });
+  return {mission:publicMission(changed),sandboxFunding:funding};
  }
  const incident=path.match(/^\/api\/missions\/([^/]+)\/incident$/);
  if(method==='POST'&&incident){const m=actorMission(ctx,incident[1]);const note=cleanNote(body.note,20,800);
