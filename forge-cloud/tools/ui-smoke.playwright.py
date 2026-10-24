@@ -1,5 +1,7 @@
 from playwright.sync_api import sync_playwright
 from pathlib import Path
+import os
+import shutil
 import tempfile
 app=Path(__file__).resolve().parents[1]
 html=(app/'public/index.html').read_text().replace('<script type="module" src="/app.js"></script>','')
@@ -30,7 +32,18 @@ mock='''(role)=>{
  };
 }'''
 with sync_playwright() as p:
- browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox'])
+ def browser_path():
+  configured=os.getenv('FORGE_BROWSER_EXECUTABLE')
+  if configured and Path(configured).exists():
+   return configured
+  for candidate in ('/usr/bin/chromium','/usr/bin/chromium-browser','/usr/local/bin/google-chrome','/usr/bin/google-chrome-stable','/usr/bin/google-chrome'):
+   if Path(candidate).exists():
+    return candidate
+  return shutil.which('chromium') or shutil.which('google-chrome') or shutil.which('google-chrome-stable')
+ launch_opts={'headless':True,'args':['--no-sandbox']}
+ if browser_path():
+  launch_opts['executable_path']=browser_path()
+ browser=p.chromium.launch(**launch_opts)
  errors=[]
  def make_page(role,width,height):
   page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
@@ -41,10 +54,11 @@ with sync_playwright() as p:
   page.add_script_tag(content=js,type="module")
   return page
  buyer=make_page('buyer',1400,900)
- buyer.locator('#viewtitle').get_by_text('Your home').wait_for(timeout=10000)
- assert buyer.locator('.quick-action').count()==3
+ buyer.locator('#viewtitle').wait_for(state='attached',timeout=10000)
+ assert buyer.locator('#viewtitle').inner_text()=='Your workspace'
+ assert buyer.locator('.focus-tile').count()==3
  buyer.screenshot(path=f'{screens}/SniperX-Forge-v07-Customer-Home.png',full_page=True)
- buyer.locator('[data-go="new"]').click()
+ buyer.locator('[data-go="new"]').first.click()
  assert buyer.locator('#stepName').inner_text()=='Step 1 of 3'
  buyer.locator('#wizardNext').click()
  assert buyer.locator('#stepName').inner_text()=='Step 1 of 3','incomplete wizard must not advance'
@@ -77,12 +91,12 @@ with sync_playwright() as p:
  buyer.screenshot(path=f'{screens}/SniperX-Forge-v07-Jobs-Browser.png',full_page=True)
  # Admin modal review rendered with native dialog, no blocking JS prompt.
  admin=make_page('admin',1365,850)
- admin.locator('[data-go="admin"]').click()
+ admin.locator('[data-go="admin"]').first.click()
  admin.locator('#inviteForm').wait_for()
  admin.screenshot(path=f'{screens}/SniperX-Forge-v07-Admin-Workspace.png',full_page=True)
  # Worker onboarding remains available.
  worker=make_page('worker',1000,800)
- worker.locator('[data-go="worker"]').click()
+ worker.locator('#nav button[data-view="worker"]').click()
  worker.locator('#workerForm').wait_for()
  # Mobile nav scroll contained and tap targets usable.
  mobile=make_page('buyer',390,844)
