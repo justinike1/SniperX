@@ -1,4 +1,4 @@
-# SniperX Forge — Prototype v0.3 (Trust & Safety Pass)
+# SniperX Forge — Prototype v0.3 (Trust & Safety + Stage 2 Foundation)
 
 **A demand-backed work coordination platform.** This is a standalone, deliberately local-only **sandbox** developed as an additive companion to the existing `SniperX` cryptocurrency trading repository. It is *not* integrated into, deployed with, or a replacement for the original trading server.
 
@@ -6,7 +6,7 @@ Forge explores a single core loop: a buyer has a defined service request → a q
 
 ## Try it locally
 
-Requires **Node.js 20+**. No additional packages or payment account needed.
+Requires **Node.js 20+**.
 
 ```bash
 cd forge
@@ -15,9 +15,21 @@ npm run check
 npm start
 ```
 
+Optional (PostgreSQL mode):
+
+```bash
+cd forge
+export DATABASE_URL=postgres://...
+npm run migrate
+npm start
+```
+
 Open **http://127.0.0.1:5100**. If your machine has an existing service on port 5100, set `FORGE_PORT=5200` before starting. The server intentionally refuses to bind to public network interfaces; don't deploy this demo as-is.
 
-Your local changes are saved to `forge/.local/demo-state.json`, which is git-ignored. Use **Reset demo** to clear the fictional scenario.
+When `DATABASE_URL` is not set, Forge uses local JSON persistence at `forge/.local/demo-state.json` (git-ignored).  
+When `DATABASE_URL` is set, Forge uses PostgreSQL plus SQL migrations in `forge/migrations/`.
+
+By default, Stage 2 auth is enabled (`FORGE_AUTH_REQUIRED=true` unless explicitly disabled).
 
 ## What you can do
 
@@ -28,7 +40,17 @@ Your local changes are saved to `forge/.local/demo-state.json`, which is git-ign
 - Use **Demand Intelligence** to see coverage by category, unfilled mission gaps, demand pipeline and potential vs completed *simulated* compensation.
 - Reset the entire demo to fresh fictional examples.
 
-## Prototype hardening (0.3)
+## Stage 2 Cloud Foundation (implemented)
+
+- Role-based account system with password hashing (`scrypt`) and session lifecycle.
+- Roles: `ADMIN`, `CUSTOMER`, `PARTICIPANT`.
+- Enforced authorization on write operations and scoped read access for mission data.
+- Session token hashing at rest (SHA-256), expiration, and logout support.
+- Audit event stream for registration, login, mission actions, incidents, and resets.
+- PostgreSQL storage mode via `DATABASE_URL` with migration script (`npm run migrate`).
+- Local JSON storage mode retained for sandbox continuity and offline development.
+
+## Prototype hardening (v0.3)
 
 - Unsafe-scope screening for selected hazard, deceptive-work, vulnerable-person and credentials scenarios. Keyword heuristics are incomplete and never sufficient to authorize real work.
 - Explicit simulated operator scope-review attestation before approving a demo mission.
@@ -39,13 +61,17 @@ Your local changes are saved to `forge/.local/demo-state.json`, which is git-ign
 
 See `docs/TRUST_AND_SAFETY.md` and `docs/RELEASE_GATES.md`. All production release gates currently FAIL.
 
-**Security qualification:** This is not a production authentication architecture. Any person or program that can access the local browser session may operate the demo.
+**Security qualification:** This is still a pre-production sandbox. The new auth/RBAC foundation improves readiness, but independent security review, full identity verification, and tenant-hardening are still release blockers.
 
 ## API endpoints
 
 | Method | Path | Result |
 |---|---|---|
 | GET | `/api/forge/health` | Sandbox status and public-launch block |
+| GET | `/api/forge/auth/me` | Current session/user context |
+| POST | `/api/forge/auth/register` | Register account (bootstrap-first user, then admin-managed) |
+| POST | `/api/forge/auth/login` | Start authenticated session |
+| POST | `/api/forge/auth/logout` | End authenticated session |
 | GET | `/api/forge/safety` | Safety holds, real-operation gates and limitations |
 | GET | `/api/forge` | Snapshot, missions, participants, activity |
 | GET | `/api/forge/intelligence` | Demand supply coverage, gaps, simulated pipeline metrics |
@@ -56,8 +82,9 @@ See `docs/TRUST_AND_SAFETY.md` and `docs/RELEASE_GATES.md`. All production relea
 | POST | `/api/forge/workers` | Register fictional demo participant |
 | POST | `/api/forge/missions/:id/incident` | Record a **demo** safety concern and permanently hold mission progression (until cancellation) |
 | POST | `/api/forge/reset` | Reset demo records |
+| GET | `/api/forge/admin/audit` | Admin audit feed of security/operational events |
 
-**API developer note:** For local POST requests, load `/` first, read the per-process `forge-csrf` meta token and pass it in `X-Forge-CSRF`; the UI does this automatically. This anti-CSRF token is not user authentication.
+**API developer note:** For local POST requests, load `/` first, read the per-process `forge-csrf` meta token and pass it in `X-Forge-CSRF`; the UI does this automatically. Auth sessions and CSRF token are separate controls.
 
 ## Matching policy
 
@@ -81,15 +108,15 @@ Cancellation is possible before completion. 'Completed' requires explicit fictio
 
 ## What must happen before live customers
 
-1. Design isolated multi-tenant authentication, role-based authorization, and consent-based personal data storage (not the existing trading schema).
+1. Complete tenant isolation for production multi-organization operation (Stage 2 currently provides role-based controls and scoped reads in a single sandbox tenant).
 2. Replace fictional listings with genuine customer-confirmed requests; verify buyers, participants, scope and qualifications.
 3. Implement proper location and travel-distance checks rather than the initial conservative city rule.
 4. Integrate a regulated payment processor with onboarding, taxes, refunds, customer disputes, fraud prevention, and auditable payment ledgers.
 5. Review service category licenses, worker classification and insurance requirements by jurisdiction with appropriate advisers.
-6. Move demo JSON storage to durable relational storage with migrations, audit logs, idempotent financial operations and access controls.
+6. Expand relational model beyond single-state persistence toward fully normalized missions/workers/ledger tables with idempotent write patterns.
 7. Establish a pilot with 5 verified paid assignments and positive contribution margin before scaling.
 
-**Security note:** The prototype has no real accounts, authentication, or payment provider and intentionally operates only on localhost. Never expose it publicly without a security overhaul.
+**Security note:** Real payment provider integration is not implemented. Identity checks are not implemented. Never expose this system publicly without independent security and legal review.
 
 ## Roadmap
 
