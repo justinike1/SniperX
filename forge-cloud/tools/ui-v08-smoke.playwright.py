@@ -65,7 +65,7 @@ with sync_playwright() as p:
  buyer.locator('#wizardNext').click();assert 'Write ten product descriptions' in buyer.locator('#missionReview').inner_text()
  buyer.screenshot(path=str(screens/'v08-Request.png'),full_page=True)
  buyer.locator('#wizardSubmit').click();buyer.locator('#missionResults').get_by_text('Write ten product descriptions').wait_for()
- buyer.locator('#nav [data-view=earn]').click();buyer.locator('.service-item').first.wait_for(timeout=6000);assert buyer.locator('.service-item').count()==8
+ buyer.locator('#nav [data-view=earn]').click();buyer.locator('.category-card').first.wait_for(timeout=6000);assert buyer.locator('.category-card').count()==8
  buyer.screenshot(path=str(screens/'v08-Earn.png'),full_page=True)
  buyer.locator('[data-template=product-copy]').click();assert buyer.locator('.forge-dialog').is_visible();assert 'no paid projects' in buyer.locator('.forge-dialog').inner_text().lower();buyer.locator('.forge-dialog button[type=submit]').click();buyer.locator('#missionForm').wait_for();assert buyer.locator('input[name=title]').input_value()=='Write product descriptions'
  buyer.locator('#nav [data-view=catalog]').click();buyer.locator('.catalog-card').first.wait_for(timeout=6000);assert buyer.locator('.catalog-card').count()==25
@@ -75,7 +75,7 @@ with sync_playwright() as p:
  buyer.locator('#nav [data-view=jobs]').click();buyer.locator('#jobSearch').fill('customer');assert 'Customer Support Specialist' in buyer.locator('#jobResults').inner_text()
  worker=page('worker',1400,900)
  worker.screenshot(path=str(screens/'v08-Worker-Home.png'),full_page=True)
- worker.locator('.service-item').first.wait_for(timeout=6000);assert worker.locator('.service-item').count()==8
+ worker.locator('.category-card').first.wait_for(timeout=6000);assert worker.locator('.category-card').count()==8
  worker.locator('[data-go=worker]').first.click();worker.locator('#workerForm').wait_for()
  admin=page('admin',1200,900)
  admin.locator('.hero-cta').click();admin.locator('#inviteForm').wait_for()

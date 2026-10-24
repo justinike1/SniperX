@@ -41,34 +41,57 @@ function homeHighlights(){
  :[['earn','Digital services','See the first work categories being prepared','01'],['worker','Tell us your skills','Build a profile for the Forge mission pilot','02'],['catalog','Explore every field','Find your profession in the broader network','03']];
  return `<div class="section-head"><div><span class="eyebrow">THE NEXT MOVE</span><h2>Start where you are.</h2></div><p>One clear step at a time.</p></div><div class="focus-grid">${fields.map(([v,title,desc,n])=>`<button type="button" class="focus-tile" data-go="${v}"><span>${n} / EXPLORE</span><strong>${esc(title)}</strong><small>${esc(desc)}</small><b aria-hidden="true">↗</b></button>`).join('')}</div>`;
 }
+
+function categorySymbol(label){
+ const key=String(label||'').toLowerCase();
+ if(key.includes('content'))return 'CC';
+ if(key.includes('digital'))return 'DS';
+ if(key.includes('local'))return 'LC';
+ return 'FX';
+}
+function heroMissionTile(m){
+ return `<article class="hero-mission-tile"><div><p>${esc(m.title)}</p><small>${esc(m.category)} · ${esc(m.locationLabel||'Remote-friendly')}</small></div><strong>${money(m.illustrativeWorkerPayCents)}</strong></article>`;
+}
+function missionMapPins(items){
+ return items.slice(0,6).map((m,idx)=>`<span class="map-pin pin-${idx+1}" title="${esc(m.title)}">${idx+1}</span>`).join('');
+}
+
 function earnOpportunityCard(m){
  const eligibility=m.fit;
  const canExpress=state.user.role==='worker'&&eligibility?.eligible;
  const inList=!!m.expressedInterest;
  const reasons=eligibility?.reasons?.filter(Boolean)||[];
- const skills=(m.skills||[]).slice(0,4);
+ const skills=(m.skills||[]).slice(0,3);
  return `<article class="opportunity-card">
-   <div class="opportunity-top"><span class="opportunity-type">${esc(m.category)}</span><span class="opportunity-demo">TEST MISSION</span></div>
-   <div class="opportunity-body"><h3>${esc(m.title)}</h3><p class="opportunity-location"><span aria-hidden="true">⌾</span> ${esc(m.locationLabel||'Location not supplied')} <span class="center-dot">·</span> ${esc(m.schedule||'Flexible')}</p>
-   <div class="opportunity-skills">${skills.map(skill=>`<span>${esc(skill)}</span>`).join('')}</div></div>
-   <div class="opportunity-bottom"><div><span class="money-caption">ILLUSTRATIVE WORKER SHARE</span><strong class="opportunity-pay">${money(m.illustrativeWorkerPayCents)}</strong><small>Not payable in beta</small></div>
-   ${state.user.role==='worker'?`<button type="button" class="${inList?'interest-btn is-interested':'interest-btn'}" data-earn-interest="${esc(m.id)}" data-interest-action="${inList?'WITHDRAW':'EXPRESS'}" ${(!inList&&!canExpress)?'disabled':''} aria-label="${inList?'Withdraw demonstration interest in':'Express demonstration interest in'} ${esc(m.title)}">${inList?'Interest saved ✓':'Express interest ↗'}</button>`:`<span class="opportunity-readonly">Preview only</span>`}
-   </div>${state.user.role==='worker'&&!canExpress&&!inList?`<p class="fit-message">${esc(reasons.slice(0,2).join(' · ')||'A reviewed profile is required.')}</p>`:''}
+  <div class="opportunity-top"><span class="opportunity-type">${esc(m.category)}</span><span class="opportunity-demo">TEST MISSION</span></div>
+  <h3>${esc(m.title)}</h3>
+  <p class="opportunity-location">${esc(m.locationLabel||'Location not supplied')} · ${esc(m.schedule||'Flexible')}</p>
+  <div class="opportunity-skills">${skills.map(skill=>`<span>${esc(skill)}</span>`).join('')}</div>
+  <div class="opportunity-bottom"><div><span class="money-caption">ILLUSTRATIVE WORKER SHARE</span><strong class="opportunity-pay">${money(m.illustrativeWorkerPayCents)}</strong><small>Not payable in beta</small></div>
+  ${state.user.role==='worker'?`<button type="button" class="${inList?'interest-btn is-interested':'interest-btn'}" data-earn-interest="${esc(m.id)}" data-interest-action="${inList?'WITHDRAW':'EXPRESS'}" ${(!inList&&!canExpress)?'disabled':''}>${inList?'Interest saved ✓':'Express interest ↗'}</button>`:`<span class="opportunity-readonly">Preview only</span>`}
+  </div>${state.user.role==='worker'&&!canExpress&&!inList?`<p class="fit-message">${esc(reasons.slice(0,2).join(' · ')||'A reviewed profile is required.')}</p>`:''}
  </article>`;
 }
+
 function earnContent(feed,services){
  const demos=feed.opportunities||[];
  const worker=state.user.role==='worker';
- return `<section class="radar-hero"><div class="radar-copy"><div class="radar-eyebrow"><span class="radar-pulse"></span> THE EARN NOW NETWORK <span class="radar-eyebrow-separator">/</span> PRIVATE BETA</div><h2>Make a move.<br><span>Make money.</span></h2><p>Find practical work. Use your skills. Build income on your own terms. We're preparing the mission marketplace — live paid opportunities are <strong>not available yet.</strong></p><div class="radar-hero-actions">${worker?'<button type="button" data-go="worker" class="radar-main-btn">Build my profile <span aria-hidden="true">↗</span></button>':state.user.role==='buyer'?'<button type="button" data-go="new" class="radar-main-btn">Create a test request <span aria-hidden="true">↗</span></button>':'<button type="button" data-go="admin" class="radar-main-btn">Manage test requests <span aria-hidden="true">↗</span></button>'}<span class="radar-hero-footnote">NO FEES TO BROWSE · INVITE-ONLY PILOT</span></div></div>
- <div class="radar-visual" aria-hidden="true"><div class="radar-orbit orbit-a"></div><div class="radar-orbit orbit-b"></div><div class="radar-orbit orbit-c"></div><div class="radar-cross cross-a">+</div><div class="radar-cross cross-b">+</div><div class="radar-center"><span>✳</span></div><div class="radar-vertical">THE WORLD IS FULL OF WORK</div><div class="radar-bottom-coordinate">40° 53′ N · 74° 33′ W</div></div></section>
- <section class="mission-market" aria-labelledby="market-title"><div class="market-section-head"><div><div class="kicker">01 / THE MARKETPLACE</div><h2 id="market-title">Find your next mission<span class="headline-period">.</span></h2><p>Browse approved test requests below. Paid opportunities will appear here only after launch approval.</p></div><div class="market-status"><strong>0</strong><span>LIVE PAID<br>MISSIONS</span></div></div>
- <div class="market-search"><label class="search-wrap"><span class="search-icon" aria-hidden="true">⌕</span><span class="sr-only">Search mission requests</span><input id="earnSearch" type="search" placeholder="Search missions, skills, or city…" autocomplete="off"></label><label class="sort-wrap"><span class="sr-only">Sort test missions</span><select id="earnSort"><option value="newest">Newest first</option><option value="pay">Illustrative pay</option></select></label></div>
- <div class="market-filters" role="group" aria-label="Mission category filters"><button type="button" data-earn-filter="all" class="filter-chip active" aria-pressed="true">All missions</button><button type="button" data-earn-filter="Content & Copy" class="filter-chip" aria-pressed="false">Content & copy</button><button type="button" data-earn-filter="Digital Setup" class="filter-chip" aria-pressed="false">Digital setup</button><span id="earnCount" class="market-count" role="status" aria-live="polite"></span></div>
- <div id="earnResults" class="earn-results">${demos.length?'':'<div class="empty-radar"><div class="empty-art" aria-hidden="true"><span class="empty-art-symbol">✳</span><div class="empty-art-ring"></div></div><span class="empty-label">THE BOARD IS GETTING READY</span><h3>No live missions yet<span>.</span></h3><p>We won’t post fake jobs or promise instant cash. As customers fund real assignments and the platform passes its launch checks, opportunities will show up here.</p><div class="empty-actions">'+(worker?'<button type="button" data-go="worker" class="primary">Get your profile ready ↗</button>':state.user.role==='buyer'?'<button type="button" data-go="new" class="primary">Explore posting a request ↗</button>':'<button type="button" data-go="admin" class="primary">Review pilot readiness ↗</button>')+'<span>COMING SOON · NO MONEY MOVES TODAY</span></div></div>'}</div>
- </section>
- <section class="explore-services" aria-labelledby="services-title"><div class="market-section-head"><div><div class="kicker">02 / WHAT YOU CAN DO</div><h2 id="services-title">Skills are currency<span class="headline-period">.</span></h2><p>Our first eight digital-service categories. These are service ideas, <strong>not available paid jobs.</strong></p></div><span class="section-side-note">DIGITAL SERVICES / PHASE ONE</span></div>
- <div class="service-list">${services.map((s,i)=>`<article class="service-item"><div class="service-index">${String(i+1).padStart(2,'0')}</div><div class="service-body"><span class="service-category">${esc(s.category)}</span><h3>${esc(s.title)}</h3><p>${esc(s.description)}</p><div class="service-skills">${(s.skills||[]).slice(0,3).map(x=>`<span>${esc(x)}</span>`).join('')}</div></div><button type="button" data-template="${esc(s.id)}" class="service-arrow" aria-label="Learn about ${esc(s.title)}">↗</button></article>`).join('')}</div></section>
- <section class="earn-trust"><span class="earn-trust-mark">✳</span><div><strong>Real work. Real people. No empty promises.</strong><p>This is a private product test. Interest buttons are demonstrations; there are no paid missions, assignments, instant transfers, or independent verifications available yet.</p></div><button type="button" data-go="safety" class="earn-trust-link">How trust works ↗</button></section>`;
+ const roleAction=worker
+  ? '<button type="button" data-go="worker" class="hero-primary">Get profile ready ↗</button>'
+  : state.user.role==='buyer'
+   ? '<button type="button" data-go="new" class="hero-primary">Post a mission ↗</button>'
+   : '<button type="button" data-go="admin" class="hero-primary">Open operations ↗</button>';
+ const teaserMarkup=demos.length
+  ? demos.slice(0,3).map(heroMissionTile).join('')
+  : '<div class="hero-empty">No live missions yet</div>';
+ const mapPreview=demos[0] ? `<article class="map-preview-card"><p>${esc(demos[0].title)}</p><small>${money(demos[0].illustrativeWorkerPayCents)} · demo only</small></article>` : '<article class="map-preview-card"><p>No live missions yet</p><small>Coming soon after launch gates</small></article>';
+ return `<section class="earn-showcase"><div class="earn-showcase-copy"><p class="showcase-brand">SNIPERX FORGE · PRIVATE BETA</p><h2>Make Money <span>Today.</span></h2><p>Find unique missions near you or online. Do the work. Get paid after launch approval — never with fake inventory.</p><div class="showcase-actions">${roleAction}<button type="button" data-go="missions" class="hero-secondary">My missions →</button></div><ul class="showcase-points"><li>Local & remote missions</li><li>Instant opportunities preview</li><li>Safe and verified beta workflows</li><li>No real payouts active yet</li></ul></div><div class="earn-showcase-ui"><article class="phone-frame mission-preview"><header><strong>Featured Missions</strong><span>LIVE PAID 0</span></header><div class="hero-mission-list">${teaserMarkup}</div></article><article class="phone-frame map-preview"><header><strong>Explore Missions</strong><span>Radar view</span></header><div class="map-canvas">${missionMapPins(demos)}</div>${mapPreview}</article></div></section>
+ <section class="mission-market" aria-labelledby="market-title"><div class="market-section-head"><div><div class="kicker">DISCOVER MISSIONS</div><h2 id="market-title">Explore mission feed</h2><p>Only approved test requests appear here. We do not fabricate paid work.</p></div><div class="market-status"><strong>0</strong><span>LIVE PAID<br>MISSIONS</span></div></div>
+ <div class="market-search"><label class="search-wrap"><span class="sr-only">Search mission requests</span><input id="earnSearch" type="search" placeholder="Search missions, skills, or city…" autocomplete="off"></label><label class="sort-wrap"><span class="sr-only">Sort test missions</span><select id="earnSort"><option value="newest">Newest first</option><option value="pay">Illustrative pay</option></select></label></div>
+ <div class="market-filters" role="group" aria-label="Mission category filters"><button type="button" data-earn-filter="all" class="filter-chip active" aria-pressed="true">All</button><button type="button" data-earn-filter="Content & Copy" class="filter-chip" aria-pressed="false">Creative</button><button type="button" data-earn-filter="Digital Setup" class="filter-chip" aria-pressed="false">Digital setup</button><span id="earnCount" class="market-count" role="status" aria-live="polite"></span></div>
+ <div id="earnResults" class="earn-results">${demos.length?'':emptyEarnMarkup()}</div></section>
+ <section class="earn-category-grid" aria-labelledby="services-title"><div class="market-section-head"><div><div class="kicker">CATEGORY SPOTLIGHT</div><h2 id="services-title">Unique missions. <span>Real money later.</span></h2><p>Service templates show where Forge starts. These are not active paid listings.</p></div></div><div class="category-rail">${services.map((s,i)=>`<article class="category-card"><span class="category-icon">${categorySymbol(s.category)}</span><div><h3>${esc(s.title)}</h3><p>${esc(s.description)}</p><small>${esc(s.category)} · ${(s.skills||[]).slice(0,2).map(esc).join(' / ')}</small></div><button type="button" data-template="${esc(s.id)}" aria-label="Learn about ${esc(s.title)}">↗</button></article>`).join('')}</div></section>
+ <section class="earn-trust"><span class="earn-trust-mark">✳</span><div><strong>Real people. Real work. No false promises.</strong><p>This is a private beta. Interest buttons are demonstrations; there are no live payouts, assignments, instant transfers, or independent verifications yet.</p></div><button type="button" data-go="safety" class="earn-trust-link">How trust works ↗</button></section>`;
 }
 function bindEarn(feed){
  const opportunities=feed.opportunities||[];
@@ -95,9 +118,10 @@ function bindEarn(feed){
  filterButtons.forEach(button=>button.addEventListener('click',()=>{selected=button.dataset.earnFilter;filterButtons.forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button))});update()}));
  $('earnSearch').addEventListener('input',update);$('earnSort').addEventListener('change',update);update();
 }
+
 function emptyEarnMarkup(){
  const worker=state.user.role==='worker';
- return `<div class="empty-radar"><div class="empty-art" aria-hidden="true"><span class="empty-art-symbol">✳</span><div class="empty-art-ring"></div></div><span class="empty-label">THE BOARD IS GETTING READY</span><h3>No live missions yet<span>.</span></h3><p>We won’t post fake jobs or promise instant cash. As customers fund real assignments and Forge passes its launch checks, opportunities will show up here.</p><div class="empty-actions">${worker?'<button type="button" data-go="worker" class="primary">Get your profile ready ↗</button>':state.user.role==='buyer'?'<button type="button" data-go="new" class="primary">Explore posting a request ↗</button>':'<button type="button" data-go="admin" class="primary">Review pilot readiness ↗</button>'}<span>COMING SOON · NO MONEY MOVES TODAY</span></div></div>`;
+ return `<div class="empty-radar"><span class="empty-label">THE BOARD IS GETTING READY</span><h3>No live missions yet.</h3><p>We won’t post fake jobs or promise instant cash. As customers fund real assignments and Forge passes launch checks, opportunities will appear here.</p><div class="empty-actions">${worker?'<button type="button" data-go="worker" class="primary">Get your profile ready ↗</button>':state.user.role==='buyer'?'<button type="button" data-go="new" class="primary">Explore posting a request ↗</button>':'<button type="button" data-go="admin" class="primary">Review pilot readiness ↗</button>'}<span>COMING SOON · NO MONEY MOVES TODAY</span></div></div>`;
 }
 function catalogContent(industries){
  return `<div class="catalog-intro"><span class="eyebrow">THE FUTURE OF FORGE</span><h2>Every industry. One intelligent network.</h2><p>Explore professions from aviation and medicine to transportation, trades and digital work. These are <strong>industry categories, not live assignments</strong>. Actual qualifications depend on jurisdiction and employer.</p><label class="catalog-search-label">What type of work interests you?<input id="catalogSearch" type="search" placeholder="Try pilot, RN, dental, CDL, tutor…" autocomplete="off"></label><div class="catalog-controls"><label class="catalog-filter-label">Show<select id="catalogFilter"><option value="">All industries</option><option value="digital">Digital services</option><option value="regulated">Regulated / credential-sensitive</option><option value="career">Other career fields</option></select></label></div><div id="catalogCount" role="status" class="filter-results" aria-live="polite"></div></div><div id="catalogResults" class="catalog-grid"></div>`;
