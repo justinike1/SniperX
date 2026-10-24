@@ -1,6 +1,6 @@
 {
   "name": "sniperx-forge-private-beta",
-  "version": "1.0.0-sandbox",
+  "version": "1.1.0-pilot-test",
   "private": true,
   "type": "module",
   "description": "Invite-only Earn Now mission feed and interest workflow, transparent demo economics, broader industry taxonomy, simulated marketplace and verification tracking",
@@ -11,7 +11,8 @@
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs",
     "admin:create": "node src/admin.mjs",
+    "audit:release": "node tools/release-audit.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check src/server.mjs && node --check src/db.mjs && node --check src/security.mjs && node --check src/handlers.mjs && node --check src/admin.mjs && node --check public/app.js && node --check src/jobs.mjs && node --check src/verification.mjs && node --check src/marketplace.mjs && node --check src/earn.mjs && node --check src/payouts.mjs && node --check src/discover.mjs && node --check src/quickpost.mjs"
+    "check": "node --check src/server.mjs && node --check src/db.mjs && node --check src/security.mjs && node --check src/handlers.mjs && node --check src/admin.mjs && node --check public/app.js && node --check src/jobs.mjs && node --check src/verification.mjs && node --check src/marketplace.mjs && node --check src/earn.mjs && node --check src/payouts.mjs && node --check src/discover.mjs && node --check src/quickpost.mjs && node --check src/stripe_test.mjs && node --check src/reconcile.mjs"
   }
 }

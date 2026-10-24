@@ -113,6 +113,18 @@ export function openStore(filename) {
       event_key TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_sandbox_wallet_worker ON sandbox_wallet_ledger(worker_user_id,created_at);
+    CREATE TABLE IF NOT EXISTS stripe_test_checkout_sessions (
+      mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE RESTRICT,
+      session_id TEXT UNIQUE, checkout_url TEXT,
+      amount_cents INTEGER NOT NULL CHECK(amount_cents BETWEEN 100 AND 1000000),
+      status TEXT NOT NULL CHECK(status IN ('CREATING_TEST','OPEN_TEST','PAID_TEST','EXPIRED_TEST','CREATE_FAILED_TEST')),
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS stripe_test_webhook_events (
+      id TEXT PRIMARY KEY, event_type TEXT NOT NULL,
+      accepted INTEGER NOT NULL CHECK(accepted IN (0,1)),
+      reason TEXT NOT NULL, received_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
   `);
   try{fs.chmodSync(absolute,0o600)}catch{}

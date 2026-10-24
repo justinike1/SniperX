@@ -5,13 +5,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openStore } from './db.mjs';
 import { checkOrigin, clearCookie, readBody, securityHeaders, sessionCookie, throttle } from './security.mjs';
 import { currentSession, handle } from './handlers.mjs';
+import {makeStripeTestClient,applyStripeTestEvent,verifyStripeTestEvent} from './stripe_test.mjs';
 
 const ROOT=path.dirname(fileURLToPath(import.meta.url));
 const STATIC=path.join(ROOT,'..','public');
 const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon'};
 const limits=new Map();
+async function readRawBody(req,max=65536){
+  if(Number(req.headers['content-length'])>max)throw Object.assign(new Error('Request too large'),{status:413});
+  let size=0;const chunks=[];
+  for await(const chunk of req){size+=chunk.length;if(size>max)throw Object.assign(new Error('Request too large'),{status:413});chunks.push(chunk)}
+  return Buffer.concat(chunks);
+}
 
-export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolve('data/forge.sqlite'),publicOrigin=process.env.FORGE_PUBLIC_ORIGIN||'http://127.0.0.1:5200',store=openStore(dbPath)}={}){
+export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolve('data/forge.sqlite'),publicOrigin=process.env.FORGE_PUBLIC_ORIGIN||'http://127.0.0.1:5200',store=openStore(dbPath),stripeTestClient=process.env.FORGE_STRIPE_TEST_SECRET_KEY?makeStripeTestClient({secretKey:process.env.FORGE_STRIPE_TEST_SECRET_KEY}):null,stripeWebhookSecret=process.env.FORGE_STRIPE_TEST_WEBHOOK_SECRET||null}={}){
   const url=new URL(publicOrigin);
   if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search)throw new Error('FORGE_PUBLIC_ORIGIN must be an exact http(s) origin with no path');
   const secure=url.protocol==='https:';
@@ -38,13 +45,20 @@ export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolv
       const address=req.socket.remoteAddress||'unknown';
       throttle(limits,`${address}:all`,200,60_000);
       if(pathname==='/api/auth/login'||pathname==='/api/auth/register')throttle(limits,`${address}:${pathname}`,10,60_000);
+      if(pathname==='/api/webhooks/stripe-test'){
+        if(method!=='POST'){res.writeHead(405);return res.end(JSON.stringify({error:'Method not allowed'}))}
+        throttle(limits,`${address}:stripe-test-webhook`,100,60_000);
+        const event=verifyStripeTestEvent(await readRawBody(req),req.headers['stripe-signature'],stripeWebhookSecret);
+        const result=applyStripeTestEvent(store,event);
+        res.writeHead(200);return res.end(JSON.stringify(result));
+      }
       let body={};
       if(method==='POST'){
         checkOrigin(req,publicOrigin);
         body=await readBody(req);
       }
       const ctx={store,method,path:pathname,query:requestURL.searchParams,body,res,secure,cookies:{},session:null,user:null,sessionToken:null,
-        sessionCookie:token=>sessionCookie(token,secure),clearCookie:()=>clearCookie(secure)};
+        sessionCookie:token=>sessionCookie(token,secure),clearCookie:()=>clearCookie(secure),publicOrigin,stripeTestClient};
       // Session tokens must be HttpOnly cookies, never carried in query strings.
       const cookieHeader=req.headers.cookie||'';
       for(const segment of cookieHeader.split(';')){const ix=segment.indexOf('=');if(ix>0&&segment.slice(0,ix).trim()==='forge_session'){
@@ -60,9 +74,9 @@ export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolv
       const payload=await handle(ctx);
       res.writeHead(200);res.end(JSON.stringify(payload));
     }catch(error){
-      const status=Number.isInteger(error?.status)&&error.status>=400&&error.status<=499?error.status:500;
+      const status=error?.status===503?503:Number.isInteger(error?.status)&&error.status>=400&&error.status<=499?error.status:500;
       if(status===500)console.error('[forge] request error',error);
-      if(!res.headersSent){res.writeHead(status);res.end(JSON.stringify({error:status===500?'Internal server error':error.message}))}
+      if(!res.headersSent){res.writeHead(status);res.end(JSON.stringify({error:status===500?'Internal server error':status===503?'Stripe test service unavailable':error.message}))}
       else res.end();
     }
   });

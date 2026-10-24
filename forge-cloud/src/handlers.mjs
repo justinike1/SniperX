@@ -7,6 +7,8 @@ import {handleEarn} from './earn.mjs';
 import {handleDiscover} from './discover.mjs';
 import {handleQuickPost} from './quickpost.mjs';
 import {handlePayouts,releaseSandboxEarnings,voidSandboxFunding} from './payouts.mjs';
+import {handleStripeTest} from './stripe_test.mjs';
+import {launchReadiness} from './reconcile.mjs';
 import {INDUSTRIES,SERVICES,catalogSummary,searchIndustries} from './marketplace.mjs';
 
 // Return expected state-machine violations as conflicts, not internal server failures.
@@ -39,6 +41,11 @@ export function currentSession(ctx){
  return user?{user,csrf:sess.csrf,session:sess,token:cookie}:null;
 }
 export async function handle(ctx){const {store,method,path,body,res,secure}=ctx;
+ const stripeTestResponse=await handleStripeTest(ctx);
+ if(stripeTestResponse!==undefined)return stripeTestResponse;
+ if(method==='GET'&&path==='/api/admin/launch-audit'){
+  requireRole(ctx,'admin');return launchReadiness(store,{stripeTestConfigured:!!ctx.stripeTestClient});
+ }
  const payoutResponse=handlePayouts(ctx);
  if(payoutResponse!==undefined)return payoutResponse;
  const quickPostResponse=handleQuickPost(ctx);
