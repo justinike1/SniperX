@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7f3">
+  <meta name="description" content="Forge — a better way to find nearby and digital work. Invite-only private beta; paid missions are not yet live.">
+  <title>Forge — Work on your terms</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/radar.css">
+</head>
+<body>
+<a class="skip-link" href="#maincontent">Skip to main content</a>
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand-area">
+      <a class="brand" href="/" aria-label="SniperX Forge home"><span class="brand-symbol" aria-hidden="true">✳</span><span class="brand-text">forge<span class="brand-period">.</span><small>BY SNIPERX</small></span></a>
+      <button class="sidebar-close" id="sidebarClose" type="button" aria-label="Close navigation">✕</button>
+    </div>
+    <div class="side-divider"></div>
+    <nav id="nav" aria-label="Your workspace" hidden>
+      <p class="nav-label">YOUR MARKETPLACE</p>
+      <button type="button" data-view="earn" class="active"><span class="nav-symbol" aria-hidden="true">↗</span><span>Earn now</span><span class="nav-trailing">01</span></button>
+      <button type="button" data-view="missions"><span class="nav-symbol" aria-hidden="true">▤</span><span>My missions</span></button>
+      <button type="button" data-view="new"><span class="nav-symbol" aria-hidden="true">＋</span><span>Post a mission</span></button>
+      <button type="button" data-view="worker"><span class="nav-symbol" aria-hidden="true">◉</span><span>My skills</span></button>
+      <p class="nav-label nav-label-spaced">EXPLORE</p>
+      <button type="button" data-view="jobs"><span class="nav-symbol" aria-hidden="true">⌕</span><span>Career listings</span></button>
+      <button type="button" data-view="catalog"><span class="nav-symbol" aria-hidden="true">▦</span><span>All industries</span></button>
+      <p class="nav-label nav-label-spaced">ACCOUNT</p>
+      <button type="button" data-view="home"><span class="nav-symbol" aria-hidden="true">⌂</span><span>My home</span></button>
+      <button type="button" data-view="verification"><span class="nav-symbol" aria-hidden="true">✓</span><span>My verification</span></button>
+      <button type="button" data-view="admin"><span class="nav-symbol" aria-hidden="true">⚙</span><span>Operations</span></button>
+      <button type="button" data-view="safety"><span class="nav-symbol" aria-hidden="true">?</span><span>Help & safety</span></button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sidebar-promo"><span class="promo-asterisk" aria-hidden="true">✳</span><p>Work should<br>work for <i>everyone.</i></p><small>GOOD WORK. REAL IMPACT.</small></div>
+      <span class="beta-chip"><span class="beta-dot" aria-hidden="true"></span> PRIVATE BETA</span>
+      <p class="beta-description">No real assignments or payments yet. This is an invitation-only product preview.</p>
+      <button id="signout" class="signout" type="button" hidden>Sign out <span aria-hidden="true">↗</span></button>
+    </div>
+  </aside>
+  <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Close navigation" hidden></button>
+  <main class="main" id="maincontent" tabindex="-1">
+    <header class="topbar">
+      <div class="topbar-left"><button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><span class="topbar-mark" aria-hidden="true">✳</span><span class="topbar-location">SNIPERX <b>/</b> FORGE</span></div>
+      <div class="topbar-right"><span class="topbar-state"><span class="beta-dot" aria-hidden="true"></span> BETA PREVIEW</span><span class="topbar-user" id="who">Invite-only access</span></div>
+    </header>
+    <div id="alerts" role="status" aria-live="polite" aria-atomic="true"></div>
+    <section id="auth" class="hero" aria-labelledby="landing-title">
+      <div class="auth-landing-head"><p class="eyebrow"><span class="eyebrow-line"></span> YOUR NEXT MOVE STARTS HERE</p><h1 id="landing-title">Make a living.<br><em>Make it yours.</em></h1><p class="landing-subtitle">Forge is building a place to discover useful work, offer your skills, and request help when you need it. Opportunities that fit real life.</p><div class="landing-flourish"><span>01 / DISCOVER</span><span>02 / DO THE WORK</span><span>03 / GET PAID*</span></div></div>
+      <div class="notice friendly-disclaimer" role="note"><strong>Private product preview.</strong> *Paid missions and payouts are not available yet. Test projects, earnings, and verification workflows are simulated. External career listings must be checked with their original publisher.</div>
+      <div class="auth-grid">
+        <form id="login" class="panel auth-panel"><div class="auth-panel-head"><span class="auth-label">MEMBERS</span><h2>Welcome back<span class="accent-dot">.</span></h2></div>
+          <label>Email address<input type="email" name="email" autocomplete="email" placeholder="you@example.com" required></label>
+          <label>Password<input type="password" name="password" autocomplete="current-password" placeholder="Enter your password" required></label>
+          <button class="primary" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+        </form>
+        <form id="register" class="panel auth-panel"><div class="auth-panel-head"><span class="auth-label">INVITATION ONLY</span><h2>Join the movement<span class="accent-dot">.</span></h2></div>
+          <label>Invitation code<input name="invitation" required autocomplete="off" placeholder="Your invitation code"></label>
+          <label>Full name<input name="name" required autocomplete="name" placeholder="First and last name"></label>
+          <label>Email address<input type="email" name="email" autocomplete="email" required placeholder="you@example.com"></label>
+          <label>Create a password <span class="label-hint">At least 14 characters</span><input type="password" name="password" minlength="14" autocomplete="new-password" required></label>
+          <button class="secondary" type="submit">Request my account <span aria-hidden="true">↗</span></button>
+        </form>
+      </div>
+    </section>
+    <section id="dashboard" hidden aria-labelledby="viewtitle">
+      <div class="heading"><div><p class="eyebrow" id="viewkicker">WELCOME</p><h1 id="viewtitle">Earn now</h1><p id="viewdesc" class="sub">Do great work. Earn on your terms.</p></div><button id="refresh" type="button" class="secondary">↻ Refresh</button></div>
+      <div id="viewcontent" aria-live="off"></div>
+    </section>
+    <footer><span>✳ &nbsp; FORGE — BUILDING THE FUTURE OF WORK</span><span>Private beta · No real payouts or dispatch</span></footer>
+  </main>
+  <nav class="mobile-dock" id="mobileDock" aria-label="Quick navigation" hidden>
+    <button type="button" data-mobile-view="earn" class="active"><span class="dock-icon" aria-hidden="true">↗</span><span>Earn</span></button>
+    <button type="button" data-mobile-view="missions"><span class="dock-icon" aria-hidden="true">▤</span><span>Missions</span></button>
+    <button type="button" data-mobile-view="new" class="dock-action"><span class="dock-icon" aria-hidden="true">＋</span><span>Post</span></button>
+    <button type="button" data-mobile-view="worker" class="dock-action"><span class="dock-icon" aria-hidden="true">◉</span><span>Profile</span></button>
+    <button type="button" data-mobile-view="admin" class="dock-action"><span class="dock-icon" aria-hidden="true">⚙</span><span>Admin</span></button>
+    <button type="button" data-mobile-view="jobs"><span class="dock-icon" aria-hidden="true">⌕</span><span>Careers</span></button>
+    <button type="button" id="mobileMore"><span class="dock-icon" aria-hidden="true">☰</span><span>More</span></button>
+  </nav>
+</div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
