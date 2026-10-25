@@ -172,42 +172,41 @@ function renderWebsite() {
   const closedWon = leads.filter((lead) => lead.status === "Closed Won").length;
 
   return `
-    <section class="site-hero">
-      <div class="site-hero-copy">
-        <p class="eyebrow">IKE AUTOMOTIVE GROUP LLC · PRE-LAUNCH DEMO WEBSITE</p>
-        <h2>Negotiate harder.<br><span>Close smarter.</span></h2>
-        <p>
-          IKE Automotive Group is building an electrified brokerage experience for buyers who want leverage, clarity, and documented deal options.
-          We handle negotiation intensity while clients keep final control.
-        </p>
-        <div class="cta-row">
-          <button type="button" class="primary-btn" data-jump="websiteLeadForm">Start my deal strategy</button>
-          <button type="button" class="secondary-btn" data-jump="websitePackages">See service packages</button>
-        </div>
-        <div class="site-hero-metrics" aria-label="Website funnel preview">
-          <div><span>Demo leads</span><strong>${leads.length}</strong></div>
-          <div><span>Booked-call rate</span><strong>${funnel.metrics.bookedRate}%</strong></div>
-          <div><span>Closed-won leads</span><strong>${closedWon}</strong></div>
-        </div>
-        <p class="muted">
-          Demonstration boundary: this page captures local demo leads only and does not send messages or create external records.
-        </p>
+    <section class="campaign-poster">
+      <div class="poster-top">
+        <p class="eyebrow">IKE AUTOMOTIVE GROUP · AUTOMOTIVE BROKERAGE</p>
+        <h2>LEASE ENDING?<br>LET’S PLAN AHEAD.</h2>
+        <p>A personal approach to your next vehicle, built on transparent negotiation.</p>
       </div>
-      <aside class="site-hero-panel">
-        <h3>Client value stack</h3>
-        <ul>
-          <li>Target vehicle strategy mapped to budget and timing pressure</li>
-          <li>Quote normalization across term, mileage, taxes, fees, and assumptions</li>
-          <li>Negotiation documentation for transparent client-side decision making</li>
-          <li>Explicit fee disclosures before service engagement</li>
-        </ul>
-        <p class="muted">No guarantees, no hidden incentives, no custody of vehicle purchase funds.</p>
+      <div class="poster-image-wrap">
+        <img
+          src="./assets/founder-justin-ike.jpg"
+          alt="Justin Ike, founder of IKE Automotive Group"
+          class="poster-image"
+        >
+      </div>
+      <div class="poster-bottom">
+        <h3>JUSTIN IKE</h3>
+        <p class="poster-role">Founder</p>
+        <p class="poster-services">Vehicle search • Offer comparison • Personal service</p>
+        <div class="cta-row">
+          <button type="button" class="poster-cta" data-jump="websiteLeadForm">START YOUR DEAL STRATEGY</button>
+          <button type="button" class="secondary-btn" data-jump="websitePackages">VIEW SERVICE PACKAGES</button>
         <div class="source-strip">${sourceMarkup || '<span class="source-pill">No lead-source mix yet</span>'}</div>
-      </aside>
+        </div>
+        <p class="poster-launch">COMING SOON — Launch subject to required authorization.</p>
+      </div>
+    </section>
+
+    <section class="site-energy-bar" aria-label="Website funnel preview">
+      <div><span>Demo leads</span><strong>${leads.length}</strong></div>
+      <div><span>Booked-call rate</span><strong>${funnel.metrics.bookedRate}%</strong></div>
+      <div><span>Closed-won leads</span><strong>${closedWon}</strong></div>
+      <div><span>CPL (assumed)</span><strong>${currency(funnel.metrics.cpl)}</strong></div>
     </section>
 
     <section id="websitePackages" class="card" style="margin-top:14px">
-      <h3>Electrified offer architecture</h3>
+      <h3>Service package architecture</h3>
       <div class="offer-grid" style="margin-top:10px">
         <article class="offer-card">
           <span>01 · STRATEGY</span>
@@ -232,7 +231,8 @@ function renderWebsite() {
         </article>
       </div>
       <p class="muted" style="margin-top:8px">
-        Pricing and policy terms are planning proposals until finalized in signed service agreements.
+        Demonstration boundary: this page captures local demo leads only and does not send messages or create external records.
+        Pricing and policy terms are proposals until finalized in signed service agreements.
       </p>
     </section>
 

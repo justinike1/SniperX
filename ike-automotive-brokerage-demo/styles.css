@@ -155,40 +155,107 @@ body {
   letter-spacing: -0.02em;
 }
 
-.site-hero {
-  display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
-  gap: 12px;
-  border: 1px solid #d6dfeb;
+.campaign-poster {
+  border: 1px solid #d7dfeb;
   border-radius: 14px;
-  padding: 18px;
-  background:
-    radial-gradient(circle at 20% 15%, #d9e8ff 0%, transparent 38%),
-    radial-gradient(circle at 92% 12%, #d9fff0 0%, transparent 32%),
-    linear-gradient(140deg, #f5f9ff 0%, #ffffff 62%);
+  overflow: hidden;
+  background: #fff;
 }
 
-.site-hero-copy h2 {
-  margin: 8px 0;
-  font-size: clamp(28px, 5vw, 48px);
-  letter-spacing: -0.045em;
-  line-height: 1.05;
+.poster-top {
+  padding: 16px;
+  background: #fff;
 }
 
-.site-hero-copy h2 span {
-  color: #0b66f4;
+.poster-top h2 {
+  margin: 8px 0 6px;
+  font-size: clamp(40px, 8vw, 84px);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
 }
 
-.site-hero-copy p {
-  color: #344257;
-  line-height: 1.6;
+.poster-top p {
+  margin: 0;
+  color: #27384f;
+  font-size: clamp(18px, 3.2vw, 42px);
+}
+
+.poster-image-wrap {
+  background: #eceff4;
+}
+
+.poster-image {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  aspect-ratio: 4 / 5;
+}
+
+.poster-bottom {
+  background: #102033;
+  color: #f6f8fc;
+  padding: 16px;
+}
+
+.poster-bottom h3 {
+  margin: 0;
+  font-size: clamp(34px, 7.2vw, 70px);
+  line-height: 0.96;
+  letter-spacing: -0.03em;
+}
+
+.poster-role {
+  margin: 6px 0 0;
+  font-size: clamp(20px, 3.7vw, 34px);
+}
+
+.poster-services {
+  margin: 10px 0 0;
+  font-size: clamp(16px, 3.1vw, 28px);
+  line-height: 1.45;
+}
+
+.poster-launch {
+  margin: 12px 0 0;
+  color: #d2dded;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.poster-cta {
+  border: 1px solid #f0f4fc;
+  background: transparent;
+  color: #f5f8ff;
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.poster-cta:hover {
+  background: #f5f8ff;
+  color: #12233a;
+}
+
+.poster-bottom .secondary-btn {
+  border-color: #3f5574;
+  background: #192b43;
+  color: #e8eef8;
+}
+
+.poster-bottom .secondary-btn:hover {
+  background: #243a5a;
 }
 
 .eyebrow {
   margin: 0;
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.13em;
-  color: #486490;
+  color: #243854;
   font-weight: 800;
 }
 
@@ -199,50 +266,29 @@ body {
   gap: 8px;
 }
 
-.site-hero-metrics {
+.site-energy-bar {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
-.site-hero-metrics div {
+.site-energy-bar div {
   border: 1px solid #d5e0f0;
   border-radius: 10px;
   background: #ffffffd9;
   padding: 8px 9px;
 }
 
-.site-hero-metrics span {
+.site-energy-bar span {
   display: block;
   font-size: 11px;
   color: #566780;
 }
 
-.site-hero-metrics strong {
+.site-energy-bar strong {
   font-size: 18px;
   letter-spacing: -0.02em;
-}
-
-.site-hero-panel {
-  border: 1px solid #d8e1ef;
-  border-radius: 12px;
-  padding: 12px;
-  background: #ffffffdb;
-}
-
-.site-hero-panel h3 {
-  margin: 0;
-}
-
-.site-hero-panel ul {
-  margin: 10px 0;
-  padding-left: 18px;
-}
-
-.site-hero-panel li {
-  color: #324158;
-  line-height: 1.45;
 }
 
 .source-strip {
@@ -681,12 +727,17 @@ tbody tr:last-child td {
     grid-template-columns: 1fr;
   }
 
-  .site-hero {
+  .site-energy-bar,
+  .offer-grid {
     grid-template-columns: 1fr;
   }
 
-  .site-hero-metrics,
-  .offer-grid {
-    grid-template-columns: 1fr;
+  .poster-top,
+  .poster-bottom {
+    padding: 12px;
+  }
+
+  .poster-launch {
+    letter-spacing: 0.05em;
   }
 }
