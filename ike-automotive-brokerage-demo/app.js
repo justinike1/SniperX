@@ -172,30 +172,61 @@ function renderWebsite() {
   const closedWon = leads.filter((lead) => lead.status === "Closed Won").length;
 
   return `
-    <section class="campaign-poster">
-      <div class="poster-top">
+    <section class="campaign-header">
+      <div>
         <p class="eyebrow">IKE AUTOMOTIVE GROUP · AUTOMOTIVE BROKERAGE</p>
-        <h2>LEASE ENDING?<br>LET’S PLAN AHEAD.</h2>
-        <p>A personal approach to your next vehicle, built on transparent negotiation.</p>
+        <h2>Electrified campaign system for your launch.</h2>
+        <p class="lead" style="margin-top:6px">
+          Founder-forward brand creative, high-intent lead capture, and marketing controls connected in one local demo flow.
+        </p>
       </div>
-      <div class="poster-image-wrap">
+      <div class="brand-badge">
+        <img src="./assets/ike-logo.jpg" alt="IKE Automotive Group logo" class="brand-logo">
+      </div>
+    </section>
+
+    <section class="campaign-poster">
+      <img
+        src="./assets/campaign-lease-ending.jpg"
+        alt="IKE Automotive Group lease ending campaign poster"
+        class="campaign-full-image"
+      >
+    </section>
+
+    <section class="campaign-gallery">
+      <article class="campaign-card">
         <img
-          src="./assets/founder-justin-ike.jpg"
-          alt="Justin Ike, founder of IKE Automotive Group"
-          class="poster-image"
+          src="./assets/campaign-car-shopping.jpg"
+          alt="Car shopping campaign creative with value proposition blocks"
         >
-      </div>
-      <div class="poster-bottom">
-        <h3>JUSTIN IKE</h3>
-        <p class="poster-role">Founder</p>
-        <p class="poster-services">Vehicle search • Offer comparison • Personal service</p>
-        <div class="cta-row">
-          <button type="button" class="poster-cta" data-jump="websiteLeadForm">START YOUR DEAL STRATEGY</button>
-          <button type="button" class="secondary-btn" data-jump="websitePackages">VIEW SERVICE PACKAGES</button>
-        <div class="source-strip">${sourceMarkup || '<span class="source-pill">No lead-source mix yet</span>'}</div>
+        <div>
+          <h3>Campaign angle: first-time + family + daily driver positioning</h3>
+          <p>Use this as the primary conversion creative for social and DM-driven lead capture.</p>
         </div>
-        <p class="poster-launch">COMING SOON — Launch subject to required authorization.</p>
+      </article>
+      <article class="campaign-card">
+        <img
+          src="./assets/campaign-new-car-leases.jpg"
+          alt="New car leases campaign creative with brand matrix"
+        >
+        <div>
+          <h3>Campaign angle: lease replacement and brand breadth</h3>
+          <p>Use this when targeting shoppers comparing multiple makes and lease options.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="poster-callout">
+      <div>
+        <strong>YOUR NEXT CAR STARTS HERE.</strong>
+        <p>Vehicle search • Offer comparison • Personal service</p>
       </div>
+      <div class="cta-row">
+        <button type="button" class="poster-cta" data-jump="websiteLeadForm">START YOUR DEAL STRATEGY</button>
+        <button type="button" class="secondary-btn" data-jump="websitePackages">VIEW SERVICE PACKAGES</button>
+      </div>
+      <div class="source-strip">${sourceMarkup || '<span class="source-pill">No lead-source mix yet</span>'}</div>
+      <p class="poster-launch">COMING SOON — Launch subject to required authorization.</p>
     </section>
 
     <section class="site-energy-bar" aria-label="Website funnel preview">
