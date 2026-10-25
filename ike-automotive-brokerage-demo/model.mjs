@@ -54,6 +54,25 @@ export function sanitizeReadinessItem(item) {
   };
 }
 
+export function createLeadFromWebsite(input, existingCount = 0) {
+  const id = `LEAD-${String(existingCount + 1).padStart(4, "0")}`;
+  const createdAt = nowIso();
+  return {
+    id,
+    createdAt,
+    name: (input.name || "").trim(),
+    email: (input.email || "").trim(),
+    phone: (input.phone || "").trim(),
+    vehicleGoal: (input.vehicleGoal || "").trim(),
+    budgetUSD: clampMoney(input.budgetUSD),
+    timeline: (input.timeline || "").trim(),
+    packageInterest: (input.packageInterest || "Full Negotiation").trim(),
+    source: (input.source || "Website").trim(),
+    notes: (input.notes || "").trim(),
+    status: "New",
+  };
+}
+
 export function createCaseFromIntake(intake, existingCount = 0) {
   const nextNumber = String(1001 + existingCount).padStart(4, "0");
   const id = `IAG-${nextNumber}`;
@@ -269,6 +288,70 @@ export function arithmeticScenarios(fee) {
   }));
 }
 
+export function defaultMarketingFunnel() {
+  return {
+    adSpend: 1800,
+    leads: 42,
+    bookedCalls: 14,
+    signedClients: 5,
+    avgFeeCollected: 999,
+    refundsIssued: 350,
+    referralLeads: 9,
+    outboundLeads: 10,
+  };
+}
+
+export function calculateMarketingSnapshot(rawInputs) {
+  const inputs = {
+    ...defaultMarketingFunnel(),
+    ...rawInputs,
+  };
+  const adSpend = clampMoney(inputs.adSpend);
+  const leads = clampWhole(inputs.leads);
+  const bookedCalls = clampWhole(inputs.bookedCalls);
+  const signedClients = clampWhole(inputs.signedClients);
+  const avgFeeCollected = clampMoney(inputs.avgFeeCollected);
+  const refundsIssued = clampMoney(inputs.refundsIssued);
+  const referralLeads = clampWhole(inputs.referralLeads);
+  const outboundLeads = clampWhole(inputs.outboundLeads);
+
+  const bookedRate = leads > 0 ? (bookedCalls / leads) * 100 : 0;
+  const closeRateFromCalls = bookedCalls > 0 ? (signedClients / bookedCalls) * 100 : 0;
+  const closeRateFromLeads = leads > 0 ? (signedClients / leads) * 100 : 0;
+  const cpl = leads > 0 ? adSpend / leads : 0;
+  const cac = signedClients > 0 ? adSpend / signedClients : 0;
+
+  const grossCollections = clampMoney(signedClients * avgFeeCollected);
+  const netAfterRefunds = clampMoney(Math.max(0, grossCollections - refundsIssued));
+
+  const organicLeads = Math.max(0, leads - outboundLeads);
+  const paidLeads = Math.max(0, leads - referralLeads - outboundLeads);
+
+  return {
+    assumptions: {
+      adSpend,
+      leads,
+      bookedCalls,
+      signedClients,
+      avgFeeCollected,
+      refundsIssued,
+      referralLeads,
+      outboundLeads,
+      organicLeads,
+      paidLeads,
+    },
+    metrics: {
+      bookedRate: Number(bookedRate.toFixed(2)),
+      closeRateFromCalls: Number(closeRateFromCalls.toFixed(2)),
+      closeRateFromLeads: Number(closeRateFromLeads.toFixed(2)),
+      cpl: Number(cpl.toFixed(2)),
+      cac: Number(cac.toFixed(2)),
+      grossCollections,
+      netAfterRefunds,
+    },
+  };
+}
+
 function seedCase(overrides) {
   const base = createCaseFromIntake(
     {
@@ -438,14 +521,71 @@ export function initialDemoState() {
 
   return {
     metadata: {
-      version: 1,
+      version: 2,
       createdAt,
       demoMode: true,
       lastResetAt: createdAt,
     },
     ui: {
-      activeTab: "customer",
+      activeTab: "website",
       selectedCaseId: cases[0].id,
+    },
+    marketingLeads: [
+      createLeadFromWebsite(
+        {
+          name: "Jordan L.",
+          email: "jordan.demo@sample.test",
+          phone: "555-2001",
+          vehicleGoal: "Hybrid SUV under 35k miles",
+          budgetUSD: 36000,
+          timeline: "Need options in 10 days",
+          packageInterest: "Full Negotiation",
+          source: "Referral",
+          notes: "Prefers CPO with service records",
+        },
+        0
+      ),
+      createLeadFromWebsite(
+        {
+          name: "Chris N.",
+          email: "chris.demo@sample.test",
+          phone: "555-2002",
+          vehicleGoal: "Lease compact EV for commuting",
+          budgetUSD: 520,
+          timeline: "Before month-end",
+          packageInterest: "Strategic Buy Plan",
+          source: "Instagram",
+          notes: "Wants side-by-side lease assumptions",
+        },
+        1
+      ),
+    ],
+    marketing: {
+      funnelInputs: defaultMarketingFunnel(),
+      flagshipOffer: "Full Negotiation",
+      channelPlan: [
+        {
+          id: "C-001",
+          channel: "Referral partners",
+          offer: "Deal review mini-audit",
+          status: "In progress with evidence",
+          owner: "Founder",
+        },
+        {
+          id: "C-002",
+          channel: "Local social content",
+          offer: "Weekly negotiation breakdown clips",
+          status: "Proposed",
+          owner: "Marketing",
+        },
+        {
+          id: "C-003",
+          channel: "Outbound to repeat dealer regions",
+          offer: "Transparent fee + documented comparison promise",
+          status: "Unverified",
+          owner: "Founder",
+        },
+      ],
     },
     customerIntakeDefaults: {
       name: "Alex Sample",

@@ -7,6 +7,16 @@ It does **not** create real customer records, dealer outreach, payments, credit 
 
 ## What this demo includes
 
+- Public-facing **website + marketing** layer with:
+  - conversion-oriented hero copy and package framing
+  - local lead capture form (demo only, no outbound)
+  - lead source + package-interest tracking
+  - optional “create case on lead capture” workflow
+- Marketing workspace with:
+  - editable funnel assumptions
+  - CPL/CAC/book/close metrics
+  - gross vs refunds vs net collections
+  - channel execution board and message stack
 - Customer-facing demo page with:
   - persistent pre-launch/demo notice
   - brokerage service explanation and exclusions
@@ -34,6 +44,7 @@ It does **not** create real customer records, dealer outreach, payments, credit 
 - Local browser storage only (`localStorage`)
 - Resettable state from the UI
 - No external API calls
+- No outbound email/SMS or dealer contact automation
 - No legal or regulatory approval implied by checklist state
 
 ## Run locally

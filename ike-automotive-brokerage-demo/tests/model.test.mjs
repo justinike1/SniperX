@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import {
   arithmeticScenarios,
   buildQuoteComparison,
+  calculateMarketingSnapshot,
   calculateEconomics,
   createCaseFromIntake,
+  createLeadFromWebsite,
   initialDemoState,
   sanitizeReadinessItem,
 } from "../model.mjs";
@@ -123,4 +125,46 @@ test("initial demo state contains realistic seeded cases", () => {
   const seeded = initialDemoState();
   assert.ok(seeded.cases.length >= 4);
   assert.equal(seeded.readinessRegister[0].status, "Verified");
+  assert.ok(seeded.marketingLeads.length >= 2);
+  assert.equal(seeded.ui.activeTab, "website");
+});
+
+test("website lead creation returns identifiable lead objects", () => {
+  const lead = createLeadFromWebsite(
+    {
+      name: "Prospect",
+      email: "prospect@example.test",
+      phone: "555-0100",
+      vehicleGoal: "Hybrid sedan",
+      budgetUSD: 28000,
+      timeline: "30 days",
+      packageInterest: "Full Negotiation",
+      source: "Website",
+      notes: "Prefers low APR options",
+    },
+    2
+  );
+  assert.equal(lead.id, "LEAD-0003");
+  assert.equal(lead.budgetUSD, 28000);
+  assert.equal(lead.status, "New");
+});
+
+test("marketing snapshot computes funnel and cost metrics", () => {
+  const report = calculateMarketingSnapshot({
+    adSpend: 2000,
+    leads: 40,
+    bookedCalls: 10,
+    signedClients: 4,
+    avgFeeCollected: 999,
+    refundsIssued: 399,
+    referralLeads: 8,
+    outboundLeads: 7,
+  });
+  assert.equal(report.metrics.bookedRate, 25);
+  assert.equal(report.metrics.closeRateFromCalls, 40);
+  assert.equal(report.metrics.closeRateFromLeads, 10);
+  assert.equal(report.metrics.cpl, 50);
+  assert.equal(report.metrics.cac, 500);
+  assert.equal(report.metrics.grossCollections, 3996);
+  assert.equal(report.metrics.netAfterRefunds, 3597);
 });

@@ -4,8 +4,10 @@ import {
   appendActivity,
   arithmeticScenarios,
   buildQuoteComparison,
+  calculateMarketingSnapshot,
   calculateEconomics,
   createCaseFromIntake,
+  createLeadFromWebsite,
   currency,
   initialDemoState,
   normalizeQuote,
@@ -27,7 +29,30 @@ function loadState() {
     if (!raw) return initialDemoState();
     const parsed = JSON.parse(raw);
     if (!parsed?.cases || !Array.isArray(parsed.cases)) return initialDemoState();
-    return parsed;
+    const seed = initialDemoState();
+    return {
+      ...seed,
+      ...parsed,
+      ui: {
+        ...seed.ui,
+        ...(parsed.ui || {}),
+      },
+      marketingLeads: Array.isArray(parsed.marketingLeads)
+        ? parsed.marketingLeads
+        : seed.marketingLeads,
+      marketing: {
+        ...seed.marketing,
+        ...(parsed.marketing || {}),
+        funnelInputs: {
+          ...seed.marketing.funnelInputs,
+          ...(parsed.marketing?.funnelInputs || {}),
+        },
+      },
+      customerIntakeDefaults: {
+        ...seed.customerIntakeDefaults,
+        ...(parsed.customerIntakeDefaults || {}),
+      },
+    };
   } catch {
     return initialDemoState();
   }
@@ -76,7 +101,7 @@ function selectedCase() {
 }
 
 function render() {
-  const tab = state.ui.activeTab || "customer";
+  const tab = state.ui.activeTab || "website";
   app.innerHTML = `
     <div class="shell">
       <header class="top">
@@ -93,6 +118,8 @@ function render() {
         </div>
         <div class="toolbar">
           <div class="tabs" role="tablist" aria-label="Prototype workspaces">
+            ${tabButton("website", "Website", tab)}
+            ${tabButton("marketing", "Marketing", tab)}
             ${tabButton("customer", "Customer demo", tab)}
             ${tabButton("cases", "Case workspace", tab)}
             ${tabButton("economics", "Economics", tab)}
@@ -119,11 +146,329 @@ function tabButton(id, label, current) {
 }
 
 function renderActiveView(tab) {
+  if (tab === "website") return renderWebsite();
+  if (tab === "marketing") return renderMarketing();
   if (tab === "cases") return renderCaseWorkspace();
   if (tab === "economics") return renderEconomics();
   if (tab === "readiness") return renderReadiness();
   if (tab === "metrics") return renderMetrics();
   return renderCustomerDemo();
+}
+
+function renderWebsite() {
+  const leads = state.marketingLeads || [];
+  return `
+    <section class="site-hero">
+      <div class="site-hero-copy">
+        <p class="eyebrow">IKE AUTOMOTIVE GROUP LLC · PRE-LAUNCH DEMO</p>
+        <h2>Professional car deal negotiation.<br><span>Built for buyer leverage.</span></h2>
+        <p>
+          We help clients secure cleaner vehicle terms through transparent dealer quote comparison and direct negotiation support.
+          You keep decision control. We handle the negotiation pressure.
+        </p>
+        <div class="cta-row">
+          <button type="button" class="primary-btn" data-jump="websiteLeadForm">Book a strategy intake</button>
+          <button type="button" class="secondary-btn" data-jump="websitePackages">See service packages</button>
+        </div>
+        <p class="muted">
+          Demonstration boundary: this page captures local demo leads only and does not send messages or create external records.
+        </p>
+      </div>
+      <aside class="site-hero-panel">
+        <h3>What clients get</h3>
+        <ul>
+          <li>Structured intake and target vehicle strategy</li>
+          <li>Quote normalization across terms, mileage, fees, and assumptions</li>
+          <li>Negotiation documentation and recommendation summary</li>
+          <li>Clear fee disclosure language before engagement</li>
+        </ul>
+        <p class="muted">No guarantees, no hidden incentives, no custody of vehicle purchase funds.</p>
+      </aside>
+    </section>
+
+    <section id="websitePackages" class="card" style="margin-top:14px">
+      <h3>Proposed package lineup</h3>
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th>Proposed fee</th>
+              <th>Delivery scope</th>
+              <th>Best fit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Strategic Buy Plan</td>
+              <td>${currency(399)}</td>
+              <td>Market brief, trim targeting, and negotiation prep notes</td>
+              <td>Self-directed buyers needing strategy support</td>
+            </tr>
+            <tr>
+              <td>Full Negotiation</td>
+              <td>${currency(999)}</td>
+              <td>Dealer quote collection, negotiation, and side-by-side recommendation</td>
+              <td>Buyers wanting full negotiation execution</td>
+            </tr>
+            <tr>
+              <td>Concierge Delivery</td>
+              <td>${currency(1499)}</td>
+              <td>Full negotiation plus close coordination and paperwork walkthrough</td>
+              <td>Clients wanting end-to-end support</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted" style="margin-top:8px">
+        Pricing and policy terms are planning proposals until finalized in signed service agreements.
+      </p>
+    </section>
+
+    <section class="grid-3" style="margin-top:14px">
+      <article class="card">
+        <h3>Who we serve</h3>
+        <p>Buyers who want documented comparisons and less dealership friction.</p>
+      </article>
+      <article class="card">
+        <h3>What we do not do</h3>
+        <p>No financing origination, no credit filing, no title transfer agency, no dealer licensing substitution.</p>
+      </article>
+      <article class="card">
+        <h3>Compensation clarity</h3>
+        <p>Compensation model must be disclosed in writing before any engagement.</p>
+      </article>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h3 id="websiteLeadForm">Marketing lead intake (demo)</h3>
+      <p class="muted">
+        Submit fictional test data to validate your website funnel. No external outbound action is triggered.
+      </p>
+      <form id="websiteLeadCaptureForm">
+        <div class="form-row">
+          <label>Name
+            <input name="name" required placeholder="Taylor Example">
+          </label>
+          <label>Email
+            <input name="email" type="email" required placeholder="taylor@example.test">
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Phone
+            <input name="phone" required placeholder="555-0123">
+          </label>
+          <label>Vehicle goal
+            <input name="vehicleGoal" required placeholder="CPO midsize SUV under 40k miles">
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Budget (USD)
+            <input name="budgetUSD" type="number" min="1" step="0.01" required value="32000">
+          </label>
+          <label>Timeline
+            <input name="timeline" required placeholder="Within 2 weeks">
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Package interest
+            <select name="packageInterest">
+              <option>Strategic Buy Plan</option>
+              <option selected>Full Negotiation</option>
+              <option>Concierge Delivery</option>
+            </select>
+          </label>
+          <label>Lead source
+            <select name="source">
+              <option>Website</option>
+              <option>Referral</option>
+              <option>Instagram</option>
+              <option>Google Search</option>
+              <option>Outbound</option>
+            </select>
+          </label>
+        </div>
+        <label>Notes
+          <textarea name="notes" placeholder="Any special requirements, trade-in details, or constraints."></textarea>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" name="createCase">
+          Also create an internal demo case immediately
+        </label>
+        <button class="primary-btn" type="submit">Save demo lead</button>
+      </form>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Recent demo leads</h3>
+      <p class="muted">${leads.length} local demo lead(s) tracked.</p>
+      ${
+        leads.length
+          ? `<div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Lead ID</th>
+                <th>Name</th>
+                <th>Goal</th>
+                <th>Budget</th>
+                <th>Source</th>
+                <th>Package</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leads
+                .slice()
+                .reverse()
+                .slice(0, 8)
+                .map(
+                  (lead) => `
+                <tr>
+                  <td>${esc(lead.id)}</td>
+                  <td>${esc(lead.name)}</td>
+                  <td>${esc(lead.vehicleGoal)}</td>
+                  <td>${currency(lead.budgetUSD)}</td>
+                  <td>${esc(lead.source)}</td>
+                  <td>${esc(lead.packageInterest)}</td>
+                  <td>${esc(new Date(lead.createdAt).toLocaleDateString())}</td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>`
+          : `<p class="muted">No leads captured yet.</p>`
+      }
+    </section>
+  `;
+}
+
+function renderMarketing() {
+  const snapshot = calculateMarketingSnapshot(state.marketing?.funnelInputs || {});
+  const assumptions = snapshot.assumptions;
+  const metrics = snapshot.metrics;
+  const planRows = state.marketing?.channelPlan || [];
+  return `
+    <h2>Marketing engine and growth controls</h2>
+    <p class="lead">
+      Practical marketing stack for demand generation, lead quality, and conversion tracking.
+      Targets are planning assumptions and must not be represented as achieved results unless evidenced.
+    </p>
+
+    <div class="grid-3" style="margin-top:12px">
+      ${kpi("Leads", assumptions.leads)}
+      ${kpi("Booked calls", assumptions.bookedCalls)}
+      ${kpi("Signed clients", assumptions.signedClients)}
+      ${kpi("Book rate", `${metrics.bookedRate}%`)}
+      ${kpi("Close rate (calls)", `${metrics.closeRateFromCalls}%`)}
+      ${kpi("Close rate (leads)", `${metrics.closeRateFromLeads}%`)}
+      ${kpi("CPL", currency(metrics.cpl))}
+      ${kpi("CAC", currency(metrics.cac))}
+      ${kpi("Gross collections", currency(metrics.grossCollections))}
+      ${kpi("Refunds", currency(assumptions.refundsIssued))}
+      ${kpi("Net after refunds", currency(metrics.netAfterRefunds))}
+      ${kpi("Referral leads", assumptions.referralLeads)}
+    </div>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Editable funnel assumptions</h3>
+      <form id="marketingFunnelForm">
+        <div class="grid-3">
+          <label>Ad spend (USD)
+            <input name="adSpend" type="number" min="0" step="0.01" value="${esc(assumptions.adSpend)}">
+          </label>
+          <label>Total leads
+            <input name="leads" type="number" min="0" step="1" value="${esc(assumptions.leads)}">
+          </label>
+          <label>Booked calls
+            <input name="bookedCalls" type="number" min="0" step="1" value="${esc(assumptions.bookedCalls)}">
+          </label>
+          <label>Signed clients
+            <input name="signedClients" type="number" min="0" step="1" value="${esc(assumptions.signedClients)}">
+          </label>
+          <label>Average fee collected (USD)
+            <input name="avgFeeCollected" type="number" min="0" step="0.01" value="${esc(assumptions.avgFeeCollected)}">
+          </label>
+          <label>Refunds issued (USD)
+            <input name="refundsIssued" type="number" min="0" step="0.01" value="${esc(assumptions.refundsIssued)}">
+          </label>
+          <label>Referral leads
+            <input name="referralLeads" type="number" min="0" step="1" value="${esc(assumptions.referralLeads)}">
+          </label>
+          <label>Outbound leads
+            <input name="outboundLeads" type="number" min="0" step="1" value="${esc(assumptions.outboundLeads)}">
+          </label>
+          <label>Flagship offer
+            <select name="flagshipOffer">
+              <option ${state.marketing.flagshipOffer === "Strategic Buy Plan" ? "selected" : ""}>Strategic Buy Plan</option>
+              <option ${state.marketing.flagshipOffer === "Full Negotiation" ? "selected" : ""}>Full Negotiation</option>
+              <option ${state.marketing.flagshipOffer === "Concierge Delivery" ? "selected" : ""}>Concierge Delivery</option>
+            </select>
+          </label>
+        </div>
+      </form>
+      <p class="muted">
+        Paid leads estimate: ${assumptions.paidLeads}. Organic/non-paid leads estimate: ${assumptions.organicLeads}.
+      </p>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Channel execution board</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th>Offer angle</th>
+              <th>Status</th>
+              <th>Owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${planRows
+              .map(
+                (row) => `
+              <tr>
+                <td>${esc(row.channel)}</td>
+                <td>${esc(row.offer)}</td>
+                <td><span class="status-tag ${statusClass(row.status)}">${esc(row.status)}</span></td>
+                <td>${esc(row.owner)}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid-2" style="margin-top:14px">
+      <article class="card">
+        <h3>Message stack</h3>
+        <ul>
+          <li><strong>Core promise:</strong> documented, transparent vehicle negotiation support.</li>
+          <li><strong>Proof angle:</strong> side-by-side quote normalization and assumption clarity.</li>
+          <li><strong>Risk reducer:</strong> no hidden incentives and explicit fee disclosure.</li>
+          <li><strong>Call to action:</strong> strategy intake call for target vehicle profile.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3>30-day campaign cadence (proposal)</h3>
+        <ul>
+          <li>Week 1: local authority content + referral outreach setup</li>
+          <li>Week 2: lead magnet launch and consult call follow-up scripts</li>
+          <li>Week 3: negotiation case-study style posts (fictional/demo-labeled)</li>
+          <li>Week 4: conversion optimization on intake and package framing</li>
+        </ul>
+      </article>
+    </section>
+
+    <div class="warning-box">
+      Marketing content must not claim guaranteed savings, guaranteed approvals, or live brokerage authority without verified external approvals.
+    </div>
+  `;
 }
 
 function renderCustomerDemo() {
@@ -772,7 +1117,7 @@ function bindCommon() {
 
   document.getElementById("resetDemo")?.addEventListener("click", () => {
     const confirmed = window.confirm(
-      "Reset all local demo cases, readiness entries, and economics inputs?"
+      "Reset all local demo website leads, cases, readiness entries, and economics/marketing inputs?"
     );
     if (!confirmed) return;
     state = initialDemoState();
@@ -783,10 +1128,70 @@ function bindCommon() {
 }
 
 function bindView(tab) {
+  if (tab === "website") bindWebsite();
+  if (tab === "marketing") bindMarketing();
   if (tab === "customer") bindCustomer();
   if (tab === "cases") bindCases();
   if (tab === "economics") bindEconomics();
   if (tab === "readiness") bindReadiness();
+}
+
+function bindWebsite() {
+  document.querySelectorAll("[data-jump]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.jump);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  const form = document.getElementById("websiteLeadCaptureForm");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const values = formDataObject(form);
+    const createCase = !!form.querySelector('input[name="createCase"]').checked;
+    mutate((next) => {
+      const lead = createLeadFromWebsite(
+        {
+          ...values,
+          budgetUSD: Number(values.budgetUSD || 0),
+        },
+        next.marketingLeads.length
+      );
+      next.marketingLeads.push(lead);
+      if (createCase) {
+        const caseItem = createCaseFromIntake(
+          {
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            intent: "Purchase",
+            budgetUSD: lead.budgetUSD,
+            preferences: lead.vehicleGoal,
+            timeframe: lead.timeline || "Flexible",
+            tradeIn: false,
+            owner: "Founder",
+            proposedFee:
+              lead.packageInterest === "Strategic Buy Plan"
+                ? 399
+                : lead.packageInterest === "Concierge Delivery"
+                  ? 1499
+                  : 999,
+          },
+          next.cases.length
+        );
+        next.cases.unshift(caseItem);
+        next.ui.selectedCaseId = caseItem.id;
+      }
+    });
+    setFlash(
+      createCase
+        ? "Demo lead saved and internal case created. No external contact was sent."
+        : "Demo lead saved locally. No external message was sent.",
+      "ok"
+    );
+  });
 }
 
 function bindCustomer() {
@@ -957,6 +1362,30 @@ function bindEconomics() {
           'input[name="laborCostIncludedInOperatingCosts"]'
         ).checked,
       };
+    });
+  });
+}
+
+function bindMarketing() {
+  const form = document.getElementById("marketingFunnelForm");
+  if (!form) return;
+  form.addEventListener("input", () => {
+    const values = formDataObject(form);
+    mutate((next) => {
+      next.marketing.funnelInputs = {
+        ...next.marketing.funnelInputs,
+        ...toNumberMap(values, [
+          "adSpend",
+          "leads",
+          "bookedCalls",
+          "signedClients",
+          "avgFeeCollected",
+          "refundsIssued",
+          "referralLeads",
+          "outboundLeads",
+        ]),
+      };
+      next.marketing.flagshipOffer = values.flagshipOffer || "Full Negotiation";
     });
   });
 }
