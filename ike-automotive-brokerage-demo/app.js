@@ -20,6 +20,7 @@ const app = document.getElementById("app");
 let state = loadState();
 let flash = "";
 let flashTone = "ok";
+const LEAD_STATUSES = ["New", "Contacted", "Qualified", "Booked", "Closed Won", "Closed Lost"];
 
 render();
 
@@ -157,68 +158,78 @@ function renderActiveView(tab) {
 
 function renderWebsite() {
   const leads = state.marketingLeads || [];
+  const funnel = calculateMarketingSnapshot(state.marketing?.funnelInputs || {});
+  const sourceCounts = leads.reduce((acc, lead) => {
+    const key = lead.source || "Unknown";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const sourceMarkup = Object.entries(sourceCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([source, count]) => `<span class="source-pill">${esc(source)} · ${count}</span>`)
+    .join("");
+  const closedWon = leads.filter((lead) => lead.status === "Closed Won").length;
+
   return `
     <section class="site-hero">
       <div class="site-hero-copy">
-        <p class="eyebrow">IKE AUTOMOTIVE GROUP LLC · PRE-LAUNCH DEMO</p>
-        <h2>Professional car deal negotiation.<br><span>Built for buyer leverage.</span></h2>
+        <p class="eyebrow">IKE AUTOMOTIVE GROUP LLC · PRE-LAUNCH DEMO WEBSITE</p>
+        <h2>Negotiate harder.<br><span>Close smarter.</span></h2>
         <p>
-          We help clients secure cleaner vehicle terms through transparent dealer quote comparison and direct negotiation support.
-          You keep decision control. We handle the negotiation pressure.
+          IKE Automotive Group is building an electrified brokerage experience for buyers who want leverage, clarity, and documented deal options.
+          We handle negotiation intensity while clients keep final control.
         </p>
         <div class="cta-row">
-          <button type="button" class="primary-btn" data-jump="websiteLeadForm">Book a strategy intake</button>
+          <button type="button" class="primary-btn" data-jump="websiteLeadForm">Start my deal strategy</button>
           <button type="button" class="secondary-btn" data-jump="websitePackages">See service packages</button>
+        </div>
+        <div class="site-hero-metrics" aria-label="Website funnel preview">
+          <div><span>Demo leads</span><strong>${leads.length}</strong></div>
+          <div><span>Booked-call rate</span><strong>${funnel.metrics.bookedRate}%</strong></div>
+          <div><span>Closed-won leads</span><strong>${closedWon}</strong></div>
         </div>
         <p class="muted">
           Demonstration boundary: this page captures local demo leads only and does not send messages or create external records.
         </p>
       </div>
       <aside class="site-hero-panel">
-        <h3>What clients get</h3>
+        <h3>Client value stack</h3>
         <ul>
-          <li>Structured intake and target vehicle strategy</li>
-          <li>Quote normalization across terms, mileage, fees, and assumptions</li>
-          <li>Negotiation documentation and recommendation summary</li>
-          <li>Clear fee disclosure language before engagement</li>
+          <li>Target vehicle strategy mapped to budget and timing pressure</li>
+          <li>Quote normalization across term, mileage, taxes, fees, and assumptions</li>
+          <li>Negotiation documentation for transparent client-side decision making</li>
+          <li>Explicit fee disclosures before service engagement</li>
         </ul>
         <p class="muted">No guarantees, no hidden incentives, no custody of vehicle purchase funds.</p>
+        <div class="source-strip">${sourceMarkup || '<span class="source-pill">No lead-source mix yet</span>'}</div>
       </aside>
     </section>
 
     <section id="websitePackages" class="card" style="margin-top:14px">
-      <h3>Proposed package lineup</h3>
-      <div class="table-wrap" style="margin-top:10px">
-        <table>
-          <thead>
-            <tr>
-              <th>Package</th>
-              <th>Proposed fee</th>
-              <th>Delivery scope</th>
-              <th>Best fit</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Strategic Buy Plan</td>
-              <td>${currency(399)}</td>
-              <td>Market brief, trim targeting, and negotiation prep notes</td>
-              <td>Self-directed buyers needing strategy support</td>
-            </tr>
-            <tr>
-              <td>Full Negotiation</td>
-              <td>${currency(999)}</td>
-              <td>Dealer quote collection, negotiation, and side-by-side recommendation</td>
-              <td>Buyers wanting full negotiation execution</td>
-            </tr>
-            <tr>
-              <td>Concierge Delivery</td>
-              <td>${currency(1499)}</td>
-              <td>Full negotiation plus close coordination and paperwork walkthrough</td>
-              <td>Clients wanting end-to-end support</td>
-            </tr>
-          </tbody>
-        </table>
+      <h3>Electrified offer architecture</h3>
+      <div class="offer-grid" style="margin-top:10px">
+        <article class="offer-card">
+          <span>01 · STRATEGY</span>
+          <h4>Strategic Buy Plan</h4>
+          <p class="offer-price">${currency(399)}</p>
+          <p>Market brief, trim targeting, and negotiation prep notes.</p>
+          <small>Best for self-directed buyers needing tactical clarity.</small>
+        </article>
+        <article class="offer-card featured">
+          <span>02 · FLAGSHIP</span>
+          <h4>Full Negotiation</h4>
+          <p class="offer-price">${currency(999)}</p>
+          <p>Dealer quote collection, negotiation, and side-by-side recommendation.</p>
+          <small>Best for buyers who want full execution without dealer pressure.</small>
+        </article>
+        <article class="offer-card">
+          <span>03 · WHITE GLOVE</span>
+          <h4>Concierge Delivery</h4>
+          <p class="offer-price">${currency(1499)}</p>
+          <p>Full negotiation plus close coordination and paperwork walkthrough.</p>
+          <small>Best for high-friction schedules and end-to-end support.</small>
+        </article>
       </div>
       <p class="muted" style="margin-top:8px">
         Pricing and policy terms are planning proposals until finalized in signed service agreements.
@@ -227,21 +238,21 @@ function renderWebsite() {
 
     <section class="grid-3" style="margin-top:14px">
       <article class="card">
-        <h3>Who we serve</h3>
-        <p>Buyers who want documented comparisons and less dealership friction.</p>
+        <h3>Who this is for</h3>
+        <p>Buyers who want data-backed leverage, cleaner deal structure, and less dealership friction.</p>
+      </article>
+      <article class="card">
+        <h3>What we never fake</h3>
+        <p>No fake approvals, no invented incentives, no implied legal authority, and no undocumented assumptions.</p>
       </article>
       <article class="card">
         <h3>What we do not do</h3>
         <p>No financing origination, no credit filing, no title transfer agency, no dealer licensing substitution.</p>
       </article>
-      <article class="card">
-        <h3>Compensation clarity</h3>
-        <p>Compensation model must be disclosed in writing before any engagement.</p>
-      </article>
     </section>
 
     <section class="card" style="margin-top:14px">
-      <h3 id="websiteLeadForm">Marketing lead intake (demo)</h3>
+      <h3 id="websiteLeadForm">High-intent lead intake (demo)</h3>
       <p class="muted">
         Submit fictional test data to validate your website funnel. No external outbound action is triggered.
       </p>
@@ -295,12 +306,12 @@ function renderWebsite() {
           <input type="checkbox" name="createCase">
           Also create an internal demo case immediately
         </label>
-        <button class="primary-btn" type="submit">Save demo lead</button>
+        <button class="primary-btn" type="submit">Capture demo lead</button>
       </form>
     </section>
 
     <section class="card" style="margin-top:14px">
-      <h3>Recent demo leads</h3>
+      <h3>Recent lead flow</h3>
       <p class="muted">${leads.length} local demo lead(s) tracked.</p>
       ${
         leads.length
@@ -314,6 +325,7 @@ function renderWebsite() {
                 <th>Budget</th>
                 <th>Source</th>
                 <th>Package</th>
+                <th>Status</th>
                 <th>Created</th>
               </tr>
             </thead>
@@ -331,6 +343,7 @@ function renderWebsite() {
                   <td>${currency(lead.budgetUSD)}</td>
                   <td>${esc(lead.source)}</td>
                   <td>${esc(lead.packageInterest)}</td>
+                  <td>${esc(lead.status || "New")}</td>
                   <td>${esc(new Date(lead.createdAt).toLocaleDateString())}</td>
                 </tr>
               `
@@ -350,12 +363,37 @@ function renderMarketing() {
   const assumptions = snapshot.assumptions;
   const metrics = snapshot.metrics;
   const planRows = state.marketing?.channelPlan || [];
+  const leads = state.marketingLeads || [];
+  const bookedWidth = Math.max(6, Math.min(100, metrics.bookedRate));
+  const signedWidth = Math.max(4, Math.min(100, metrics.closeRateFromLeads));
   return `
     <h2>Marketing engine and growth controls</h2>
     <p class="lead">
       Practical marketing stack for demand generation, lead quality, and conversion tracking.
       Targets are planning assumptions and must not be represented as achieved results unless evidenced.
     </p>
+
+    <section class="funnel-card">
+      <div class="funnel-head">
+        <h3>Acquisition funnel pulse</h3>
+        <span>Flagship offer: ${esc(state.marketing.flagshipOffer || "Full Negotiation")}</span>
+      </div>
+      <div class="funnel-rows">
+        <div class="funnel-row">
+          <strong>Leads (${assumptions.leads})</strong>
+          <div class="funnel-bar"><span style="width:100%"></span></div>
+        </div>
+        <div class="funnel-row">
+          <strong>Booked calls (${assumptions.bookedCalls})</strong>
+          <div class="funnel-bar"><span style="width:${bookedWidth}%"></span></div>
+        </div>
+        <div class="funnel-row">
+          <strong>Signed clients (${assumptions.signedClients})</strong>
+          <div class="funnel-bar"><span style="width:${signedWidth}%"></span></div>
+        </div>
+      </div>
+      <p class="muted">Funnel bars are based on editable assumptions and are for planning only.</p>
+    </section>
 
     <div class="grid-3" style="margin-top:12px">
       ${kpi("Leads", assumptions.leads)}
@@ -412,6 +450,51 @@ function renderMarketing() {
       <p class="muted">
         Paid leads estimate: ${assumptions.paidLeads}. Organic/non-paid leads estimate: ${assumptions.organicLeads}.
       </p>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Lead pipeline control</h3>
+      ${
+        leads.length
+          ? `<div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Lead</th>
+                <th>Goal</th>
+                <th>Source</th>
+                <th>Package</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leads
+                .slice()
+                .reverse()
+                .slice(0, 12)
+                .map(
+                  (lead) => `
+                <tr>
+                  <td><strong>${esc(lead.name)}</strong><br><small>${esc(lead.id)}</small></td>
+                  <td>${esc(lead.vehicleGoal)}</td>
+                  <td>${esc(lead.source)}</td>
+                  <td>${esc(lead.packageInterest)}</td>
+                  <td>
+                    <select data-lead-status="${esc(lead.id)}">
+                      ${LEAD_STATUSES.map((status) => `<option value="${esc(status)}" ${lead.status === status ? "selected" : ""}>${esc(status)}</option>`).join("")}
+                    </select>
+                  </td>
+                  <td><button type="button" class="secondary-btn" data-lead-to-case="${esc(lead.id)}">Create case</button></td>
+                </tr>
+              `
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>`
+          : `<p class="muted">No leads in pipeline yet. Capture leads from the Website tab.</p>`
+      }
     </section>
 
     <section class="card" style="margin-top:14px">
@@ -1368,24 +1451,72 @@ function bindEconomics() {
 
 function bindMarketing() {
   const form = document.getElementById("marketingFunnelForm");
-  if (!form) return;
-  form.addEventListener("input", () => {
-    const values = formDataObject(form);
-    mutate((next) => {
-      next.marketing.funnelInputs = {
-        ...next.marketing.funnelInputs,
-        ...toNumberMap(values, [
-          "adSpend",
-          "leads",
-          "bookedCalls",
-          "signedClients",
-          "avgFeeCollected",
-          "refundsIssued",
-          "referralLeads",
-          "outboundLeads",
-        ]),
-      };
-      next.marketing.flagshipOffer = values.flagshipOffer || "Full Negotiation";
+  if (form) {
+    form.addEventListener("input", () => {
+      const values = formDataObject(form);
+      mutate((next) => {
+        next.marketing.funnelInputs = {
+          ...next.marketing.funnelInputs,
+          ...toNumberMap(values, [
+            "adSpend",
+            "leads",
+            "bookedCalls",
+            "signedClients",
+            "avgFeeCollected",
+            "refundsIssued",
+            "referralLeads",
+            "outboundLeads",
+          ]),
+        };
+        next.marketing.flagshipOffer = values.flagshipOffer || "Full Negotiation";
+      });
+    });
+  }
+
+  document.querySelectorAll("[data-lead-status]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const leadId = select.dataset.leadStatus;
+      mutate((next) => {
+        const lead = next.marketingLeads.find((item) => item.id === leadId);
+        if (!lead) return;
+        lead.status = select.value;
+      });
+      setFlash("Lead status updated.", "ok");
+    });
+  });
+
+  document.querySelectorAll("[data-lead-to-case]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const leadId = button.dataset.leadToCase;
+      mutate((next) => {
+        const lead = next.marketingLeads.find((item) => item.id === leadId);
+        if (!lead) return;
+        const item = createCaseFromIntake(
+          {
+            name: lead.name,
+            email: lead.email,
+            phone: lead.phone,
+            intent: "Purchase",
+            budgetUSD: lead.budgetUSD,
+            preferences: lead.vehicleGoal,
+            timeframe: lead.timeline || "Flexible",
+            tradeIn: false,
+            owner: "Founder",
+            proposedFee:
+              lead.packageInterest === "Strategic Buy Plan"
+                ? 399
+                : lead.packageInterest === "Concierge Delivery"
+                  ? 1499
+                  : 999,
+          },
+          next.cases.length
+        );
+        next.cases.unshift(item);
+        next.ui.selectedCaseId = item.id;
+        next.ui.activeTab = "cases";
+        lead.status = "Qualified";
+      });
+      setFlash("Lead converted into a demo case.", "ok");
     });
   });
 }
