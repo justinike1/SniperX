@@ -17,6 +17,11 @@ It does **not** create real customer records, dealer outreach, payments, credit 
   - CPL/CAC/book/close metrics
   - gross vs refunds vs net collections
   - channel execution board and message stack
+- Lease Desk workspace with:
+  - residual, money factor, APR-estimate, cap-cost, and payment calculations
+  - editable credit-tier matrix (`min score`, `buy-rate MF`, `residual adjustment`)
+  - tier scenario comparison for payment sensitivity
+  - explicit warning flags for high MF / low residual / risky cap reduction assumptions
 - Customer-facing demo page with:
   - persistent pre-launch/demo notice
   - brokerage service explanation and exclusions

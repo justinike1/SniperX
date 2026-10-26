@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import {
   arithmeticScenarios,
   buildQuoteComparison,
+  calculateLeaseDesk,
   calculateMarketingSnapshot,
   calculateEconomics,
   createCaseFromIntake,
   createLeadFromWebsite,
   initialDemoState,
+  leaseTierScenarios,
   sanitizeReadinessItem,
 } from "../model.mjs";
 
@@ -167,4 +169,53 @@ test("marketing snapshot computes funnel and cost metrics", () => {
   assert.equal(report.metrics.cac, 500);
   assert.equal(report.metrics.grossCollections, 3996);
   assert.equal(report.metrics.netAfterRefunds, 3597);
+});
+
+test("lease desk computes monthly payment with tier-adjusted residual and money factor", () => {
+  const report = calculateLeaseDesk(
+    {
+      creditScore: 735,
+      msrp: 45000,
+      sellingPrice: 42000,
+      incentives: 1000,
+      capReduction: 2000,
+      acquisitionFee: 895,
+      docFee: 500,
+      registrationFee: 300,
+      rollFeesIntoLease: true,
+      termMonths: 36,
+      annualMileage: 10000,
+      baseResidualPct: 61,
+      mfMarkup: 0.0003,
+      salesTaxRatePct: 6.625,
+      taxOnMonthlyPayment: true,
+      firstPaymentDueAtSigning: true,
+    },
+    [
+      { id: "T1", name: "Tier 1", minScore: 760, buyRateMF: 0.0012, residualAdjPct: 0 },
+      { id: "T2", name: "Tier 2", minScore: 720, buyRateMF: 0.0015, residualAdjPct: -1 },
+      { id: "T3", name: "Tier 3", minScore: 680, buyRateMF: 0.0019, residualAdjPct: -2 },
+    ]
+  );
+  assert.equal(report.selectedTier.name, "Tier 2");
+  assert.equal(report.assumptions.residualPct, 60);
+  assert.equal(report.assumptions.moneyFactor, 0.0018);
+  assert.ok(report.totals.monthlyPayment > 0);
+  assert.ok(report.totals.driveOff > 0);
+  assert.ok(report.totals.aprEstimatePct > 0);
+});
+
+test("lease tier scenarios return sorted tier outputs", () => {
+  const rows = leaseTierScenarios(
+    { creditScore: 700, msrp: 40000, sellingPrice: 39000, termMonths: 36 },
+    [
+      { id: "T2", name: "Tier 2", minScore: 700, buyRateMF: 0.0018, residualAdjPct: -1 },
+      { id: "T1", name: "Tier 1", minScore: 760, buyRateMF: 0.0013, residualAdjPct: 0 },
+      { id: "T3", name: "Tier 3", minScore: 640, buyRateMF: 0.0022, residualAdjPct: -3 },
+    ]
+  );
+  assert.equal(rows.length, 3);
+  assert.equal(rows[0].tier.name, "Tier 1");
+  assert.equal(rows[1].tier.name, "Tier 2");
+  assert.ok(rows[0].monthlyPayment < rows[2].monthlyPayment);
 });

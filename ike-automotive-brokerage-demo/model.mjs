@@ -352,6 +352,211 @@ export function calculateMarketingSnapshot(rawInputs) {
   };
 }
 
+export function defaultLeaseTierMatrix() {
+  return [
+    { id: "T1", name: "Tier 1", minScore: 760, buyRateMF: 0.00125, residualAdjPct: 0.0 },
+    { id: "T2", name: "Tier 2", minScore: 720, buyRateMF: 0.00155, residualAdjPct: -1.0 },
+    { id: "T3", name: "Tier 3", minScore: 680, buyRateMF: 0.00195, residualAdjPct: -2.0 },
+    { id: "T4", name: "Tier 4", minScore: 640, buyRateMF: 0.00245, residualAdjPct: -3.5 },
+    { id: "T5", name: "Tier 5", minScore: 0, buyRateMF: 0.00295, residualAdjPct: -5.0 },
+  ];
+}
+
+export function defaultLeaseDeskInputs() {
+  return {
+    creditScore: 725,
+    msrp: 45500,
+    sellingPrice: 42500,
+    incentives: 1500,
+    capReduction: 2000,
+    acquisitionFee: 895,
+    docFee: 499,
+    registrationFee: 380,
+    rollFeesIntoLease: true,
+    termMonths: 36,
+    annualMileage: 10000,
+    baseResidualPct: 61,
+    mfMarkup: 0.0003,
+    salesTaxRatePct: 6.625,
+    taxOnMonthlyPayment: true,
+    firstPaymentDueAtSigning: true,
+  };
+}
+
+function clampPct(value, min = 0, max = 100) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
+
+function clampMF(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Number(n.toFixed(6)));
+}
+
+function roundMoney(value) {
+  return Number((Number(value) || 0).toFixed(2));
+}
+
+export function evaluateLeaseTier(score, tiers = defaultLeaseTierMatrix()) {
+  const cleanScore = clampWhole(score);
+  const sorted = (tiers || []).slice().sort((a, b) => Number(b.minScore) - Number(a.minScore));
+  const selected = sorted.find((tier) => cleanScore >= Number(tier.minScore)) || sorted[sorted.length - 1];
+  return {
+    creditScore: cleanScore,
+    tier: selected
+      ? {
+          ...selected,
+          minScore: clampWhole(selected.minScore),
+          buyRateMF: clampMF(selected.buyRateMF),
+          residualAdjPct: Number(selected.residualAdjPct) || 0,
+        }
+      : null,
+  };
+}
+
+function sanitizeTier(tier, fallbackName) {
+  return {
+    id: tier.id || `T-${fallbackName}`,
+    name: String(tier.name || fallbackName).trim(),
+    minScore: clampWhole(tier.minScore),
+    buyRateMF: clampMF(tier.buyRateMF),
+    residualAdjPct: Number(tier.residualAdjPct) || 0,
+  };
+}
+
+function computeLeaseWithTier(inputs, tier) {
+  const msrp = clampMoney(inputs.msrp);
+  const sellingPrice = clampMoney(inputs.sellingPrice);
+  const incentives = clampMoney(inputs.incentives);
+  const capReduction = clampMoney(inputs.capReduction);
+  const acqFee = clampMoney(inputs.acquisitionFee);
+  const docFee = clampMoney(inputs.docFee);
+  const regFee = clampMoney(inputs.registrationFee);
+  const termMonths = Math.max(1, clampWhole(inputs.termMonths));
+  const annualMileage = Math.max(1, clampWhole(inputs.annualMileage));
+  const baseResidualPct = clampPct(inputs.baseResidualPct, 10, 95);
+  const mfMarkup = clampMF(inputs.mfMarkup);
+  const taxRate = clampPct(inputs.salesTaxRatePct, 0, 20);
+  const taxOnMonthly = !!inputs.taxOnMonthlyPayment;
+  const firstPaymentDue = !!inputs.firstPaymentDueAtSigning;
+  const rollFees = !!inputs.rollFeesIntoLease;
+
+  const totalFees = roundMoney(acqFee + docFee + regFee);
+  const residualPct = clampPct(baseResidualPct + (tier?.residualAdjPct || 0), 5, 95);
+  const residualValue = roundMoney(msrp * (residualPct / 100));
+  const buyRateMF = clampMF(tier?.buyRateMF || 0);
+  const moneyFactor = clampMF(buyRateMF + mfMarkup);
+  const grossCapCost = roundMoney(sellingPrice + (rollFees ? totalFees : 0));
+  const adjustedCapCost = roundMoney(Math.max(0, grossCapCost - incentives - capReduction));
+  const depreciationCharge = roundMoney((adjustedCapCost - residualValue) / termMonths);
+  const rentCharge = roundMoney((adjustedCapCost + residualValue) * moneyFactor);
+  const baseMonthly = roundMoney(depreciationCharge + rentCharge);
+  const monthlyTax = taxOnMonthly ? roundMoney(baseMonthly * (taxRate / 100)) : 0;
+  const monthlyPayment = roundMoney(baseMonthly + monthlyTax);
+  const upfrontTax = taxOnMonthly ? 0 : roundMoney(baseMonthly * termMonths * (taxRate / 100));
+  const driveOff = roundMoney(
+    capReduction +
+      (rollFees ? 0 : totalFees) +
+      (firstPaymentDue ? monthlyPayment : 0) +
+      upfrontTax
+  );
+  const leaseTotal = roundMoney(monthlyPayment * termMonths + driveOff);
+  const totalAllowedMiles = Math.max(1, roundMoney((annualMileage * termMonths) / 12));
+  const effectiveCostPerMile = roundMoney(leaseTotal / totalAllowedMiles);
+  const aprEstimatePct = roundMoney(moneyFactor * 2400);
+
+  const warnings = [];
+  if (moneyFactor >= 0.0032) warnings.push("High money factor: validate buy rate and markup.");
+  if (residualPct < 50) warnings.push("Low residual percentage: monthly may increase substantially.");
+  if (adjustedCapCost < residualValue) {
+    warnings.push("Adjusted cap cost is below residual value; verify selling price, incentives, and residual assumptions.");
+  }
+  if (monthlyPayment <= 0) warnings.push("Calculated monthly payment is non-positive; verify inputs.");
+  if (capReduction > 0) warnings.push("Cap reduction paid upfront can increase loss risk if vehicle is totaled early.");
+
+  return {
+    tier: tier || null,
+    assumptions: {
+      msrp,
+      sellingPrice,
+      incentives,
+      capReduction,
+      acqFee,
+      docFee,
+      regFee,
+      totalFees,
+      rollFees,
+      termMonths,
+      annualMileage,
+      baseResidualPct,
+      residualPct,
+      buyRateMF,
+      mfMarkup,
+      moneyFactor,
+      taxRate,
+      taxOnMonthly,
+      firstPaymentDue,
+    },
+    totals: {
+      residualValue,
+      grossCapCost,
+      adjustedCapCost,
+      depreciationCharge,
+      rentCharge,
+      baseMonthly,
+      monthlyTax,
+      monthlyPayment,
+      upfrontTax,
+      driveOff,
+      leaseTotal,
+      totalAllowedMiles,
+      effectiveCostPerMile,
+      aprEstimatePct,
+    },
+    warnings,
+  };
+}
+
+export function calculateLeaseDesk(rawInputs, rawTiers = defaultLeaseTierMatrix()) {
+  const inputs = {
+    ...defaultLeaseDeskInputs(),
+    ...rawInputs,
+  };
+  const tiers = (rawTiers || []).map((tier, idx) => sanitizeTier(tier, `Tier ${idx + 1}`));
+  const { creditScore, tier } = evaluateLeaseTier(inputs.creditScore, tiers);
+  const result = computeLeaseWithTier({ ...inputs, creditScore }, tier);
+  return {
+    creditScore,
+    tiers,
+    selectedTier: tier,
+    ...result,
+  };
+}
+
+export function leaseTierScenarios(rawInputs, rawTiers = defaultLeaseTierMatrix()) {
+  const inputs = {
+    ...defaultLeaseDeskInputs(),
+    ...rawInputs,
+  };
+  const tiers = (rawTiers || []).map((tier, idx) => sanitizeTier(tier, `Tier ${idx + 1}`));
+  return tiers
+    .slice()
+    .sort((a, b) => Number(b.minScore) - Number(a.minScore))
+    .map((tier) => {
+      const report = computeLeaseWithTier(inputs, tier);
+      return {
+        tier,
+        monthlyPayment: report.totals.monthlyPayment,
+        driveOff: report.totals.driveOff,
+        residualValue: report.totals.residualValue,
+        moneyFactor: report.assumptions.moneyFactor,
+        aprEstimatePct: report.totals.aprEstimatePct,
+      };
+    });
+}
+
 function seedCase(overrides) {
   const base = createCaseFromIntake(
     {
@@ -586,6 +791,10 @@ export function initialDemoState() {
           owner: "Founder",
         },
       ],
+    },
+    desking: {
+      inputs: defaultLeaseDeskInputs(),
+      tiers: defaultLeaseTierMatrix(),
     },
     customerIntakeDefaults: {
       name: "Alex Sample",

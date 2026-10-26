@@ -5,11 +5,13 @@ import {
   arithmeticScenarios,
   buildQuoteComparison,
   calculateMarketingSnapshot,
+  calculateLeaseDesk,
   calculateEconomics,
   createCaseFromIntake,
   createLeadFromWebsite,
   currency,
   initialDemoState,
+  leaseTierScenarios,
   normalizeQuote,
   sanitizeReadinessItem,
 } from "./model.mjs";
@@ -48,6 +50,17 @@ function loadState() {
           ...seed.marketing.funnelInputs,
           ...(parsed.marketing?.funnelInputs || {}),
         },
+      },
+      desking: {
+        ...seed.desking,
+        ...(parsed.desking || {}),
+        inputs: {
+          ...seed.desking.inputs,
+          ...(parsed.desking?.inputs || {}),
+        },
+        tiers: Array.isArray(parsed.desking?.tiers)
+          ? parsed.desking.tiers
+          : seed.desking.tiers,
       },
       customerIntakeDefaults: {
         ...seed.customerIntakeDefaults,
@@ -121,6 +134,7 @@ function render() {
           <div class="tabs" role="tablist" aria-label="Prototype workspaces">
             ${tabButton("website", "Website", tab)}
             ${tabButton("marketing", "Marketing", tab)}
+            ${tabButton("desk", "Lease Desk", tab)}
             ${tabButton("customer", "Customer demo", tab)}
             ${tabButton("cases", "Case workspace", tab)}
             ${tabButton("economics", "Economics", tab)}
@@ -149,6 +163,7 @@ function tabButton(id, label, current) {
 function renderActiveView(tab) {
   if (tab === "website") return renderWebsite();
   if (tab === "marketing") return renderMarketing();
+  if (tab === "desk") return renderLeaseDesk();
   if (tab === "cases") return renderCaseWorkspace();
   if (tab === "economics") return renderEconomics();
   if (tab === "readiness") return renderReadiness();
@@ -582,6 +597,180 @@ function renderMarketing() {
     <div class="warning-box">
       Marketing content must not claim guaranteed savings, guaranteed approvals, or live brokerage authority without verified external approvals.
     </div>
+  `;
+}
+
+function renderLeaseDesk() {
+  const deskReport = calculateLeaseDesk(state.desking?.inputs || {}, state.desking?.tiers || []);
+  const scenarios = leaseTierScenarios(state.desking?.inputs || {}, state.desking?.tiers || []);
+  const assumptions = deskReport.assumptions;
+  const totals = deskReport.totals;
+  const selectedTier = deskReport.selectedTier;
+
+  return `
+    <h2>Personal Lease Desk</h2>
+    <p class="lead">
+      Internal desking calculator for residual, money factor, and credit tiers.
+      Use this for estimate modeling only — confirm lender program sheets and taxable rules before quoting clients.
+    </p>
+    <div class="warning-box">
+      Demo boundaries: this tool does not submit deals, pull credit, or represent lender approval. Values are internal planning outputs only.
+    </div>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Lease deal assumptions</h3>
+      <form id="leaseDeskForm">
+        <div class="grid-3">
+          <label>Credit score
+            <input name="creditScore" type="number" min="300" max="850" step="1" value="${esc(state.desking.inputs.creditScore)}">
+          </label>
+          <label>MSRP (USD)
+            <input name="msrp" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.msrp)}">
+          </label>
+          <label>Selling price (USD)
+            <input name="sellingPrice" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.sellingPrice)}">
+          </label>
+          <label>Incentives / rebates (USD)
+            <input name="incentives" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.incentives)}">
+          </label>
+          <label>Cap reduction (USD)
+            <input name="capReduction" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.capReduction)}">
+          </label>
+          <label>Acquisition fee (USD)
+            <input name="acquisitionFee" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.acquisitionFee)}">
+          </label>
+          <label>Doc fee (USD)
+            <input name="docFee" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.docFee)}">
+          </label>
+          <label>Registration fee (USD)
+            <input name="registrationFee" type="number" min="0" step="0.01" value="${esc(state.desking.inputs.registrationFee)}">
+          </label>
+          <label>Term (months)
+            <input name="termMonths" type="number" min="1" step="1" value="${esc(state.desking.inputs.termMonths)}">
+          </label>
+          <label>Annual mileage
+            <input name="annualMileage" type="number" min="1" step="1" value="${esc(state.desking.inputs.annualMileage)}">
+          </label>
+          <label>Base residual (%)
+            <input name="baseResidualPct" type="number" min="1" max="95" step="0.1" value="${esc(state.desking.inputs.baseResidualPct)}">
+          </label>
+          <label>MF markup (decimal)
+            <input name="mfMarkup" type="number" min="0" step="0.00001" value="${esc(state.desking.inputs.mfMarkup)}">
+          </label>
+          <label>Sales tax rate (%)
+            <input name="salesTaxRatePct" type="number" min="0" max="20" step="0.001" value="${esc(state.desking.inputs.salesTaxRatePct)}">
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="check-row">
+            <input type="checkbox" name="rollFeesIntoLease" ${state.desking.inputs.rollFeesIntoLease ? "checked" : ""}>
+            Roll fees into lease cap cost
+          </label>
+          <label class="check-row">
+            <input type="checkbox" name="taxOnMonthlyPayment" ${state.desking.inputs.taxOnMonthlyPayment ? "checked" : ""}>
+            Tax collected on monthly payment
+          </label>
+        </div>
+        <label class="check-row">
+          <input type="checkbox" name="firstPaymentDueAtSigning" ${state.desking.inputs.firstPaymentDueAtSigning ? "checked" : ""}>
+          First payment due at signing
+        </label>
+      </form>
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Tier matrix editor</h3>
+      <p class="muted">Set buy-rate money factor and residual adjustment by score tier.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th>Minimum score</th>
+              <th>Buy-rate MF</th>
+              <th>Residual adjustment (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${deskReport.tiers
+              .slice()
+              .sort((a, b) => Number(b.minScore) - Number(a.minScore))
+              .map(
+                (tier) => `
+              <tr>
+                <td><strong>${esc(tier.name)}</strong>${selectedTier?.id === tier.id ? ' <span class="ok">(active)</span>' : ''}</td>
+                <td><input data-tier-id="${esc(tier.id)}" data-tier-field="minScore" type="number" min="0" max="850" step="1" value="${esc(tier.minScore)}"></td>
+                <td><input data-tier-id="${esc(tier.id)}" data-tier-field="buyRateMF" type="number" min="0" step="0.00001" value="${esc(tier.buyRateMF)}"></td>
+                <td><input data-tier-id="${esc(tier.id)}" data-tier-field="residualAdjPct" type="number" step="0.1" value="${esc(tier.residualAdjPct)}"></td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="kpi-grid" style="margin-top:14px">
+      ${kpi("Active tier", selectedTier ? `${selectedTier.name} (>=${selectedTier.minScore})` : "N/A")}
+      ${kpi("Residual value", currency(totals.residualValue))}
+      ${kpi("Adjusted cap cost", currency(totals.adjustedCapCost))}
+      ${kpi("Money factor", assumptions.moneyFactor.toFixed(5))}
+      ${kpi("APR estimate", `${totals.aprEstimatePct.toFixed(2)}%`)}
+      ${kpi("Base monthly", currency(totals.baseMonthly))}
+      ${kpi("Tax / month", currency(totals.monthlyTax))}
+      ${kpi("Monthly payment", currency(totals.monthlyPayment))}
+      ${kpi("Drive-off due", currency(totals.driveOff))}
+      ${kpi("Lease total cost", currency(totals.leaseTotal))}
+      ${kpi("Allowed miles", totals.totalAllowedMiles.toLocaleString())}
+      ${kpi("Effective cost / mile", currency(totals.effectiveCostPerMile))}
+    </section>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Tier scenario comparison</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tier</th>
+              <th>Min score</th>
+              <th>MF used</th>
+              <th>APR estimate</th>
+              <th>Residual value</th>
+              <th>Monthly payment</th>
+              <th>Drive-off</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${scenarios
+              .map(
+                (row) => `
+              <tr>
+                <td>${esc(row.tier.name)}${selectedTier?.id === row.tier.id ? ' <span class="ok">(active)</span>' : ''}</td>
+                <td>${row.tier.minScore}</td>
+                <td>${row.moneyFactor.toFixed(5)}</td>
+                <td>${row.aprEstimatePct.toFixed(2)}%</td>
+                <td>${currency(row.residualValue)}</td>
+                <td>${currency(row.monthlyPayment)}</td>
+                <td>${currency(row.driveOff)}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    ${
+      deskReport.warnings.length
+        ? `<div class="warning-box" style="margin-top:14px"><strong>Desk warnings:</strong><ul>${deskReport.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul></div>`
+        : ""
+    }
+    <p class="muted" style="margin-top:12px">
+      Formula highlights: depreciation = (adjusted cap − residual) / term; rent charge = (adjusted cap + residual) × money factor;
+      monthly payment = base payment + tax method output.
+    </p>
   `;
 }
 
@@ -1244,6 +1433,7 @@ function bindCommon() {
 function bindView(tab) {
   if (tab === "website") bindWebsite();
   if (tab === "marketing") bindMarketing();
+  if (tab === "desk") bindDesk();
   if (tab === "customer") bindCustomer();
   if (tab === "cases") bindCases();
   if (tab === "economics") bindEconomics();
@@ -1476,6 +1666,58 @@ function bindEconomics() {
           'input[name="laborCostIncludedInOperatingCosts"]'
         ).checked,
       };
+    });
+  });
+}
+
+function bindDesk() {
+  const form = document.getElementById("leaseDeskForm");
+  if (form) {
+    form.addEventListener("change", () => {
+      const values = formDataObject(form);
+      mutate((next) => {
+        next.desking.inputs = {
+          ...next.desking.inputs,
+          ...toNumberMap(values, [
+            "creditScore",
+            "msrp",
+            "sellingPrice",
+            "incentives",
+            "capReduction",
+            "acquisitionFee",
+            "docFee",
+            "registrationFee",
+            "termMonths",
+            "annualMileage",
+            "baseResidualPct",
+            "mfMarkup",
+            "salesTaxRatePct",
+          ]),
+          rollFeesIntoLease: !!form.querySelector('input[name="rollFeesIntoLease"]').checked,
+          taxOnMonthlyPayment: !!form.querySelector('input[name="taxOnMonthlyPayment"]').checked,
+          firstPaymentDueAtSigning: !!form.querySelector('input[name="firstPaymentDueAtSigning"]').checked,
+        };
+      });
+    });
+  }
+
+  document.querySelectorAll("[data-tier-id][data-tier-field]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const tierId = input.dataset.tierId;
+      const field = input.dataset.tierField;
+      mutate((next) => {
+        next.desking.tiers = next.desking.tiers.map((tier) => {
+          if (tier.id !== tierId) return tier;
+          const value =
+            field === "minScore" || field === "buyRateMF" || field === "residualAdjPct"
+              ? Number(input.value)
+              : input.value;
+          return {
+            ...tier,
+            [field]: value,
+          };
+        });
+      });
     });
   });
 }
