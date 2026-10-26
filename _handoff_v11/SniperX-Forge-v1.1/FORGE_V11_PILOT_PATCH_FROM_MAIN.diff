@@ -1,0 +1,713 @@
+diff --git a/forge-cloud/docs/STRIPE_TEST_PILOT.md b/forge-cloud/docs/STRIPE_TEST_PILOT.md
+new file mode 100644
+index 0000000..709009b
+--- /dev/null
++++ b/forge-cloud/docs/STRIPE_TEST_PILOT.md
+@@ -0,0 +1,65 @@
++# Forge v1.1 — Test Checkout Pilot Only
++
++**This is a technical test integration, not a launch authorization.** No real financial balances, bank payouts, W-2 wages, connected-account transfers, or payment guarantees are created here.
++
++## Product behavior
++
++- Existing private-beta mission posting, admin approval, assignment, proof, buyer acceptance, Earn Today, and simulated wallet remain in place.
++- The added Stripe **test-mode** Checkout endpoint lets an authenticated **buyer** open a Stripe-hosted test checkout for their own eligible mission.
++- A signed test-mode Stripe webhook records whether the test Checkout Session is paid, expired, or ineligible. Every event is stored with a unique ID.
++- Stripe test payments are kept **entirely separate** from the sandbox worker wallet. **No test Checkout event ever credits earnings, collects real funds or transfers money.**
++- Worker wallet simulated standard/instant payout fees remain mock calculations only and are not provider quotes.
++- An admin can inspect read-only ledger integrity and unresolved launch blockers.
++
++## Configuration
++
++Only use your own Stripe **test-mode** credentials. Do not put credentials in Git, Cursor prompts, screenshots, or ChatGPT. Configure them privately in a secrets manager or a local process environment:
++
++```
++FORGE_STRIPE_TEST_SECRET_KEY=sk_test_<your test-mode secret>
++FORGE_STRIPE_TEST_WEBHOOK_SECRET=whsec_<your test-mode webhook signing secret>
++FORGE_PUBLIC_ORIGIN=http://127.0.0.1:5200
++```
++
++Never configure `sk_live_` values: startup rejects them. Never convert this into live mode by changing the key prefix; real payments require a separately designed and reviewed integration.
++
++To use Stripe CLI, connect the forwarding endpoint for the local service to `http://127.0.0.1:5200/api/webhooks/stripe-test`; use the CLI-provided **test** webhook signing secret. Stripe CLI and network access are not needed to run the included offline tests.
++
++## API
++
++| Method | Path | Who | Function |
++|---|---|---|---|
++| POST | `/api/missions/:id/test-checkout` | Mission's buyer | Create or return a hosted TEST Checkout Session; requires same-site CSRF token. |
++| GET | `/api/missions/:id/test-checkout/status` | Mission's buyer or admin | Review test-only session state. |
++| POST | `/api/webhooks/stripe-test` | Stripe test-mode webhook | Raw-body HMAC signature required; no user session/CSRF; never accepts `livemode:true`. |
++| GET | `/api/admin/stripe-test/summary` | Admin | View test integration status and event counts without secrets. |
++| GET | `/api/admin/launch-audit` | Admin | Read-only ledger integrity checks and outstanding launch blockers. |
++
++To exercise test checkout: create a buyer test mission, sign in as its buyer, call `POST /api/missions/{id}/test-checkout` with the existing `X-Forge-CSRF` mechanism, open the returned Stripe test URL, and check the signed webhook result with the status endpoint.
++
++A successful checkout is marked `PAID_TEST` only when a signed Stripe event matches the expected mission ID, session ID, amount and currency, with `livemode:false` and `payment_status:paid`. No genuine card charge is issued.
++
++## Operator audit
++
++```
++cd forge-cloud
++npm run check
++npm test
++FORGE_DB_PATH=./data/forge.sqlite npm run audit:release
++```
++
++The audit command refuses to create a missing database. It exits nonzero if it finds financial inconsistencies. A clean **simulated** ledger is necessary for further testing, but is **not** a statement that live funds have settled or that production is ready.
++
++## Launch blockers
++
++1. Configure a real legal entity and contracts suitable for the marketplace.
++2. Complete state-by-state worker classification assessment; in New Jersey, the ABC test applies, and W-2 employment shifts require an employer/payroll arrangement.
++3. Independently verify buyer businesses, participant identities, service qualifications, and regulated work scopes; consent/background-check procedures where required.
++4. Select the correct Stripe Connect account type, payment flow, and onboarding; review allowed business model and platform risk with Stripe.
++5. Develop and independently audit a **separate** production ledger tied to actual processor charges, refunds, disputes, Stripe account balances, transfer IDs, worker entitlements, and bank payouts. Never rely on test-Checkout events as available production funds.
++6. Confirm fast-payout eligibility and fee disclosure with the actual provider for each worker and destination. Faster payouts are not guaranteed, even in supported jurisdictions.
++7. Implement human dispute handling, refunds, chargebacks, worker support, immutable audit retention and reconciliation.
++8. Independent application penetration test, managed database/backup strategy, secrets handling, observability, abuse monitoring, and incident response.
++9. Validate verified paying buyer demand in a tightly controlled legal pilot before public availability.
++
++**No single configuration switch can approve or enable public launch or real worker payouts.**
+diff --git a/forge-cloud/package.json b/forge-cloud/package.json
+index dc2652d..aedc417 100644
+--- a/forge-cloud/package.json
++++ b/forge-cloud/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "sniperx-forge-private-beta",
+-  "version": "1.0.0-sandbox",
++  "version": "1.1.0-pilot-test",
+   "private": true,
+   "type": "module",
+   "description": "Invite-only Earn Now mission feed and interest workflow, transparent demo economics, broader industry taxonomy, simulated marketplace and verification tracking",
+@@ -11,7 +11,8 @@
+     "start": "node src/server.mjs",
+     "dev": "node --watch src/server.mjs",
+     "admin:create": "node src/admin.mjs",
++    "audit:release": "node tools/release-audit.mjs",
+     "test": "node --test tests/*.test.mjs",
+-    "check": "node --check src/server.mjs && node --check src/db.mjs && node --check src/security.mjs && node --check src/handlers.mjs && node --check src/admin.mjs && node --check public/app.js && node --check src/jobs.mjs && node --check src/verification.mjs && node --check src/marketplace.mjs && node --check src/earn.mjs && node --check src/payouts.mjs && node --check src/discover.mjs && node --check src/quickpost.mjs"
++    "check": "node --check src/server.mjs && node --check src/db.mjs && node --check src/security.mjs && node --check src/handlers.mjs && node --check src/admin.mjs && node --check public/app.js && node --check src/jobs.mjs && node --check src/verification.mjs && node --check src/marketplace.mjs && node --check src/earn.mjs && node --check src/payouts.mjs && node --check src/discover.mjs && node --check src/quickpost.mjs && node --check src/stripe_test.mjs && node --check src/reconcile.mjs"
+   }
+ }
+diff --git a/forge-cloud/src/db.mjs b/forge-cloud/src/db.mjs
+index 7bbb016..1f9a882 100644
+--- a/forge-cloud/src/db.mjs
++++ b/forge-cloud/src/db.mjs
+@@ -113,6 +113,18 @@ export function openStore(filename) {
+       event_key TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL
+     );
+     CREATE INDEX IF NOT EXISTS idx_sandbox_wallet_worker ON sandbox_wallet_ledger(worker_user_id,created_at);
++    CREATE TABLE IF NOT EXISTS stripe_test_checkout_sessions (
++      mission_id TEXT PRIMARY KEY REFERENCES missions(id) ON DELETE RESTRICT,
++      session_id TEXT UNIQUE, checkout_url TEXT,
++      amount_cents INTEGER NOT NULL CHECK(amount_cents BETWEEN 100 AND 1000000),
++      status TEXT NOT NULL CHECK(status IN ('CREATING_TEST','OPEN_TEST','PAID_TEST','EXPIRED_TEST','CREATE_FAILED_TEST')),
++      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
++    );
++    CREATE TABLE IF NOT EXISTS stripe_test_webhook_events (
++      id TEXT PRIMARY KEY, event_type TEXT NOT NULL,
++      accepted INTEGER NOT NULL CHECK(accepted IN (0,1)),
++      reason TEXT NOT NULL, received_at TEXT NOT NULL
++    );
+     CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+   `);
+   try{fs.chmodSync(absolute,0o600)}catch{}
+diff --git a/forge-cloud/src/handlers.mjs b/forge-cloud/src/handlers.mjs
+index 80a7d38..ab4ac40 100644
+--- a/forge-cloud/src/handlers.mjs
++++ b/forge-cloud/src/handlers.mjs
+@@ -7,6 +7,8 @@ import {handleEarn} from './earn.mjs';
+ import {handleDiscover} from './discover.mjs';
+ import {handleQuickPost} from './quickpost.mjs';
+ import {handlePayouts,releaseSandboxEarnings,voidSandboxFunding} from './payouts.mjs';
++import {handleStripeTest} from './stripe_test.mjs';
++import {launchReadiness} from './reconcile.mjs';
+ import {INDUSTRIES,SERVICES,catalogSummary,searchIndustries} from './marketplace.mjs';
+ 
+ // Return expected state-machine violations as conflicts, not internal server failures.
+@@ -39,6 +41,11 @@ export function currentSession(ctx){
+  return user?{user,csrf:sess.csrf,session:sess,token:cookie}:null;
+ }
+ export async function handle(ctx){const {store,method,path,body,res,secure}=ctx;
++ const stripeTestResponse=await handleStripeTest(ctx);
++ if(stripeTestResponse!==undefined)return stripeTestResponse;
++ if(method==='GET'&&path==='/api/admin/launch-audit'){
++  requireRole(ctx,'admin');return launchReadiness(store,{stripeTestConfigured:!!ctx.stripeTestClient});
++ }
+  const payoutResponse=handlePayouts(ctx);
+  if(payoutResponse!==undefined)return payoutResponse;
+  const quickPostResponse=handleQuickPost(ctx);
+diff --git a/forge-cloud/src/reconcile.mjs b/forge-cloud/src/reconcile.mjs
+new file mode 100644
+index 0000000..b775d46
+--- /dev/null
++++ b/forge-cloud/src/reconcile.mjs
+@@ -0,0 +1,84 @@
++/**
++ * Read-only operator audit for the sandbox monetary ledger.
++ * Never treats these sums as real funds or as proof of a completed bank payout.
++ */
++import {splitPayment} from './core.mjs';
++
++export function auditSandboxLedger(store){
++  const issues=[];
++  const add=(code,details)=>issues.push({code,details:String(details).slice(0,220)});
++  const funding=store.all('SELECT * FROM sandbox_mission_funding');
++  const payouts=store.all('SELECT * FROM sandbox_payouts');
++  const ledger=store.all('SELECT rowid,* FROM sandbox_wallet_ledger ORDER BY rowid ASC');
++  const missionById=new Map(store.all('SELECT * FROM missions').map(row=>[row.id,store.missionFromRow(row)]));
++  const wallet=new Map();
++  const ledgerByEvent=new Map();
++  const byMission=new Map();
++  const byPayout=new Map();
++  const remember=(map,id,row)=>{const list=map.get(id)||[];list.push(row);map.set(id,list);};
++  for(const item of ledger){
++    ledgerByEvent.set(item.event_key,item);
++    if(item.mission_id)remember(byMission,item.mission_id,item);
++    if(item.payout_id)remember(byPayout,item.payout_id,item);
++    const next=(wallet.get(item.worker_user_id)||0)+item.amount_cents;
++    wallet.set(item.worker_user_id,next);
++    if(next<0)add('NEGATIVE_RUNNING_BALANCE',`worker=${item.worker_user_id} ledger=${item.id}`);
++  }
++  for(const fund of funding){
++    const m=missionById.get(fund.mission_id);
++    if(!m){add('ORPHAN_FUNDING',fund.mission_id);continue;}
++    const expected=splitPayment(m.priceCents);
++    if(expected.totalCents!==fund.amount_cents||expected.workerPayCents!==fund.worker_cents||expected.platformFeeCents!==fund.platform_fee_cents)
++      add('INCORRECT_SPLIT',fund.mission_id);
++    const credits=(byMission.get(fund.mission_id)||[]).filter(item=>item.kind==='MISSION_RELEASE');
++    if(fund.status==='RELEASED'){
++      if(m.status!=='COMPLETED'||!m.buyerAccepted||m.safetyHold)add('UNSAFE_FUNDING_RELEASE',fund.mission_id);
++      if(credits.length!==1||credits[0].amount_cents!==fund.worker_cents||credits[0].worker_user_id!==m.workerUserId)
++        add('MISSING_OR_WRONG_WORKER_CREDIT',fund.mission_id);
++    }else if(credits.length)add('CREDIT_WITHOUT_RELEASED_FUNDING',fund.mission_id);
++    if(fund.status==='VOIDED_SIMULATED'&&m.status!=='CANCELLED')add('VOIDED_NOT_CANCELLED',fund.mission_id);
++  }
++  for(const row of ledger.filter(x=>x.kind==='MISSION_RELEASE')){
++    if(!funding.some(x=>x.mission_id===row.mission_id &&x.status==='RELEASED'))add('ORPHAN_RELEASE_CREDIT',row.id);
++  }
++  for(const payout of payouts){
++    const entries=byPayout.get(payout.id)||[];
++    const debits=entries.filter(x=>x.kind==='PAYOUT_RESERVED');
++    const refunds=entries.filter(x=>x.kind==='PAYOUT_REFUNDED');
++    const expectedFee=payout.method==='INSTANT'?Math.max(50,Math.round(payout.amount_cents*150/10000)):0;
++    if(payout.fee_cents!==expectedFee||payout.net_cents!==payout.amount_cents-payout.fee_cents)
++      add('PAYOUT_MATH_MISMATCH',payout.id);
++    if(debits.length!==1||debits[0].amount_cents!==-payout.amount_cents||debits[0].worker_user_id!==payout.worker_user_id)
++      add('MISSING_OR_WRONG_PAYOUT_RESERVATION',payout.id);
++    if(payout.status==='FAILED_SIMULATED'){
++      if(refunds.length!==1||refunds[0].amount_cents!==payout.amount_cents||refunds[0].worker_user_id!==payout.worker_user_id)
++        add('FAILED_PAYOUT_NOT_RESTORED',payout.id);
++    }else if(refunds.length)add('UNEXPECTED_PAYOUT_REFUND',payout.id);
++  }
++  for(const [workerId,cents] of wallet){if(cents<0)add('NEGATIVE_WALLET_BALANCE',workerId);}
++  return {
++    ok:issues.length===0,
++    mode:'SIMULATED_ONLY',
++    liveFundsAudited:false,
++    counts:{missions:missionById.size,sandboxFundings:funding.length,workerLedgerEntries:ledger.length,sandboxPayouts:payouts.length,testCheckoutSessions:store.one('SELECT COUNT(*) AS n FROM stripe_test_checkout_sessions').n},
++    issues
++  };
++}
++
++export function launchReadiness(store,{stripeTestConfigured=false}={}){
++  const ledger=auditSandboxLedger(store);
++  // Invariant: product cannot be marked public-ready just by toggling a configuration value.
++  const blockers=[
++    {id:'verified_buyers',label:'Verified, genuinely paying customers and validated demand'},
++    {id:'identity_verification',label:'Independent identity/business verification and eligible worker onboarding'},
++    {id:'employment_law',label:'Worker classification, staffing/payroll and wage rules reviewed for every jurisdiction'},
++    {id:'provider_live',label:'Regulated payment provider approved for the business model, with live authorization'},
++    {id:'payouts',label:'Connected-account payout eligibility, settlement and reconciliation'},
++    {id:'disputes',label:'Chargebacks, refunds, incident response and disputes workflows'},
++    {id:'insurance',label:'Appropriate insurance and contracts reviewed'},
++    {id:'independent_security',label:'Independent penetration testing, backups and monitoring'},
++    {id:'real_paid_pilot',label:'Successful independently verified real paid pilot'}
++  ];
++  if(!ledger.ok)blockers.unshift({id:'sandbox_integrity',label:'Resolve sandbox financial ledger discrepancies'});
++  return {publicLaunchAllowed:false,realPayoutsEnabled:false,stripeTestConfigured,ledger,blockers,note:'All real-money and public-release gates remain blocked; TEST checkout is not real funding.'};
++}
+diff --git a/forge-cloud/src/server.mjs b/forge-cloud/src/server.mjs
+index 794f21c..53774ba 100644
+--- a/forge-cloud/src/server.mjs
++++ b/forge-cloud/src/server.mjs
+@@ -5,13 +5,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
+ import { openStore } from './db.mjs';
+ import { checkOrigin, clearCookie, readBody, securityHeaders, sessionCookie, throttle } from './security.mjs';
+ import { currentSession, handle } from './handlers.mjs';
++import {makeStripeTestClient,applyStripeTestEvent,verifyStripeTestEvent} from './stripe_test.mjs';
+ 
+ const ROOT=path.dirname(fileURLToPath(import.meta.url));
+ const STATIC=path.join(ROOT,'..','public');
+ const MIME={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.ico':'image/x-icon'};
+ const limits=new Map();
++async function readRawBody(req,max=65536){
++  if(Number(req.headers['content-length'])>max)throw Object.assign(new Error('Request too large'),{status:413});
++  let size=0;const chunks=[];
++  for await(const chunk of req){size+=chunk.length;if(size>max)throw Object.assign(new Error('Request too large'),{status:413});chunks.push(chunk)}
++  return Buffer.concat(chunks);
++}
+ 
+-export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolve('data/forge.sqlite'),publicOrigin=process.env.FORGE_PUBLIC_ORIGIN||'http://127.0.0.1:5200',store=openStore(dbPath)}={}){
++export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolve('data/forge.sqlite'),publicOrigin=process.env.FORGE_PUBLIC_ORIGIN||'http://127.0.0.1:5200',store=openStore(dbPath),stripeTestClient=process.env.FORGE_STRIPE_TEST_SECRET_KEY?makeStripeTestClient({secretKey:process.env.FORGE_STRIPE_TEST_SECRET_KEY}):null,stripeWebhookSecret=process.env.FORGE_STRIPE_TEST_WEBHOOK_SECRET||null}={}){
+   const url=new URL(publicOrigin);
+   if(!['http:','https:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search)throw new Error('FORGE_PUBLIC_ORIGIN must be an exact http(s) origin with no path');
+   const secure=url.protocol==='https:';
+@@ -38,13 +45,20 @@ export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolv
+       const address=req.socket.remoteAddress||'unknown';
+       throttle(limits,`${address}:all`,200,60_000);
+       if(pathname==='/api/auth/login'||pathname==='/api/auth/register')throttle(limits,`${address}:${pathname}`,10,60_000);
++      if(pathname==='/api/webhooks/stripe-test'){
++        if(method!=='POST'){res.writeHead(405);return res.end(JSON.stringify({error:'Method not allowed'}))}
++        throttle(limits,`${address}:stripe-test-webhook`,100,60_000);
++        const event=verifyStripeTestEvent(await readRawBody(req),req.headers['stripe-signature'],stripeWebhookSecret);
++        const result=applyStripeTestEvent(store,event);
++        res.writeHead(200);return res.end(JSON.stringify(result));
++      }
+       let body={};
+       if(method==='POST'){
+         checkOrigin(req,publicOrigin);
+         body=await readBody(req);
+       }
+       const ctx={store,method,path:pathname,query:requestURL.searchParams,body,res,secure,cookies:{},session:null,user:null,sessionToken:null,
+-        sessionCookie:token=>sessionCookie(token,secure),clearCookie:()=>clearCookie(secure)};
++        sessionCookie:token=>sessionCookie(token,secure),clearCookie:()=>clearCookie(secure),publicOrigin,stripeTestClient};
+       // Session tokens must be HttpOnly cookies, never carried in query strings.
+       const cookieHeader=req.headers.cookie||'';
+       for(const segment of cookieHeader.split(';')){const ix=segment.indexOf('=');if(ix>0&&segment.slice(0,ix).trim()==='forge_session'){
+@@ -60,9 +74,9 @@ export function createForgeServer({dbPath=process.env.FORGE_DB_PATH||path.resolv
+       const payload=await handle(ctx);
+       res.writeHead(200);res.end(JSON.stringify(payload));
+     }catch(error){
+-      const status=Number.isInteger(error?.status)&&error.status>=400&&error.status<=499?error.status:500;
++      const status=error?.status===503?503:Number.isInteger(error?.status)&&error.status>=400&&error.status<=499?error.status:500;
+       if(status===500)console.error('[forge] request error',error);
+-      if(!res.headersSent){res.writeHead(status);res.end(JSON.stringify({error:status===500?'Internal server error':error.message}))}
++      if(!res.headersSent){res.writeHead(status);res.end(JSON.stringify({error:status===500?'Internal server error':status===503?'Stripe test service unavailable':error.message}))}
+       else res.end();
+     }
+   });
+diff --git a/forge-cloud/src/stripe_test.mjs b/forge-cloud/src/stripe_test.mjs
+new file mode 100644
+index 0000000..3b3fff1
+--- /dev/null
++++ b/forge-cloud/src/stripe_test.mjs
+@@ -0,0 +1,167 @@
++/**
++ * Stripe Checkout TEST-MODE ONLY integration for Forge pilot development.
++ * No live charges, worker payouts, Stripe Connect transfers, or wage payments.
++ * Test checkout events are segregated from the simulated worker wallet.
++ * NEVER add automatic wallet credits on the strength of these events.
++ */
++import {createHmac, timingSafeEqual} from 'node:crypto';
++import {fail} from './security.mjs';
++
++const NOW=()=>new Date().toISOString();
++const TEST_API='https://api.stripe.com';
++const SUPPORTED_EVENTS=new Set(['checkout.session.completed','checkout.session.expired','checkout.session.async_payment_succeeded']);
++const stripeError=(message)=>Object.assign(new Error(message),{status:503});
++const role=(ctx,...roles)=>{if(!ctx.user)fail(401,'Authentication required');if(!roles.includes(ctx.user.role))fail(403,'Access denied');};
++
++export function stripeTestConfigured(key){return typeof key==='string'&&key.startsWith('sk_test_')&&key.length>8;}
++
++/** Client constructor refuses ALL live-mode secret keys and untrusted API endpoints. */
++export function makeStripeTestClient({secretKey,fetchImpl=fetch,apiBase=TEST_API}={}){
++  if(!stripeTestConfigured(secretKey))throw new Error('Only sk_test_ keys are accepted for Forge checkout test mode');
++  if(apiBase!==TEST_API)throw new Error('Stripe API endpoint must be official');
++  return {
++    async createSession({mission,origin}){
++      const url=new URL(origin);
++      if(!['http:','https:'].includes(url.protocol)||url.pathname!=='/'||url.search||url.hash)throw new Error('Invalid Forge origin');
++      const form=new URLSearchParams({
++        mode:'payment',
++        'payment_method_types[0]':'card',
++        'line_items[0][price_data][currency]':'usd',
++        'line_items[0][price_data][unit_amount]':String(mission.priceCents),
++        'line_items[0][price_data][product_data][name]':`Forge TEST mission: ${mission.title.slice(0,100)}`,
++        'line_items[0][quantity]':'1',
++        'metadata[forge_test_mission_id]':mission.id,
++        'client_reference_id':mission.id,
++        success_url:`${origin.replace(/\/$/,'')}/?stripe_test=success&session_id={CHECKOUT_SESSION_ID}`,
++        cancel_url:`${origin.replace(/\/$/,'')}/?stripe_test=cancel`,
++      });
++      const res=await fetchImpl(`${TEST_API}/v1/checkout/sessions`,{
++        method:'POST',
++        headers:{Authorization:`Bearer ${secretKey}`,'Content-Type':'application/x-www-form-urlencoded','Idempotency-Key':`forge-test-checkout-${mission.id}`},
++        body:form.toString(),
++        signal:AbortSignal.timeout(12000)
++      });
++      let payload;try{payload=await res.json()}catch{throw stripeError('Stripe test API returned unreadable response')}
++      if(!res.ok)throw stripeError('Stripe test API request was unsuccessful');
++      if(!payload||payload.livemode!==false||typeof payload.id!=='string'||!payload.id.startsWith('cs_test_')||
++        typeof payload.url!=='string'||!payload.url.startsWith('https://checkout.stripe.com/')){
++        throw stripeError('Stripe did not return a valid TEST Checkout Session');
++      }
++      if(payload.amount_total!==undefined && payload.amount_total!==mission.priceCents)throw stripeError('Stripe test session amount mismatch');
++      if(payload.currency!==undefined && payload.currency!=='usd')throw stripeError('Stripe test session currency mismatch');
++      return {id:payload.id,url:payload.url,livemode:false};
++    }
++  };
++}
++
++/** Stripe-signature validation uses the EXACT raw body; protects against tampering and replay. */
++export function verifyStripeTestEvent(raw,signatureHeader,webhookSecret,{currentSeconds=Math.floor(Date.now()/1000)}={}){
++  if(typeof webhookSecret!=='string'||!webhookSecret.startsWith('whsec_')||webhookSecret.length<=6)fail(503,'Stripe test webhook is not configured');
++  if(!Buffer.isBuffer(raw)||raw.length===0||raw.length>65536)fail(400,'Invalid webhook payload');
++  if(typeof signatureHeader!=='string'||signatureHeader.length>2000)fail(400,'Missing valid webhook signature');
++  const parts=signatureHeader.split(',').map(p=>p.trim().split('='));
++  const timestamp=parts.find(p=>p[0]==='t')?.[1];
++  const sigs=parts.filter(p=>p[0]==='v1').map(p=>p[1]);
++  if(!/^\d{10}$/.test(timestamp||'')||Math.abs(currentSeconds-Number(timestamp))>300)fail(400,'Webhook timestamp outside accepted window');
++  const expected=createHmac('sha256',webhookSecret).update(`${timestamp}.`).update(raw).digest();
++  const valid=sigs.some(sig=>{
++    if(typeof sig!=='string'||! /^[0-9a-f]{64}$/i.test(sig))return false;
++    return timingSafeEqual(expected,Buffer.from(sig,'hex'));
++  });
++  if(!valid)fail(400,'Invalid Stripe webhook signature');
++  let event;try{event=JSON.parse(raw.toString('utf8'))}catch{fail(400,'Invalid JSON webhook')}
++  if(!event||typeof event!=='object'||Array.isArray(event)||typeof event.id!=='string'||!/^evt_[a-zA-Z0-9_]{3,150}$/.test(event.id))fail(400,'Invalid Stripe event');
++  if(event.livemode!==false)fail(400,'Live Stripe events are prohibited in test mode');
++  return event;
++}
++
++/** Incoming TEST events are idempotent. They do not fund missions or wallet balances. */
++export function applyStripeTestEvent(store,event){
++  return store.transaction(()=>{
++    const prior=store.one('SELECT id FROM stripe_test_webhook_events WHERE id=?',event.id);
++    if(prior)return {received:true,duplicate:true,mode:'TEST_ONLY'};
++    const type=typeof event.type==='string'?event.type.slice(0,100):'unknown';
++    const session=event.data?.object;
++    let accepted=false,reason='EVENT_NOT_APPLICABLE';
++    if(SUPPORTED_EVENTS.has(type)&&session&&typeof session==='object'&&session.livemode===false&&
++        typeof session.id==='string'&&session.id.startsWith('cs_test_')){
++      const stored=store.one('SELECT * FROM stripe_test_checkout_sessions WHERE session_id=?',session.id);
++      if(stored && session.metadata?.forge_test_mission_id===stored.mission_id && session.client_reference_id===stored.mission_id &&
++          session.currency==='usd' && session.amount_total===stored.amount_cents){
++        if(type==='checkout.session.expired'){
++          if(stored.status==='OPEN_TEST'){
++            store.run('UPDATE stripe_test_checkout_sessions SET status=?,updated_at=? WHERE mission_id=?','EXPIRED_TEST',NOW(),stored.mission_id);
++            accepted=true;reason='SESSION_EXPIRED_TEST';
++          }else reason='STATUS_NOT_APPLICABLE';
++        }else if(session.payment_status==='paid'){
++          if(stored.status==='OPEN_TEST'){
++            store.run('UPDATE stripe_test_checkout_sessions SET status=?,updated_at=? WHERE mission_id=?','PAID_TEST',NOW(),stored.mission_id);
++            accepted=true;reason='TEST_PAYMENT_CONFIRMED_NO_WALLET_CREDIT';
++          }else reason='STATUS_NOT_APPLICABLE';
++        }else reason='NOT_PAID';
++      }else reason='SESSION_NOT_MATCHED';
++    }
++    store.run('INSERT INTO stripe_test_webhook_events(id,event_type,accepted,reason,received_at) VALUES(?,?,?,?,?)',event.id,type,accepted?1:0,reason,NOW());
++    // Don't let untrusted webhook events cause financial ledger writes.
++    store.audit(null,'STRIPE_TEST_WEBHOOK','stripe_test_event',event.id,{type,accepted,reason});
++    return {received:true,duplicate:false,accepted,mode:'TEST_ONLY'};
++  });
++}
++
++export async function handleStripeTest(ctx){
++  const {store,method,path,publicOrigin,stripeTestClient}=ctx;
++  const start=path.match(/^\/api\/missions\/([^/]+)\/test-checkout$/);
++  if(method==='POST'&&start){
++    role(ctx,'buyer');
++    if(!stripeTestClient)fail(503,'Stripe Checkout test mode is not configured');
++    const mission=store.getMission(start[1]);
++    if(!mission||mission.buyerUserId!==ctx.user.id)fail(404,'Mission not found');
++    if(mission.safetyHold||!['NEW','APPROVED'].includes(mission.status))fail(409,'Mission not eligible for test checkout');
++    if(!Number.isSafeInteger(mission.priceCents)||mission.priceCents<100||mission.priceCents>1_000_000)fail(409,'Invalid mission price');
++    const existing=store.transaction(()=>{
++      const old=store.one('SELECT * FROM stripe_test_checkout_sessions WHERE mission_id=?',mission.id);
++      if(old){
++        if(old.status==='CREATE_FAILED_TEST' || old.status==='CREATING_TEST' && Date.now()-Date.parse(old.updated_at)>60000){
++          store.run('UPDATE stripe_test_checkout_sessions SET status=?,updated_at=? WHERE mission_id=?','CREATING_TEST',NOW(),mission.id);
++          return null;
++        }
++        return old;
++      }
++      store.run('INSERT INTO stripe_test_checkout_sessions(mission_id,session_id,checkout_url,amount_cents,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',mission.id,null,null,mission.priceCents,'CREATING_TEST',NOW(),NOW());
++      return null;
++    });
++    if(existing){
++      if(existing.status==='OPEN_TEST' && existing.checkout_url)return {
++        mode:'STRIPE_TEST_ONLY',url:existing.checkout_url,sessionId:existing.session_id,amountCents:existing.amount_cents,
++        duplicate:true,realPaymentCollected:false,workerPayoutEnabled:false
++      };
++      fail(409,`Existing test checkout status: ${existing.status}`);
++    }
++    try{
++      const session=await stripeTestClient.createSession({mission,origin:publicOrigin});
++      store.transaction(()=>{
++        store.run('UPDATE stripe_test_checkout_sessions SET session_id=?,checkout_url=?,status=?,updated_at=? WHERE mission_id=?',session.id,session.url,'OPEN_TEST',NOW(),mission.id);
++        store.audit(ctx.user.id,'STRIPE_TEST_CHECKOUT_CREATED','mission',mission.id,{sessionId:session.id,amountCents:mission.priceCents,live:false});
++      });
++      return {mode:'STRIPE_TEST_ONLY',url:session.url,sessionId:session.id,amountCents:mission.priceCents,realPaymentCollected:false,workerPayoutEnabled:false};
++    }catch(error){
++      store.transaction(()=>store.run('UPDATE stripe_test_checkout_sessions SET status=?,updated_at=? WHERE mission_id=? AND status=?','CREATE_FAILED_TEST',NOW(),mission.id,'CREATING_TEST'));
++      throw error;
++    }
++  }
++  const status=path.match(/^\/api\/missions\/([^/]+)\/test-checkout\/status$/);
++  if(method==='GET'&&status){
++    role(ctx,'buyer','admin');
++    const mission=store.getMission(status[1]);
++    if(!mission||ctx.user.role!=='admin'&&mission.buyerUserId!==ctx.user.id)fail(404,'Mission not found');
++    const record=store.one('SELECT session_id,status,amount_cents,updated_at FROM stripe_test_checkout_sessions WHERE mission_id=?',mission.id);
++    return {mode:'TEST_ONLY',checkout:record||null,realFundsCollected:false,workerPayoutEnabled:false};
++  }
++  if(method==='GET'&&path==='/api/admin/stripe-test/summary'){
++    role(ctx,'admin');
++    const counts=store.all('SELECT status,COUNT(*) AS count FROM stripe_test_checkout_sessions GROUP BY status');
++    const webhooks=store.one('SELECT COUNT(*) AS received,COALESCE(SUM(accepted),0) AS accepted FROM stripe_test_webhook_events');
++    return {configured:!!stripeTestClient,liveMode:false,workerBankPayoutsEnabled:false,checkoutCounts:counts,webhooks};
++  }
++  return undefined;
++}
+diff --git a/forge-cloud/tests/reconcile.test.mjs b/forge-cloud/tests/reconcile.test.mjs
+new file mode 100644
+index 0000000..6f855b0
+--- /dev/null
++++ b/forge-cloud/tests/reconcile.test.mjs
+@@ -0,0 +1,54 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import os from 'node:os';
++import fs from 'node:fs';
++import path from 'node:path';
++import {randomUUID} from 'node:crypto';
++import {openStore} from '../src/db.mjs';
++import {auditSandboxLedger,launchReadiness} from '../src/reconcile.mjs';
++import {splitPayment} from '../src/core.mjs';
++
++const dir=fs.mkdtempSync(path.join(os.tmpdir(),'forge-reconcile-test-'));
++const store=openStore(path.join(dir,'test.sqlite'));
++const uid=randomUUID(), buyer=randomUUID(), missionId=randomUUID();
++const date=new Date().toISOString();
++store.run('INSERT INTO users VALUES(?,?,?,?,?,?)',uid,'worker@example.invalid','x','worker','Worker',date);
++store.run('INSERT INTO users VALUES(?,?,?,?,?,?)',buyer,'buyer@example.invalid','x','buyer','Buyer',date);
++const mission={id:missionId,status:'COMPLETED',buyerAccepted:true,workerUserId:uid,priceCents:10000,safetyHold:false};
++store.run('INSERT INTO missions VALUES(?,?,?,?,?,?)',missionId,buyer,uid,JSON.stringify(mission),date,date);
++const split=splitPayment(10000);
++store.run('INSERT INTO sandbox_mission_funding VALUES(?,?,?,?,?,?,?,?)',missionId,10000,split.workerPayCents,split.platformFeeCents,'RELEASED',buyer,date,date);
++store.run('INSERT INTO sandbox_wallet_ledger VALUES(?,?,?,?,?,?,?,?)',randomUUID(),uid,missionId,null,'MISSION_RELEASE',split.workerPayCents,'mission-release:'+missionId,date);
++try{
++  await test('a consistent funded completed mission reconciles but still has launch blockers',()=>{
++    const r=auditSandboxLedger(store);assert.equal(r.ok,true,JSON.stringify(r.issues));
++    const l=launchReadiness(store,{stripeTestConfigured:true});
++    assert.equal(l.stripeTestConfigured,true);assert.equal(l.publicLaunchAllowed,false);assert.equal(l.realPayoutsEnabled,false);
++    assert.ok(l.blockers.some(x=>x.id==='employment_law'));
++  });
++  await test('test checkout cannot become a worker balance',()=>{
++    store.run('INSERT INTO stripe_test_checkout_sessions VALUES(?,?,?,?,?,?,?)',missionId,'cs_test_example','https://checkout.stripe.com/c/pay/cs_test_example',10000,'PAID_TEST',date,date);
++    const r=auditSandboxLedger(store);
++    assert.equal(r.ok,true);assert.equal(r.counts.testCheckoutSessions,1);
++    assert.equal(store.one('SELECT COALESCE(SUM(amount_cents),0) AS cents FROM sandbox_wallet_ledger WHERE worker_user_id=?',uid).cents,split.workerPayCents);
++  });
++  await test('mismatched funding is flagged',()=>{
++    store.run('UPDATE sandbox_mission_funding SET worker_cents=worker_cents-1 WHERE mission_id=?',missionId);
++    const r=auditSandboxLedger(store);assert.equal(r.ok,false);
++    assert.ok(r.issues.some(x=>x.code==='INCORRECT_SPLIT'));
++    assert.ok(r.issues.some(x=>x.code==='MISSING_OR_WRONG_WORKER_CREDIT'));
++    store.run('UPDATE sandbox_mission_funding SET worker_cents=? WHERE mission_id=?',split.workerPayCents,missionId);
++  });
++  await test('double-credit and missing payout refund are flagged',()=>{
++    const duplicate=randomUUID();
++    store.run('INSERT INTO sandbox_wallet_ledger VALUES(?,?,?,?,?,?,?,?)',duplicate,uid,missionId,null,'MISSION_RELEASE',split.workerPayCents,'extra:'+duplicate,date);
++    assert.ok(auditSandboxLedger(store).issues.some(x=>x.code==='MISSING_OR_WRONG_WORKER_CREDIT'));
++    store.run('DELETE FROM sandbox_wallet_ledger WHERE id=?',duplicate);
++    const payoutId=randomUUID();
++    store.run('INSERT INTO sandbox_payouts VALUES(?,?,?,?,?,?,?,?,?,?)',payoutId,uid,'reconcile-refund-key-00001','STANDARD',1000,0,1000,'FAILED_SIMULATED',date,date);
++    store.run('INSERT INTO sandbox_wallet_ledger VALUES(?,?,?,?,?,?,?,?)',randomUUID(),uid,null,payoutId,'PAYOUT_RESERVED',-1000,'payout-reserve:'+payoutId,date);
++    const r=auditSandboxLedger(store);assert.equal(r.ok,false);
++    assert.ok(r.issues.some(x=>x.code==='FAILED_PAYOUT_NOT_RESTORED'));
++    const l=launchReadiness(store);assert.equal(l.publicLaunchAllowed,false);assert.ok(l.blockers.some(x=>x.id==='sandbox_integrity'));
++  });
++}finally{store.close();fs.rmSync(dir,{recursive:true,force:true})}
+diff --git a/forge-cloud/tests/stripe-test.test.mjs b/forge-cloud/tests/stripe-test.test.mjs
+new file mode 100644
+index 0000000..42a94a0
+--- /dev/null
++++ b/forge-cloud/tests/stripe-test.test.mjs
+@@ -0,0 +1,164 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import fs from 'node:fs';
++import path from 'node:path';
++import os from 'node:os';
++import {randomUUID,createHmac} from 'node:crypto';
++import {createForgeServer} from '../src/server.mjs';
++import {hashPassword} from '../src/security.mjs';
++import {makeStripeTestClient,verifyStripeTestEvent,applyStripeTestEvent} from '../src/stripe_test.mjs';
++
++const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'forge-stripe-test-'));
++const password='extremely-secure-private-test-password';
++const webhookSecret='whsec_test_dummy_signature_signing_secret';
++const customerId=randomUUID();
++const fakeCheckoutID='cs_test_1234567890example';
++let checkoutCalls=0;
++let mockShouldFail=false;
++const fakeFetch=async (url,opts)=>{
++  checkoutCalls++;
++  assert.equal(url,'https://api.stripe.com/v1/checkout/sessions');
++  assert.match(opts.headers.Authorization,/^Bearer sk_test_/);
++  const parsed=new URLSearchParams(opts.body);
++  assert.equal(parsed.get('mode'),'payment');
++  assert.equal(parsed.get('payment_method_types[0]'),'card');
++  assert.equal(parsed.get('metadata[forge_test_mission_id]'),parsed.get('client_reference_id'));
++  assert.ok(parsed.get('success_url').includes('{CHECKOUT_SESSION_ID}'));
++  assert.equal(opts.headers['Idempotency-Key'],`forge-test-checkout-${parsed.get('client_reference_id')}`);
++  if(mockShouldFail)return {ok:false,json:async()=>({error:{message:'Simulated temporary failure'}})};
++  return {ok:true,json:async()=>({id:fakeCheckoutID,url:`https://checkout.stripe.com/c/pay/${fakeCheckoutID}`,livemode:false,currency:'usd',amount_total:9000})};
++};
++const client=makeStripeTestClient({secretKey:'sk_test_not_a_real_key',fetchImpl:fakeFetch});
++const app=createForgeServer({dbPath:path.join(tmp,'test.sqlite'),publicOrigin:'http://127.0.0.1:5200',stripeTestClient:client,stripeWebhookSecret:webhookSecret});
++const userId=randomUUID(),adminId=randomUUID();
++app.store.run('INSERT INTO users VALUES(?,?,?,?,?,?)',userId,'buyer@example.invalid',hashPassword(password),'buyer','Forge Test Buyer',new Date().toISOString());
++app.store.run('INSERT INTO users VALUES(?,?,?,?,?,?)',customerId,'worker@example.invalid',hashPassword(password),'worker','Forge Test Worker',new Date().toISOString());
++app.store.run('INSERT INTO users VALUES(?,?,?,?,?,?)',adminId,'admin@example.invalid',hashPassword(password),'admin','Forge Test Admin',new Date().toISOString());
++await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
++const root=`http://127.0.0.1:${app.server.address().port}`;
++let buyer={};let missionId;
++async function api(url,{as,method='GET',data,headers={}}={}){
++  let h={...headers};if(as?.cookie)h.Cookie=as.cookie;
++  if(data!==undefined){h['Content-Type']='application/json';}
++  if(as?.csrf&&method==='POST'&&!('X-Forge-CSRF' in h))h['X-Forge-CSRF']=as.csrf;
++  const res=await fetch(root+'/api'+url,{method,headers:h,body:data===undefined?undefined:JSON.stringify(data)});
++  return {status:res.status,body:await res.json(),cookie:res.headers.get('set-cookie')};
++}
++function sign(raw,{timestamp=Math.floor(Date.now()/1000),secret=webhookSecret}={}){
++  const signature=createHmac('sha256',secret).update(`${timestamp}.`).update(raw).digest('hex');
++  return `t=${timestamp},v1=${signature}`;
++}
++async function webhook(event,{signature,raw}={}){
++  const payload=raw||JSON.stringify(event);
++  const res=await fetch(root+'/api/webhooks/stripe-test',{method:'POST',headers:{'Content-Type':'application/json','Stripe-Signature':signature||sign(payload)},body:payload});
++  return {status:res.status,body:await res.json()};
++}
++function event({id='evt_test_event_123456',type='checkout.session.completed',amount=9000,paid='paid',live=false,sessionId=fakeCheckoutID,mission=missionId}={}){
++  return {id,type,livemode:live,data:{object:{id:sessionId,object:'checkout.session',livemode:live,client_reference_id:mission,metadata:{forge_test_mission_id:mission},amount_total:amount,currency:'usd',payment_status:paid}}};
++}
++try{
++  await test('rejects all live-mode Stripe API keys and nonofficial endpoints',()=>{
++    assert.throws(()=>makeStripeTestClient({secretKey:'sk_live_DANGER'}),/Only sk_test_/);
++    assert.throws(()=>makeStripeTestClient({secretKey:'sk_test_valid',apiBase:'http://localhost:1'}),/official/);
++  });
++  await test('checks signature timestamp, signature and live-mode webhook bans',()=>{
++    const raw=Buffer.from(JSON.stringify(event({mission:'test-mission-id'})));
++    assert.equal(verifyStripeTestEvent(raw,sign(raw),webhookSecret).livemode,false);
++    assert.throws(()=>verifyStripeTestEvent(raw,sign(raw,{timestamp:Math.floor(Date.now()/1000)-1000}),webhookSecret),/timestamp/);
++    assert.throws(()=>verifyStripeTestEvent(Buffer.from('changed'),sign(raw),webhookSecret),/signature/);
++    const live=Buffer.from(JSON.stringify(event({mission:'test-mission-id',live:true})));
++    assert.throws(()=>verifyStripeTestEvent(live,sign(live),webhookSecret),/Live Stripe events/);
++  });
++  await test('buyer creates a test-only mission; unauthorized buyer cannot checkout',async()=>{
++    const login=await api('/auth/login',{method:'POST',data:{email:'buyer@example.invalid',password}});
++    assert.equal(login.status,200);buyer={cookie:login.cookie.split(';')[0],csrf:login.body.csrf};
++    const created=await api('/missions',{as:buyer,method:'POST',data:{title:'Proofread draft product descriptions',description:'Proofread twenty short product descriptions for clarity and typos only.',category:'Content & Copy',city:'Newark',schedule:'Flexible',skills:['Editing'],priceUSD:90}});
++    assert.equal(created.status,200,JSON.stringify(created.body));missionId=created.body.mission.id;
++    assert.equal((await api(`/missions/${missionId}/test-checkout`,{method:'POST',data:{}})).status,401);
++    assert.equal((await api(`/missions/${missionId}/test-checkout`,{as:buyer,method:'POST',data:{},headers:{'X-Forge-CSRF':'bad'}})).status,403);
++    assert.equal((await api('/admin/stripe-test/summary',{as:buyer})).status,403);
++  });
++  await test('test checkout fails closed, then safely retries with same Stripe idempotency key',async()=>{
++    mockShouldFail=true;
++    const bad=await api(`/missions/${missionId}/test-checkout`,{as:buyer,method:'POST',data:{}});
++    assert.equal(bad.status,503);
++    assert.equal(app.store.one('SELECT status FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).status,'CREATE_FAILED_TEST');
++    mockShouldFail=false;
++    const good=await api(`/missions/${missionId}/test-checkout`,{as:buyer,method:'POST',data:{}});
++    assert.equal(good.status,200,JSON.stringify(good.body));
++    assert.equal(good.body.mode,'STRIPE_TEST_ONLY');
++    assert.equal(good.body.realPaymentCollected,false);
++    assert.equal(good.body.workerPayoutEnabled,false);
++    assert.equal(good.body.amountCents,9000);
++    assert.ok(good.body.url.startsWith('https://checkout.stripe.com/'));
++    assert.equal(checkoutCalls,2);
++    const duplicate=await api(`/missions/${missionId}/test-checkout`,{as:buyer,method:'POST',data:{}});
++    assert.equal(duplicate.status,200);
++    assert.equal(duplicate.body.duplicate,true);
++    assert.equal(checkoutCalls,2);
++    const status=await api(`/missions/${missionId}/test-checkout/status`,{as:buyer});
++    assert.equal(status.status,200);
++    assert.equal(status.body.checkout.status,'OPEN_TEST');
++  });
++  await test('webhook authentication is mandatory; modified signatures fail',async()=>{
++    const evt=event();const raw=JSON.stringify(evt);
++    const bad=await webhook(evt,{signature:sign(raw,{secret:'whsec_wrong_secret'})});
++    assert.equal(bad.status,400);
++    const live=await webhook(event({live:true}));assert.equal(live.status,400);
++    assert.equal(app.store.one('SELECT status FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).status,'OPEN_TEST');
++  });
++  await test('paid webhook must match session ID, mission, currency, and amount',async()=>{
++    const invalid=await webhook(event({id:'evt_wrong_amount_456',amount:8999}));
++    assert.equal(invalid.status,200);
++    assert.equal(invalid.body.accepted,false);
++    const wrong=await webhook(event({id:'evt_wrong_id_456',sessionId:'cs_test_different'}));
++    assert.equal(wrong.status,200);
++    assert.equal(wrong.body.accepted,false);
++    assert.equal(app.store.one('SELECT status FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).status,'OPEN_TEST');
++    const unpaid=await webhook(event({id:'evt_not_paid_456',paid:'unpaid'}));
++    assert.equal(unpaid.body.accepted,false);
++    assert.equal(app.store.one('SELECT status FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).status,'OPEN_TEST');
++  });
++  await test('valid Stripe TEST webhook confirms test checkout, but never funds a worker',async()=>{
++    const evt=event();
++    const first=await webhook(evt);assert.equal(first.status,200,JSON.stringify(first.body));assert.equal(first.body.accepted,true);
++    const replay=await webhook(evt);assert.equal(replay.status,200);assert.equal(replay.body.duplicate,true);
++    assert.equal(app.store.one('SELECT status FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).status,'PAID_TEST');
++    assert.equal(app.store.one('SELECT COUNT(*) n FROM sandbox_wallet_ledger').n,0);
++    assert.equal(app.store.one('SELECT COUNT(*) n FROM sandbox_mission_funding').n,0);
++    const status=await api(`/missions/${missionId}/test-checkout/status`,{as:buyer});
++    assert.equal(status.body.realFundsCollected,false);assert.equal(status.body.workerPayoutEnabled,false);
++    const workerLogin=await api('/auth/login',{method:'POST',data:{email:'worker@example.invalid',password}});
++    assert.equal(workerLogin.status,200);
++    const worker={cookie:workerLogin.cookie.split(';')[0],csrf:workerLogin.body.csrf};
++    const wallet=await api('/wallet/me',{as:worker});assert.equal(wallet.status,200);assert.equal(wallet.body.balanceCents,0);
++  });
++  await test('only admins can view readiness; healthy test ledger does not mark production ready',async()=>{
++    assert.equal((await api('/admin/launch-audit',{as:buyer})).status,403);
++    const login=await api('/auth/login',{method:'POST',data:{email:'admin@example.invalid',password}});
++    assert.equal(login.status,200);
++    const admin={cookie:login.cookie.split(';')[0],csrf:login.body.csrf};
++    const audit=await api('/admin/launch-audit',{as:admin});
++    assert.equal(audit.status,200,JSON.stringify(audit.body));
++    assert.equal(audit.body.publicLaunchAllowed,false);
++    assert.equal(audit.body.realPayoutsEnabled,false);
++    assert.equal(audit.body.ledger.ok,true);
++    assert.equal(audit.body.stripeTestConfigured,true);
++    assert.ok(audit.body.blockers.some(x=>x.id==='provider_live'));
++    const stripeSummary=await api('/admin/stripe-test/summary',{as:admin});
++    assert.equal(stripeSummary.status,200);
++    assert.ok(stripeSummary.body.webhooks.received>=1);
++    assert.equal(stripeSummary.body.liveMode,false);
++  });
++  await test('webhook status is monotonic; expiry cannot undo paid test event',async()=>{
++    const expired=await webhook(event({id:'evt_expire_after_paid_456',type:'checkout.session.expired',paid:'unpaid'}));
++    assert.equal(expired.status,200);assert.equal(expired.body.accepted,false);
++    assert.equal(app.store.one('SELECT status FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).status,'PAID_TEST');
++  });
++  await test('test checkout rejects unknown missions and does not accept client-chosen prices',async()=>{
++    assert.equal((await api('/missions/nonexistent/test-checkout',{as:buyer,method:'POST',data:{amountCents:1}})).status,404);
++    assert.equal(app.store.one('SELECT amount_cents FROM stripe_test_checkout_sessions WHERE mission_id=?',missionId).amount_cents,9000);
++  });
++}finally{
++  await app.close();fs.rmSync(tmp,{recursive:true,force:true});
++}
+diff --git a/forge-cloud/tools/release-audit.mjs b/forge-cloud/tools/release-audit.mjs
+new file mode 100644
+index 0000000..9393d4e
+--- /dev/null
++++ b/forge-cloud/tools/release-audit.mjs
+@@ -0,0 +1,13 @@
++/** Usage: FORGE_DB_PATH=./data/forge.sqlite node tools/release-audit.mjs */
++import path from 'node:path';
++import fs from 'node:fs';
++import {openStore} from '../src/db.mjs';
++import {launchReadiness} from '../src/reconcile.mjs';
++const filepath=path.resolve(process.env.FORGE_DB_PATH||'data/forge.sqlite');
++if(!fs.existsSync(filepath)){console.error(`No Forge database at ${filepath}; refusing to create an empty audit database.`);process.exit(2)}
++const store=openStore(filepath);
++try{
++  const result=launchReadiness(store,{stripeTestConfigured:!!process.env.FORGE_STRIPE_TEST_SECRET_KEY?.startsWith('sk_test_')});
++  console.log(JSON.stringify(result,null,2));
++  if(!result.ledger.ok)process.exitCode=1;
++}finally{store.close()}

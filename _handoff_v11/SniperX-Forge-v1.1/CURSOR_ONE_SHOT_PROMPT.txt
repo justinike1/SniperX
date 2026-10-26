@@ -1,0 +1,19 @@
+You are working in the existing GitHub repository justinike1/SniperX. Apply the attached SniperX Forge v1.1 pilot test-payment finalization package ONLY to forge-cloud/. Do not edit, delete, inspect unnecessarily, or change any other legacy trading or wallet code.
+
+The handoff is in PATH_TO_HANDOFF_FOLDER (replace with the actual extracted path). Its files are:
+- install_v11.py (guarded installer)
+- FORGE_V11_PILOT_PATCH_FROM_MAIN.diff (source and automated tests)
+- FINALIZATION_SUMMARY.md (scope)
+- forge-cloud/docs/STRIPE_TEST_PILOT.md (technical design, included in patch)
+
+MANDATORY:
+1. Fetch latest origin/main and work from a clean checkout of main. Confirm the feature branch is based on the latest origin/main. Do NOT reapply the earlier Oct 24 patches.
+2. Run `python3 PATH_TO_HANDOFF_FOLDER/install_v11.py --repo .` from the repo root, and STOP on any preflight error. Do not bypass SHA hashes or overwrite newer source.
+3. Create feature branch `forge/stripe-test-pilot-v11` from main, then run `python3 PATH_TO_HANDOFF_FOLDER/install_v11.py --repo . --apply`.
+4. Run `cd forge-cloud && node --version && npm run check && npm test`. Expect >=67 tests, 0 failures. Run `git diff --check` at repo root and inspect all file changes.
+5. Independently review Stripe TEST Checkout request fields, signed webhook verification, cross-tenant authorization, idempotency, fraud and error cases, and transaction scope. Run a local browser/API smoke if available. Report any risks; do not claim tests you didn't run.
+6. Confirm public/app.js and public/radar.css were not replaced; no files outside forge-cloud changed. Leave the current Earn Now styling untouched.
+7. Commit and push a feature branch and open a PR targeting main, but DO NOT merge, deploy, connect live bank details, enable live charges, or change repo visibility. Report PR URL and test results.
+8. Do not paste Stripe credentials anywhere. No real-money integration is approved. W-2/payroll remains separate from contractor-style payouts. All payments and instant transfer quotes remain simulated except Stripe TEST Checkout, which also uses fake money.
+
+The existing 53 tests and the added 14 tests pass in our clean local source check (67 total). The installer independently checks hashes of all four modified existing backend files against audited GitHub main. If current main has moved, STOP and request a reconciled patch instead of forcing it.

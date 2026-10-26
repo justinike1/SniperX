@@ -1,0 +1,17 @@
+You are integrating a PRE-TESTED, private-beta additive patch into my existing GitHub repo `justinike1/SniperX`. I have NOT uploaded any previous Forge builds to Cursor. This handoff folder is the ONLY source to use; do not apply old ZIPs, patches, or guesses from prior chats.
+
+Handoff location: PATH_TO_HANDOFF_FOLDER
+
+IMPORTANT SCOPE: Work ONLY inside `forge-cloud/` in the existing repo. Do not modify or inspect trading/wallet/cryptocurrency files elsewhere in the repository. Never reveal credentials. Do not deploy, push, commit, change repo privacy, enable payments, or promise real earnings without my explicit approval.
+
+Read `READ_ME_FIRST.md` in the handoff folder. Then perform exactly this sequence:
+
+1. Open my Git repository root, ensure a clean `forge-cloud/` on up-to-date `main`, and run `python3 PATH_TO_HANDOFF_FOLDER/install_handoff.py --repo .` WITHOUT `--apply` first. If it fails, STOP and show me the mismatch. Do not force apply.
+2. On successful preflight, create a feature branch called `forge/earn-today-handoff-oct24` (if it already exists, use a new descriptive branch instead). Run `python3 PATH_TO_HANDOFF_FOLDER/install_handoff.py --repo . --apply`.
+3. Preserve my current GitHub-main Earn Now design. The installer intentionally merges feature JavaScript/CSS without overwriting existing `public/app.js`/`public/radar.css` from main. Do not copy the older source files over them.
+4. Run `cd forge-cloud && npm run check && npm test` (expected 53 tests pass), then `git diff --check`. Confirm every changed file lives inside `forge-cloud/`.
+5. Run a genuine local-browser smoke using the installed application, with separate worker, buyer and admin demo accounts; check desktop/mobile navigation, Earn Today tabs and empty states, availability, quick project, W-2 inquiry isolation, simulated wallet and funds, insufficient-balance protections, CSRF, safe role access, and responsive layout. Report any unverified behavior instead of assuming it works.
+6. Keep all real-money, public-job and payroll capabilities OFF. The current code is a sandbox: zero real banking, zero funded jobs, zero payroll, zero confirmed same-day earnings. W-2 shift inquiries cannot become worker listings. Do not connect any live bank account or accept live customer payments.
+7. Give me a concise change summary, tests actually run, screenshots if useful, any failures or legal/technical blockers, and recommended next engineering task. Show the diff for my approval before committing, pushing or deploying anything.
+
+Do this as one focused task, minimize unnecessary dependency installation and repeated AI exploration. Do not expand the project into unrelated features. If the preflight fails because GitHub changed, diagnose first and stop; never overwrite newer work.

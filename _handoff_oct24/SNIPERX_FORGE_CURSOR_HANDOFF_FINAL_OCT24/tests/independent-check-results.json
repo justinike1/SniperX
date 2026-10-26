@@ -1,0 +1,106 @@
+{
+  "checkedAt": "2026-10-24T18:45:04.682Z",
+  "testedPackage": "Pre-handoff integrated Forge preview",
+  "mainShaParity": "Patched against local audited Forge baseline; GitHub current UI compatibility verified by independent GitHub connector anchor checks. Exact current GitHub UI not executed locally.",
+  "count": 18,
+  "passed": 18,
+  "failed": 0,
+  "results": [
+    {
+      "label": "Local web server, health flags, and static assets",
+      "status": "PASS",
+      "detail": "All four assets served; no launch/payments/dispatch claims."
+    },
+    {
+      "label": "Unauthenticated private operations blocked",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "label": "Admin sign-in and invitation-only account creation",
+      "status": "PASS",
+      "detail": "Admin + 2 buyers + 1 worker."
+    },
+    {
+      "label": "Cross-site and missing-CSRF writes blocked",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "label": "Catalog and empty honest earning feed",
+      "status": "PASS",
+      "detail": "25 industry groups, 0 live missions"
+    },
+    {
+      "label": "Buyer posts allowed demo mission",
+      "status": "PASS",
+      "detail": {
+        "missionId": "ebb7998e-0164-4b9c-81fd-9cc02973f1b0",
+        "priceUSD": 125
+      }
+    },
+    {
+      "label": "Pending mission not prematurely discoverable; buyer isolation",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "label": "Operator approves request and makes DEMO listing discoverable",
+      "status": "PASS",
+      "detail": "1 visible simulated opportunity"
+    },
+    {
+      "label": "Worker profile and no-interest-before-demo-review gate",
+      "status": "PASS",
+      "detail": "Unreviewed user cannot express interest"
+    },
+    {
+      "label": "Admin-reviewed worker expresses interest; idempotency and scope",
+      "status": "PASS",
+      "detail": "Demo interest visible to operator only"
+    },
+    {
+      "label": "Operator assignment removes mission from discovery feed",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "label": "Worker submits proof; only owner buyer can accept",
+      "status": "PASS",
+      "detail": "COMPLETED is a simulated status, no transfer."
+    },
+    {
+      "label": "Operator analytics and audit trail reflect completion",
+      "status": "PASS",
+      "detail": {
+        "completedDemo": 1,
+        "simulatedGrossCents": 12500
+      }
+    },
+    {
+      "label": "Safety hold prevents approval after reported concern",
+      "status": "PASS",
+      "detail": "Reported incident blocks further work"
+    },
+    {
+      "label": "External job inventory empty without configured feeds",
+      "status": "PASS",
+      "detail": "No invented job listings"
+    },
+    {
+      "label": "All public-launch gates remain explicitly blocked",
+      "status": "PASS",
+      "detail": "10 unresolved gates"
+    },
+    {
+      "label": "SQLite persisted records and ownership after server stops",
+      "status": "PASS",
+      "detail": "Mission stored in persistent database"
+    },
+    {
+      "label": "Reopen SQLite database retains completed mission",
+      "status": "PASS",
+      "detail": "COMPLETED"
+    }
+  ]
+}

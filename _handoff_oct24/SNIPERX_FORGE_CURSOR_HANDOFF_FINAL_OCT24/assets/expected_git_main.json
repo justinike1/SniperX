@@ -1,0 +1,8 @@
+{
+  "forge-cloud/public/app.js": "cf2335460e7d5430e6f3e30e9f086a22a2cacefb",
+  "forge-cloud/public/radar.css": "9c0f085802ef7aee37ebb02152c7b38164cebce0",
+  "forge-cloud/public/index.html": "64b63efb601b470f374b12a6e2c5569495289a60",
+  "forge-cloud/src/handlers.mjs": "4b0a9a50394ec03864357f011a37a2984db0e888",
+  "forge-cloud/src/db.mjs": "65e97d4ada2211b6ad784defa62ff55da5594103",
+  "forge-cloud/src/server.mjs": "b2f6947624ac2e9092133a290187cf6b92f32c9d"
+}

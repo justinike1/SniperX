@@ -1,0 +1,16 @@
+{
+  "release": "SniperX Forge v1.1 pilot-test handoff",
+  "tested_at": "2026-10-24",
+  "test_results": {
+    "passed": 67,
+    "failed": 0
+  },
+  "live_money_enabled": false,
+  "files": {
+    "READ_ME_FIRST.md": "c3b148b458d90d92a1344bb9dfac6bc4fffb92c0e48ba9e4f60691860ddd18c5",
+    "FINALIZATION_SUMMARY.md": "53e66c5a1eacdacb6df618758c628cf30c8a05ba0fec4d1302920916718052ea",
+    "CURSOR_ONE_SHOT_PROMPT.txt": "f1c5843904991b3e7212daf06e766a03f7039c111b48c730e228811f5ef8a183",
+    "FORGE_V11_PILOT_PATCH_FROM_MAIN.diff": "f08fbfb8d91a451323b71372af223a1749d60980be9363bf7db616f30aa0f64f",
+    "install_v11.py": "2308a1551cbeefa9004ccc561615051c7f809f10bc4c6937298fd90f22192516"
+  }
+}
