@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IKE Automotive Group | Private progress</title>
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="stylesheet" href="/public/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="shell header-row">
+        <div class="brand">
+          <strong>IKE Automotive Group</strong>
+          <span>Private client progress</span>
+        </div>
+        <nav class="nav-links" aria-label="Progress navigation">
+          <a href="/">Public website</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="section">
+        <h2>Private case progress</h2>
+        <p class="lead">
+          This page shows only client-approved case information. Internal notes, private dealer contacts,
+          and staff-only records are intentionally excluded.
+        </p>
+        <form id="progressForm" class="form-grid">
+          <label>Case reference
+            <input id="caseRefInput" required placeholder="IKE-00001">
+          </label>
+          <label>Access token (optional if in URL fragment)
+            <input id="tokenInput" placeholder="auto-read from #access_token=...">
+          </label>
+        </form>
+        <div class="btn-row">
+          <button id="loadProgress" class="primary" type="button">Load progress</button>
+        </div>
+        <div id="progressFlash" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="section">
+        <h2>Case status</h2>
+        <div id="progressContent" class="small">No case loaded yet.</div>
+      </section>
+    </main>
+
+    <script type="module" src="/public/progress.js"></script>
+  </body>
+</html>

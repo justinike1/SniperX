@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IKE Automotive Group | Your next car starts here</title>
+    <meta
+      name="description"
+      content="IKE Automotive Group helps clients compare vehicle offers, coordinate dealership conversations, and move forward with one accountable point of contact."
+    >
+    <link rel="stylesheet" href="/public/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="shell header-row">
+        <div class="brand">
+          <strong>IKE Automotive Group</strong>
+          <span>The IKE Standard</span>
+        </div>
+        <nav class="nav-links" aria-label="Primary navigation">
+          <a href="#home">Home</a>
+          <a href="#standard">The IKE Standard</a>
+          <a href="#services">Services</a>
+          <a href="#about">About Us</a>
+          <a href="#questions">Questions</a>
+          <a href="#begin">Begin Your Search</a>
+          <a href="#client-access">Private client access</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section id="home" class="hero">
+        <p class="eyebrow">IKE AUTOMOTIVE GROUP</p>
+        <h1>Your next car starts here.</h1>
+        <p>
+          IKE Automotive Group helps clients identify vehicles, compare dealership offers in writing,
+          and coordinate transaction conversations with one accountable point of contact.
+          We focus on clear assumptions, visible next steps, and informed decisions.
+        </p>
+        <div class="hero-grid">
+          <div class="hero-card">
+            <strong>Who benefits from IKE support?</strong>
+            <ul>
+              <li>First-time buyers who want the process explained clearly.</li>
+              <li>Busy families balancing schedule, budget, and trade-in details.</li>
+              <li>Commuters and practical daily-driver shoppers.</li>
+              <li>Luxury clients seeking organized, discreet coordination.</li>
+            </ul>
+          </div>
+          <div class="hero-card">
+            <strong>How to begin</strong>
+            <ul>
+              <li>Submit a short two-step inquiry.</li>
+              <li>Receive a stable case reference after save confirmation.</li>
+              <li>Work with assigned broker + management oversight.</li>
+              <li>Review approved written offer comparisons before deciding.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="standard" class="section">
+        <h2>The IKE Standard</h2>
+        <p class="lead">
+          “Every deal explained, every client informed.” This means written comparisons, clear
+          compensation disclosures, accountable broker assignment, management review, and dependable follow-up.
+        </p>
+        <div class="card-grid">
+          <article class="card">
+            <h3>Written comparisons</h3>
+            <p>Every client-facing proposal includes explicit assumptions and known unknowns.</p>
+          </article>
+          <article class="card">
+            <h3>Clear compensation</h3>
+            <p>Service scope, fee timing, and compensation disclosures are documented and versioned.</p>
+          </article>
+          <article class="card">
+            <h3>Accountable ownership</h3>
+            <p>Each case has a broker assignment, management coverage, and a next client update target.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="services" class="section">
+        <h2>Services</h2>
+        <p class="lead">
+          Scope and pricing remain configurable internally until approved. Public service descriptions are shown without unapproved price commitments.
+        </p>
+        <div class="card-grid" id="serviceCards">
+          <article class="card">
+            <h3>Offer Review</h3>
+            <p>Written review of an existing dealership offer.</p>
+          </article>
+          <article class="card">
+            <h3>Vehicle Brokerage</h3>
+            <p>Vehicle brief, sourcing coordination, and side-by-side offer comparison.</p>
+          </article>
+          <article class="card">
+            <h3>Concierge Coordination</h3>
+            <p>Brokerage support with expanded handover and delivery coordination.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="about" class="section">
+        <h2>About Us</h2>
+        <p class="lead">
+          IKE Automotive Group is being built as a long-term brokerage company where clients remain connected
+          to the IKE standard as team capacity grows.
+        </p>
+        <div id="teamProfiles" class="team-grid"></div>
+      </section>
+
+      <section id="questions" class="section">
+        <h2>Questions</h2>
+        <div class="split">
+          <article class="card">
+            <h3>Do you sell the vehicle directly?</h3>
+            <p>No. The licensed dealer sells the vehicle. IKE supports planning, comparisons, and coordination within the agreed scope.</p>
+          </article>
+          <article class="card">
+            <h3>Are terms final in this preview?</h3>
+            <p>No. Some service terms are still under internal review and remain configurable until approved.</p>
+          </article>
+          <article class="card">
+            <h3>Will this submit credit applications?</h3>
+            <p>No. This application does not submit credit, process payments, or execute dealer transactions.</p>
+          </article>
+          <article class="card">
+            <h3>Can clients track progress privately?</h3>
+            <p>Yes. Cases can receive time-limited private progress links with scoped access and revocation.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="begin" class="section">
+        <h2>Begin Your Search</h2>
+        <p class="lead">Short two-step inquiry. Success confirmation appears only after durable server save.</p>
+        <div class="two-step">
+          <form id="inquiryStep1" class="step active" novalidate>
+            <div class="form-grid">
+              <label>Name
+                <input name="name" required autocomplete="name">
+              </label>
+              <label>Email
+                <input name="email" type="email" required autocomplete="email">
+              </label>
+              <label>Phone
+                <input name="phone" required>
+              </label>
+              <label>Vehicle interest
+                <input name="vehicleInterest" required placeholder="Example: 3-row SUV lease 12k/yr">
+              </label>
+            </div>
+            <label>Target budget (cents)
+              <input name="budgetCents" type="number" min="0" step="1" value="4200000">
+            </label>
+            <div class="btn-row">
+              <button class="primary" type="submit">Continue to step 2</button>
+            </div>
+          </form>
+
+          <form id="inquiryStep2" class="step" novalidate>
+            <input type="hidden" name="inquiryId">
+            <div class="form-grid">
+              <label>Timing
+                <input name="timing" required placeholder="Within 30 days">
+              </label>
+              <label>Location
+                <input name="location" required placeholder="New Jersey / Tri-State">
+              </label>
+              <label>Service preference
+                <select name="servicePreference">
+                  <option>Offer Review</option>
+                  <option selected>Vehicle Brokerage</option>
+                  <option>Concierge Coordination</option>
+                </select>
+              </label>
+              <label>Preferred contact method
+                <input name="contactPreference" placeholder="Phone or email">
+              </label>
+            </div>
+            <div class="form-grid">
+              <label class="check">
+                <input type="checkbox" name="consentInquiryContact" checked>
+                Inquiry contact consent
+              </label>
+              <label class="check">
+                <input type="checkbox" name="consentOngoingService" checked>
+                Ongoing service updates
+              </label>
+            </div>
+            <label class="check">
+              <input type="checkbox" name="consentPromotionalMarketing">
+              Promotional marketing consent (optional)
+            </label>
+            <div class="btn-row">
+              <button class="secondary" type="button" id="backToStep1">Back</button>
+              <button class="primary" type="submit">Submit inquiry</button>
+            </div>
+          </form>
+          <div id="inquiryFlash" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="client-access" class="section">
+        <h2>Private client access</h2>
+        <p class="lead">
+          Case-specific links are generated by IKE staff and include expiry, scope, revocation, and renewal controls.
+          Access links provide limited progress visibility and are not document vaults.
+        </p>
+        <p class="small">
+          If your link expired, request a renewed link from your assigned broker or IKE support.
+        </p>
+      </section>
+      <p class="footer">
+        IKE Automotive Group demo build. No live charges, payouts, credit submissions, or dealer outreach are performed here.
+      </p>
+    </main>
+
+    <script type="module" src="/public/app.js"></script>
+  </body>
+</html>

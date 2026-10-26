@@ -139,8 +139,10 @@ test("website lead creation returns identifiable lead objects", () => {
       name: "Prospect",
       email: "prospect@example.test",
       phone: "555-0100",
+      intent: "Lease",
       vehicleGoal: "Hybrid sedan",
       budgetUSD: 28000,
+      targetMonthlyPayment: 510,
       timeline: "30 days",
       packageInterest: "Full Negotiation",
       source: "Website",
@@ -150,6 +152,8 @@ test("website lead creation returns identifiable lead objects", () => {
   );
   assert.equal(lead.id, "LEAD-0003");
   assert.equal(lead.budgetUSD, 28000);
+  assert.equal(lead.intent, "Lease");
+  assert.equal(lead.targetMonthlyPayment, 510);
   assert.equal(lead.status, "New");
 });
 

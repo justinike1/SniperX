@@ -5,11 +5,22 @@ Reviewed and implemented: October 25, 2026.
 This prototype is a **local, reversible demonstration** for an automotive brokerage operating model.
 It does **not** create real customer records, dealer outreach, payments, credit applications, signatures, or vehicle transactions.
 
+## Durable website + operations slice
+
+A server-backed implementation now exists in:
+
+- `ike-automotive-brokerage-demo/website`
+
+This newer slice is separate from the browser-only prototype and persists operational records on disk through API endpoints with role enforcement.
+See `ike-automotive-brokerage-demo/website/README.md` for setup, environment-variable names, migrations, and workflow status.
+
 ## What this demo includes
 
 - Public-facing **website + marketing** layer with:
   - conversion-oriented hero copy and package framing
   - local lead capture form (demo only, no outbound)
+  - intent + payment-target capture and quick route actions (Website -> Marketing/Cases/Lease Desk)
+  - one-click lead conversion into internal case or lease-desk estimate
   - lead source + package-interest tracking
   - optional “create case on lead capture” workflow
 - Marketing workspace with:
