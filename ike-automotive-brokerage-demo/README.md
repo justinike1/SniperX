@@ -10,6 +10,8 @@ It does **not** create real customer records, dealer outreach, payments, credit 
 - Public-facing **website + marketing** layer with:
   - conversion-oriented hero copy and package framing
   - local lead capture form (demo only, no outbound)
+  - intent + payment-target capture and quick route actions (Website -> Marketing/Cases/Lease Desk)
+  - one-click lead conversion into internal case or lease-desk estimate
   - lead source + package-interest tracking
   - optional “create case on lead capture” workflow
 - Marketing workspace with:

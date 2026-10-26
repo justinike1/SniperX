@@ -69,6 +69,8 @@ function loadState() {
           parsed.desking?.selectedProfileId || seed.desking.selectedProfileId,
         selectedProgramId:
           parsed.desking?.selectedProgramId || seed.desking.selectedProgramId,
+        selectedImportCaseId:
+          parsed.desking?.selectedImportCaseId || seed.desking.selectedImportCaseId,
       },
       customerIntakeDefaults: {
         ...seed.customerIntakeDefaults,
@@ -116,6 +118,67 @@ function esc(value) {
 
 function statusClass(value) {
   return `status-${String(value).replaceAll(" ", "-")}`;
+}
+
+function proposedFeeForPackage(packageName) {
+  if (packageName === "Strategic Buy Plan") return 399;
+  if (packageName === "Concierge Delivery") return 1499;
+  return 999;
+}
+
+function linkedCaseForLead(leadId, cases = state.cases) {
+  return (cases || []).find((item) => (item.notes || "").includes(`LeadRef:${leadId}`)) || null;
+}
+
+function buildCaseFromLead(lead, existingCount = 0) {
+  const item = createCaseFromIntake(
+    {
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone,
+      intent: lead.intent || "Purchase",
+      budgetUSD: lead.budgetUSD,
+      preferences: lead.vehicleGoal,
+      timeframe: lead.timeline || "Flexible",
+      tradeIn: false,
+      owner: "Founder",
+      proposedFee: proposedFeeForPackage(lead.packageInterest),
+    },
+    existingCount
+  );
+  item.notes = `${item.notes}\nLeadRef:${lead.id}`;
+  return appendActivity(item, `LeadRef:${lead.id} converted from website lead pipeline.`);
+}
+
+function applyLeadToDeskState(next, lead) {
+  const budget = Number(lead.budgetUSD || 0);
+  const goalText = String(lead.vehicleGoal || "").toLowerCase();
+  const timeframeText = String(lead.timeline || "").toLowerCase();
+  const targetMonthly = Number(lead.targetMonthlyPayment || 0);
+  const isLease = String(lead.intent || "Purchase") === "Lease";
+
+  const budgetFromMonthly =
+    targetMonthly > 0 ? Math.max(12000, Math.round(targetMonthly * (isLease ? 120 : 72))) : 0;
+  const budgetFromLead = budget > 0 ? budget : 0;
+  const baselineSelling = Math.max(
+    12000,
+    budgetFromMonthly || (isLease && budgetFromLead < 2500 ? budgetFromLead * 115 : budgetFromLead)
+  );
+  const normalizedSelling = Math.round(baselineSelling / 100) * 100;
+  const normalizedMsrp = Math.round((normalizedSelling * 1.08) / 100) * 100;
+  const annualMileage = /15k|15000|high mileage|commut/.test(goalText) ? 15000 : 12000;
+  const urgentTimeline = /week|asap|urgent|month[- ]end|immediate/.test(timeframeText);
+
+  next.desking.inputs = {
+    ...next.desking.inputs,
+    msrp: normalizedMsrp,
+    sellingPrice: normalizedSelling,
+    incentives: isLease ? 500 : next.desking.inputs.incentives,
+    capReduction: isLease ? 0 : next.desking.inputs.capReduction,
+    termMonths: isLease ? 36 : next.desking.inputs.termMonths,
+    annualMileage: isLease ? annualMileage : next.desking.inputs.annualMileage,
+    baseResidualPct: isLease ? (urgentTimeline ? 60 : 61) : next.desking.inputs.baseResidualPct,
+  };
 }
 
 function selectedCase() {
@@ -193,6 +256,8 @@ function renderWebsite() {
     .map(([source, count]) => `<span class="source-pill">${esc(source)} · ${count}</span>`)
     .join("");
   const closedWon = leads.filter((lead) => lead.status === "Closed Won").length;
+  const convertedToCase = leads.filter((lead) => linkedCaseForLead(lead.id, state.cases)).length;
+  const leaseIntentLeads = leads.filter((lead) => (lead.intent || "Purchase") === "Lease").length;
 
   return `
     <section class="campaign-header">
@@ -256,7 +321,33 @@ function renderWebsite() {
       <div><span>Demo leads</span><strong>${leads.length}</strong></div>
       <div><span>Booked-call rate</span><strong>${funnel.metrics.bookedRate}%</strong></div>
       <div><span>Closed-won leads</span><strong>${closedWon}</strong></div>
+      <div><span>Leads to case</span><strong>${convertedToCase}</strong></div>
+      <div><span>Lease-intent leads</span><strong>${leaseIntentLeads}</strong></div>
       <div><span>CPL (assumed)</span><strong>${currency(funnel.metrics.cpl)}</strong></div>
+    </section>
+
+    <section class="conversion-runway" aria-label="Lead conversion runway">
+      <article class="conversion-step">
+        <span>STEP 1</span>
+        <h3>Capture lead</h3>
+        <p>Collect intent, budget, and timeline from website traffic in one form.</p>
+      </article>
+      <article class="conversion-step">
+        <span>STEP 2</span>
+        <h3>Convert to case</h3>
+        <p>Create an internal case with tracked owner/status and explicit fee assumptions.</p>
+      </article>
+      <article class="conversion-step">
+        <span>STEP 3</span>
+        <h3>Desk the quote</h3>
+        <p>Load assumptions into Lease Desk to model residual, MF, tier, and payment ranges.</p>
+      </article>
+    </section>
+
+    <section class="route-grid">
+      <button type="button" class="quick-route-btn" data-route-tab="customer">Open customer intake demo</button>
+      <button type="button" class="quick-route-btn" data-route-tab="cases">Open internal case workspace</button>
+      <button type="button" class="quick-route-btn" data-route-tab="desk">Open personal Lease Desk</button>
     </section>
 
     <section id="websitePackages" class="card" style="margin-top:14px">
@@ -323,16 +414,27 @@ function renderWebsite() {
           <label>Phone
             <input name="phone" required placeholder="555-0123">
           </label>
+          <label>Intent
+            <select name="intent">
+              <option value="Purchase" selected>Purchase</option>
+              <option value="Lease">Lease</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
           <label>Vehicle goal
             <input name="vehicleGoal" required placeholder="CPO midsize SUV under 40k miles">
+          </label>
+          <label>Timeline
+            <input name="timeline" required placeholder="Within 2 weeks">
           </label>
         </div>
         <div class="form-row">
           <label>Budget (USD)
             <input name="budgetUSD" type="number" min="1" step="0.01" required value="32000">
           </label>
-          <label>Timeline
-            <input name="timeline" required placeholder="Within 2 weeks">
+          <label>Target payment (optional monthly USD)
+            <input name="targetMonthlyPayment" type="number" min="0" step="0.01" placeholder="620">
           </label>
         </div>
         <div class="form-row">
@@ -353,11 +455,25 @@ function renderWebsite() {
             </select>
           </label>
         </div>
+        <div class="form-row">
+          <label>After capture
+            <select name="postCaptureAction">
+              <option value="stay" selected>Stay on Website tab</option>
+              <option value="marketing">Open Marketing tab</option>
+              <option value="cases">Open Case workspace tab</option>
+              <option value="desk">Open Lease Desk tab</option>
+            </select>
+          </label>
+          <label class="check-row" style="margin-top:24px">
+            <input type="checkbox" name="openDeskEstimate">
+            Prefill Lease Desk assumptions from this lead
+          </label>
+        </div>
         <label>Notes
           <textarea name="notes" placeholder="Any special requirements, trade-in details, or constraints."></textarea>
         </label>
         <label class="check-row">
-          <input type="checkbox" name="createCase">
+          <input type="checkbox" name="createCase" checked>
           Also create an internal demo case immediately
         </label>
         <button class="primary-btn" type="submit">Capture demo lead</button>
@@ -375,11 +491,15 @@ function renderWebsite() {
               <tr>
                 <th>Lead ID</th>
                 <th>Name</th>
+                <th>Intent</th>
                 <th>Goal</th>
                 <th>Budget</th>
+                <th>Target / mo</th>
                 <th>Source</th>
                 <th>Package</th>
+                <th>Linked case</th>
                 <th>Status</th>
+                <th>Action</th>
                 <th>Created</th>
               </tr>
             </thead>
@@ -389,18 +509,34 @@ function renderWebsite() {
                 .reverse()
                 .slice(0, 8)
                 .map(
-                  (lead) => `
+                  (lead) => {
+                    const linkedCase = linkedCaseForLead(lead.id, state.cases);
+                    return `
                 <tr>
                   <td>${esc(lead.id)}</td>
                   <td>${esc(lead.name)}</td>
+                  <td>${esc(lead.intent || "Purchase")}</td>
                   <td>${esc(lead.vehicleGoal)}</td>
                   <td>${currency(lead.budgetUSD)}</td>
+                  <td>${lead.targetMonthlyPayment ? currency(lead.targetMonthlyPayment) : "—"}</td>
                   <td>${esc(lead.source)}</td>
                   <td>${esc(lead.packageInterest)}</td>
+                  <td>${linkedCase ? esc(linkedCase.id) : '<span class="muted">Not yet</span>'}</td>
                   <td>${esc(lead.status || "New")}</td>
+                  <td>
+                    <div class="lead-action-stack">
+                      ${
+                        linkedCase
+                          ? `<button type="button" class="secondary-btn" data-open-case-id="${esc(linkedCase.id)}">Open case</button>`
+                          : `<button type="button" class="secondary-btn" data-website-lead-case="${esc(lead.id)}">Create case</button>`
+                      }
+                      <button type="button" class="secondary-btn" data-website-lead-desk="${esc(lead.id)}">Desk estimate</button>
+                    </div>
+                  </td>
                   <td>${esc(new Date(lead.createdAt).toLocaleDateString())}</td>
                 </tr>
               `
+                  }
                 )
                 .join("")}
             </tbody>
@@ -515,9 +651,11 @@ function renderMarketing() {
             <thead>
               <tr>
                 <th>Lead</th>
+                <th>Intent</th>
                 <th>Goal</th>
                 <th>Source</th>
                 <th>Package</th>
+                <th>Linked case</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -528,20 +666,34 @@ function renderMarketing() {
                 .reverse()
                 .slice(0, 12)
                 .map(
-                  (lead) => `
+                  (lead) => {
+                    const linkedCase = linkedCaseForLead(lead.id, state.cases);
+                    return `
                 <tr>
                   <td><strong>${esc(lead.name)}</strong><br><small>${esc(lead.id)}</small></td>
+                  <td>${esc(lead.intent || "Purchase")}${lead.targetMonthlyPayment ? `<br><small>${currency(lead.targetMonthlyPayment)} / mo target</small>` : ""}</td>
                   <td>${esc(lead.vehicleGoal)}</td>
                   <td>${esc(lead.source)}</td>
                   <td>${esc(lead.packageInterest)}</td>
+                  <td>${linkedCase ? esc(linkedCase.id) : '<span class="muted">Not yet</span>'}</td>
                   <td>
                     <select data-lead-status="${esc(lead.id)}">
                       ${LEAD_STATUSES.map((status) => `<option value="${esc(status)}" ${lead.status === status ? "selected" : ""}>${esc(status)}</option>`).join("")}
                     </select>
                   </td>
-                  <td><button type="button" class="secondary-btn" data-lead-to-case="${esc(lead.id)}">Create case</button></td>
+                  <td>
+                    <div class="lead-action-stack">
+                      ${
+                        linkedCase
+                          ? `<button type="button" class="secondary-btn" data-open-case-id="${esc(linkedCase.id)}">Open case</button>`
+                          : `<button type="button" class="secondary-btn" data-lead-to-case="${esc(lead.id)}">Create case</button>`
+                      }
+                      <button type="button" class="secondary-btn" data-lead-to-desk="${esc(lead.id)}">Desk lease</button>
+                    </div>
+                  </td>
                 </tr>
               `
+                  }
                 )
                 .join("")}
             </tbody>
@@ -627,6 +779,10 @@ function renderLeaseDesk() {
   const assumptions = deskReport.assumptions;
   const totals = deskReport.totals;
   const selectedTier = deskReport.selectedTier;
+  const importCaseId = state.desking?.selectedImportCaseId || state.cases?.[0]?.id || "";
+  const blendedMonthly =
+    assumptions.termMonths > 0 ? totals.leaseTotal / Math.max(1, assumptions.termMonths) : 0;
+  const upfrontSharePct = totals.leaseTotal > 0 ? (totals.driveOff / totals.leaseTotal) * 100 : 0;
 
   return `
     <h2>Personal Lease Desk</h2>
@@ -637,6 +793,27 @@ function renderLeaseDesk() {
     <div class="warning-box">
       Demo boundaries: this tool does not submit deals, pull credit, or represent lender approval. Values are internal planning outputs only.
     </div>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Fast import from internal case</h3>
+      <p class="muted">Use an existing case to prefill desking assumptions before quote review.</p>
+      <div class="form-row">
+        <label>Case source
+          <select id="deskCaseImportSelect">
+            ${state.cases
+              .map(
+                (item) =>
+                  `<option value="${esc(item.id)}" ${item.id === importCaseId ? "selected" : ""}>${esc(item.id)} · ${esc(item.customer?.name || "Unknown")} · ${esc(item.request?.intent || "Purchase")}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <div class="desk-actions">
+          <button type="button" class="secondary-btn" id="deskImportCase">Apply case assumptions</button>
+          <button type="button" class="secondary-btn" id="deskOpenCase">Open selected case</button>
+        </div>
+      </div>
+    </section>
 
     <section class="card" style="margin-top:14px">
       <h3>Lender profile and program presets</h3>
@@ -782,6 +959,8 @@ function renderLeaseDesk() {
       ${kpi("Tax / month", currency(totals.monthlyTax))}
       ${kpi("Monthly payment", currency(totals.monthlyPayment))}
       ${kpi("Drive-off due", currency(totals.driveOff))}
+      ${kpi("Blended monthly (total ÷ term)", currency(blendedMonthly))}
+      ${kpi("Upfront share of total", `${upfrontSharePct.toFixed(1)}%`)}
       ${kpi("Lease total cost", currency(totals.leaseTotal))}
       ${kpi("Allowed miles", totals.totalAllowedMiles.toLocaleString())}
       ${kpi("Effective cost / mile", currency(totals.effectiveCostPerMile))}
@@ -1509,6 +1688,58 @@ function bindWebsite() {
     });
   });
 
+  document.querySelectorAll("[data-route-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      mutate((next) => {
+        next.ui.activeTab = button.dataset.routeTab;
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-open-case-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      mutate((next) => {
+        next.ui.activeTab = "cases";
+        next.ui.selectedCaseId = button.dataset.openCaseId;
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-website-lead-case]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const leadId = button.dataset.websiteLeadCase;
+      mutate((next) => {
+        const lead = next.marketingLeads.find((item) => item.id === leadId);
+        if (!lead) return;
+        const existing = linkedCaseForLead(lead.id, next.cases);
+        if (existing) {
+          next.ui.activeTab = "cases";
+          next.ui.selectedCaseId = existing.id;
+          return;
+        }
+        const caseItem = buildCaseFromLead(lead, next.cases.length);
+        next.cases.unshift(caseItem);
+        next.ui.activeTab = "cases";
+        next.ui.selectedCaseId = caseItem.id;
+        lead.status = "Qualified";
+      });
+      setFlash("Lead converted and opened in Case workspace.", "ok");
+    });
+  });
+
+  document.querySelectorAll("[data-website-lead-desk]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const leadId = button.dataset.websiteLeadDesk;
+      mutate((next) => {
+        const lead = next.marketingLeads.find((item) => item.id === leadId);
+        if (!lead) return;
+        applyLeadToDeskState(next, lead);
+        next.ui.activeTab = "desk";
+      });
+      setFlash("Lead assumptions moved into Lease Desk for estimate modeling.", "ok");
+    });
+  });
+
   const form = document.getElementById("websiteLeadCaptureForm");
   if (!form) return;
   form.addEventListener("submit", (event) => {
@@ -1516,44 +1747,54 @@ function bindWebsite() {
     if (!form.reportValidity()) return;
     const values = formDataObject(form);
     const createCase = !!form.querySelector('input[name="createCase"]').checked;
+    const openDeskEstimate = !!form.querySelector('input[name="openDeskEstimate"]').checked;
+    const postCaptureAction = values.postCaptureAction || "stay";
+    const forceCase = postCaptureAction === "cases";
     mutate((next) => {
       const lead = createLeadFromWebsite(
         {
           ...values,
           budgetUSD: Number(values.budgetUSD || 0),
+          targetMonthlyPayment: Number(values.targetMonthlyPayment || 0),
         },
         next.marketingLeads.length
       );
       next.marketingLeads.push(lead);
-      if (createCase) {
-        const caseItem = createCaseFromIntake(
-          {
-            name: lead.name,
-            email: lead.email,
-            phone: lead.phone,
-            intent: "Purchase",
-            budgetUSD: lead.budgetUSD,
-            preferences: lead.vehicleGoal,
-            timeframe: lead.timeline || "Flexible",
-            tradeIn: false,
-            owner: "Founder",
-            proposedFee:
-              lead.packageInterest === "Strategic Buy Plan"
-                ? 399
-                : lead.packageInterest === "Concierge Delivery"
-                  ? 1499
-                  : 999,
-          },
-          next.cases.length
-        );
+
+      const shouldCreateCase = createCase || forceCase;
+      let caseItem = null;
+      if (shouldCreateCase) {
+        caseItem = buildCaseFromLead(lead, next.cases.length);
         next.cases.unshift(caseItem);
         next.ui.selectedCaseId = caseItem.id;
+        lead.status = "Qualified";
+      }
+
+      if (openDeskEstimate || postCaptureAction === "desk") {
+        applyLeadToDeskState(next, lead);
+        next.ui.activeTab = "desk";
+      } else if (postCaptureAction === "marketing") {
+        next.ui.activeTab = "marketing";
+      } else if (postCaptureAction === "cases" && caseItem) {
+        next.ui.activeTab = "cases";
+      } else {
+        next.ui.activeTab = "website";
       }
     });
+    const actionSummary =
+      openDeskEstimate || postCaptureAction === "desk"
+        ? "Lease Desk opened with prefilled assumptions."
+        : postCaptureAction === "marketing"
+          ? "Marketing pipeline opened."
+          : postCaptureAction === "cases"
+            ? "Case workspace opened."
+            : "Lead saved on Website tab.";
     setFlash(
-      createCase
-        ? "Demo lead saved and internal case created. No external contact was sent."
-        : "Demo lead saved locally. No external message was sent.",
+      (createCase || forceCase
+        ? "Demo lead saved and internal case created. "
+        : "Demo lead saved locally. ") +
+        actionSummary +
+        " No external message was sent.",
       "ok"
     );
   });
@@ -1732,10 +1973,51 @@ function bindEconomics() {
 }
 
 function bindDesk() {
+  const importSelect = document.getElementById("deskCaseImportSelect");
+  const importButton = document.getElementById("deskImportCase");
+  const openCaseButton = document.getElementById("deskOpenCase");
   const profileSelect = document.getElementById("deskLenderProfile");
   const programSelect = document.getElementById("deskLenderProgram");
   const applyProgramButton = document.getElementById("deskApplyProgram");
   const printButton = document.getElementById("deskPrintSheet");
+
+  importSelect?.addEventListener("change", () => {
+    mutate((next) => {
+      next.desking.selectedImportCaseId = importSelect.value;
+    });
+  });
+
+  importButton?.addEventListener("click", () => {
+    mutate((next) => {
+      const selectedId = next.desking.selectedImportCaseId || importSelect?.value;
+      const item = next.cases.find((candidate) => candidate.id === selectedId);
+      if (!item) return;
+      const budget = Number(item.request?.budgetUSD || 0);
+      const sellingPrice = Math.max(12000, Math.round((budget || next.desking.inputs.sellingPrice) / 100) * 100);
+      const msrp = Math.round((sellingPrice * 1.08) / 100) * 100;
+      const leaseIntent = item.request?.intent === "Lease";
+      next.desking.inputs = {
+        ...next.desking.inputs,
+        msrp,
+        sellingPrice,
+        capReduction: item.request?.tradeIn ? 1000 : 0,
+        termMonths: leaseIntent ? 36 : next.desking.inputs.termMonths,
+        annualMileage: leaseIntent ? 12000 : next.desking.inputs.annualMileage,
+        baseResidualPct: leaseIntent ? 61 : next.desking.inputs.baseResidualPct,
+      };
+      next.desking.selectedImportCaseId = item.id;
+    });
+    setFlash("Case assumptions applied to Lease Desk.", "ok");
+  });
+
+  openCaseButton?.addEventListener("click", () => {
+    const selectedId = state.desking?.selectedImportCaseId || importSelect?.value;
+    if (!selectedId) return;
+    mutate((next) => {
+      next.ui.activeTab = "cases";
+      next.ui.selectedCaseId = selectedId;
+    });
+  });
 
   profileSelect?.addEventListener("change", () => {
     mutate((next) => {
@@ -1960,32 +2242,36 @@ function bindMarketing() {
       mutate((next) => {
         const lead = next.marketingLeads.find((item) => item.id === leadId);
         if (!lead) return;
-        const item = createCaseFromIntake(
-          {
-            name: lead.name,
-            email: lead.email,
-            phone: lead.phone,
-            intent: "Purchase",
-            budgetUSD: lead.budgetUSD,
-            preferences: lead.vehicleGoal,
-            timeframe: lead.timeline || "Flexible",
-            tradeIn: false,
-            owner: "Founder",
-            proposedFee:
-              lead.packageInterest === "Strategic Buy Plan"
-                ? 399
-                : lead.packageInterest === "Concierge Delivery"
-                  ? 1499
-                  : 999,
-          },
-          next.cases.length
-        );
-        next.cases.unshift(item);
+        const existing = linkedCaseForLead(lead.id, next.cases);
+        const item = existing || buildCaseFromLead(lead, next.cases.length);
+        if (!existing) next.cases.unshift(item);
         next.ui.selectedCaseId = item.id;
         next.ui.activeTab = "cases";
         lead.status = "Qualified";
       });
-      setFlash("Lead converted into a demo case.", "ok");
+      setFlash("Lead routed to Case workspace.", "ok");
+    });
+  });
+
+  document.querySelectorAll("[data-lead-to-desk]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const leadId = button.dataset.leadToDesk;
+      mutate((next) => {
+        const lead = next.marketingLeads.find((item) => item.id === leadId);
+        if (!lead) return;
+        applyLeadToDeskState(next, lead);
+        next.ui.activeTab = "desk";
+      });
+      setFlash("Lead assumptions loaded into Lease Desk.", "ok");
+    });
+  });
+
+  document.querySelectorAll("[data-open-case-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      mutate((next) => {
+        next.ui.activeTab = "cases";
+        next.ui.selectedCaseId = button.dataset.openCaseId;
+      });
     });
   });
 }
