@@ -1,0 +1,31 @@
+name: Forge cloud checks
+on:
+  pull_request:
+    paths:
+      - 'forge-cloud/**'
+      - '.github/workflows/forge-cloud-checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'forge-cloud/**'
+      - '.github/workflows/forge-cloud-checks.yml'
+permissions:
+  contents: read
+jobs:
+  syntax-and-unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forge-cloud
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: JS syntax check
+        run: npm run check
+      - name: Run all tests
+        run: npm test
+      - name: Run backup/restore verification tests
+        run: node --test tests/backup.test.mjs

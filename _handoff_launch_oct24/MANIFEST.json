@@ -1,0 +1,71 @@
+{
+  "created_on": "2026-10-24",
+  "scope": "operational preparation, NOT approved live launch",
+  "files": [
+    {
+      "path": ".github/workflows/forge-cloud-checks.yml",
+      "sha256": "4c6192724f4a81799fd3b859d67069d32c15747644ef56f720ce179efc5183be",
+      "bytes": 759
+    },
+    {
+      "path": "CURSOR_HANDOFF.md",
+      "sha256": "b89c98f9200d96b90f41b06aeb9570ef6962afa6218b224917d47f2e185cd776",
+      "bytes": 2106
+    },
+    {
+      "path": "FOUNDER_ACTIONS.md",
+      "sha256": "32305a5d225b23f859ae508027c303f059f34c820703ace2034dae579fb0009b",
+      "bytes": 3198
+    },
+    {
+      "path": "README_FIRST.md",
+      "sha256": "feb5f4d1f83b202cf161d41da5f1ac9fe7f28fb4c8bb710aa9f741cf03caf4d2",
+      "bytes": 4544
+    },
+    {
+      "path": "forge-cloud/docs/COUNSEL_REVIEW_NJ.md",
+      "sha256": "dc901232b89346af4b39f8e3dbb3468a36d58b79059f14c729443ead76d77c89",
+      "bytes": 6120
+    },
+    {
+      "path": "forge-cloud/docs/FAILURE_SCENARIOS.md",
+      "sha256": "8a230d1b72b883d3dc72b79f1c7bbca1ed73d0135944938b9beec6536048ed35",
+      "bytes": 3442
+    },
+    {
+      "path": "forge-cloud/docs/LAUNCH_GATE.md",
+      "sha256": "a4805845e85c1e636529ee3d54631b01b7f6ff00a99b6be965525c351a3b6554",
+      "bytes": 4024
+    },
+    {
+      "path": "forge-cloud/docs/LEGAL_DRAFT_NOTICES.md",
+      "sha256": "3f72ae5ef8b03d1d31a3503e3fc5a9f98d74e756a41fa98ad36eddacd56175b7",
+      "bytes": 3490
+    },
+    {
+      "path": "forge-cloud/docs/LIVE_PAYMENTS_APPROVAL.md",
+      "sha256": "82db3324d358d3ec4178c05f06821d85b12059138e02144b1ee00e47e53ecf6d",
+      "bytes": 6132
+    },
+    {
+      "path": "forge-cloud/docs/OPERATIONS_SOP.md",
+      "sha256": "f7e065c01e91974b66e41708588a106cc41bcf34505eb361b173422c13e7b16d",
+      "bytes": 8362
+    },
+    {
+      "path": "forge-cloud/tests/backup.test.mjs",
+      "sha256": "1a8b5d79787b1fb10e20ab8b9b25ab54f87d925737494ded7ba9f755a3c7e891",
+      "bytes": 1484
+    },
+    {
+      "path": "forge-cloud/tools/backup-sqlite.mjs",
+      "sha256": "58f2abd4656dbe39b1675dd577bc0d6080455a4f3fd627501449691f0cc3482a",
+      "bytes": 2282
+    },
+    {
+      "path": "forge-cloud/tools/verify-sqlite.mjs",
+      "sha256": "d490d25d3304e1506f127c44fc97b4c87520151d048b592bb009a185e156f944",
+      "bytes": 1611
+    }
+  ]
+}

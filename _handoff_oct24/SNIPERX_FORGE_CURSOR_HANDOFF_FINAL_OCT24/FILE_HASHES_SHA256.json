@@ -1,0 +1,110 @@
+{
+  "bundle": "SniperX Forge October 24 2026 Cursor handoff",
+  "test_status": {
+    "node_tests": "53 passed",
+    "independent_api_checks": "18 passed",
+    "mocked_browser_sessions": "4 passed"
+  },
+  "files": [
+    {
+      "path": "CURSOR_ONE_SHOT_PROMPT.txt",
+      "sha256": "52c542d944c4a98933642535872d51894bfc3a72cd029e551fae804ad9544972",
+      "size_bytes": 2787
+    },
+    {
+      "path": "FORGE_BACKEND_PATCH_FROM_MAIN.diff",
+      "sha256": "08383a975abc88ccf5b837257c228bad5021909258ce2c6d62f8c38852a010bf",
+      "size_bytes": 69347
+    },
+    {
+      "path": "READ_ME_FIRST.md",
+      "sha256": "dbfd71783b5173ada7dc2da18e5e823ad7cfb1be25102017a782c5b0cfea4b35",
+      "size_bytes": 6425
+    },
+    {
+      "path": "assets/expected_git_main.json",
+      "sha256": "78510f854b75dbca34b156e8382ba5235609eab396536e3acd07062fe5baa95c",
+      "size_bytes": 461
+    },
+    {
+      "path": "assets/forge_new_feature_styles.css",
+      "sha256": "6b9e2162ed97d5d5ccbfd120a3efa64f4667e379499e45dd5445d57a4eb5873f",
+      "size_bytes": 10375
+    },
+    {
+      "path": "assets/forge_ui_features.js",
+      "sha256": "c42e7b046b7ab964d02be599334ee57c4688ef34ee94c8773a71e096578ac4f8",
+      "size_bytes": 18265
+    },
+    {
+      "path": "assets/source_reference/src/discover.mjs",
+      "sha256": "e7a1b77fc3cf5460d5d81a8641897b8f10e4b0b48af5c4cc2d1c2035f592ff59",
+      "size_bytes": 7597
+    },
+    {
+      "path": "assets/source_reference/src/payouts.mjs",
+      "sha256": "a365b58ee747a11b3b46b7cb384b95be3fa04a6d78fdf60e3f3614c9b892a223",
+      "size_bytes": 10113
+    },
+    {
+      "path": "assets/source_reference/src/quickpost.mjs",
+      "sha256": "6bfdf4438b75f62abb31a7a018b9375d4e46c65a3381bd695aa2b6b1b64f446f",
+      "size_bytes": 6282
+    },
+    {
+      "path": "assets/source_reference/tests/discover.test.mjs",
+      "sha256": "2279e5eeea6d2ca3f40577e0f4ce400a06fef81e755189f56f8c508cb78557ba",
+      "size_bytes": 7794
+    },
+    {
+      "path": "assets/source_reference/tests/payouts.test.mjs",
+      "sha256": "9ff33d2abc26af52cf662ba12bcc61bcb6c21c18529c522ae28e4d96deb14f72",
+      "size_bytes": 12991
+    },
+    {
+      "path": "assets/source_reference/tests/quickpost.test.mjs",
+      "sha256": "5f71386ae4036120ac0db3ee5d04c81dc93e71cc4d3123b926665cb17902fcbb",
+      "size_bytes": 6181
+    },
+    {
+      "path": "install_handoff.py",
+      "sha256": "2a49353289b97db077cb7556374dbb404c5f570ca2db8d8842ff892802cf8461",
+      "size_bytes": 8076
+    },
+    {
+      "path": "tests/browser-smoke-results.json",
+      "sha256": "ea0011181e5bc96902117ffe535ac9a9f84249196aad40da77019d019cac65e3",
+      "size_bytes": 802
+    },
+    {
+      "path": "tests/independent-check-results.json",
+      "sha256": "89581fc4e144c60db64bfd5561e8500470a30d89c6187666e3cd9309ce47ae3a",
+      "size_bytes": 3201
+    },
+    {
+      "path": "tests/offline_browser_smoke.py",
+      "sha256": "b56f38d068f91228948e73682fbf186288b651ee2895d2a04d0593b413d7e439",
+      "size_bytes": 5244
+    },
+    {
+      "path": "tests/smoke-buyer-desktop.png",
+      "sha256": "ed49471bd185964ec0d4641e435fcbefddf68273e7f231fe133d4051c076f71b",
+      "size_bytes": 164179
+    },
+    {
+      "path": "tests/smoke-buyer-mobile.png",
+      "sha256": "1d415443666a0cf29163fe808213532bf12deaa5f81852fe49d941e5848a8055",
+      "size_bytes": 117471
+    },
+    {
+      "path": "tests/smoke-worker-desktop.png",
+      "sha256": "3f104687a703e65f7fb032ca7b62ab6a036870f65116cb21f218882138afd8a4",
+      "size_bytes": 303209
+    },
+    {
+      "path": "tests/smoke-worker-mobile.png",
+      "sha256": "5c84e4c7de53f9671518eb729c57d4eef1e7c504a17b12610c01d98b213d97b5",
+      "size_bytes": 161121
+    }
+  ]
+}

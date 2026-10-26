@@ -1,0 +1,34 @@
+[
+  {
+    "device": "desktop",
+    "role": "worker",
+    "status": "PASS",
+    "scope": "Mocked browser JS and CSS, no real HTTP/payment",
+    "noPageErrors": true,
+    "noHorizontalOverflow": true
+  },
+  {
+    "device": "mobile",
+    "role": "worker",
+    "status": "PASS",
+    "scope": "Mocked browser JS and CSS, no real HTTP/payment",
+    "noPageErrors": true,
+    "noHorizontalOverflow": true
+  },
+  {
+    "device": "desktop",
+    "role": "buyer",
+    "status": "PASS",
+    "scope": "Mocked browser JS and CSS, no real HTTP/payment",
+    "noPageErrors": true,
+    "noHorizontalOverflow": true
+  },
+  {
+    "device": "mobile",
+    "role": "buyer",
+    "status": "PASS",
+    "scope": "Mocked browser JS and CSS, no real HTTP/payment",
+    "noPageErrors": true,
+    "noHorizontalOverflow": true
+  }
+]
