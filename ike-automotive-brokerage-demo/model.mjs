@@ -362,6 +362,65 @@ export function defaultLeaseTierMatrix() {
   ];
 }
 
+export function defaultLeaseLenderProfiles() {
+  return [
+    {
+      id: "LNX",
+      name: "Luxe National Auto Finance",
+      region: "Northeast",
+      programs: [
+        {
+          id: "LNX-36-10",
+          label: "2026 Core Lease · 36m / 10k",
+          termMonths: 36,
+          annualMileage: 10000,
+          residualPct: 61,
+          acquisitionFee: 895,
+          tierBuyRates: { T1: 0.0012, T2: 0.00145, T3: 0.00185, T4: 0.00235, T5: 0.0029 },
+          notes: "Balanced monthly profile for core sedans/SUVs.",
+        },
+        {
+          id: "LNX-39-12",
+          label: "2026 Extended Lease · 39m / 12k",
+          termMonths: 39,
+          annualMileage: 12000,
+          residualPct: 58,
+          acquisitionFee: 895,
+          tierBuyRates: { T1: 0.00125, T2: 0.00152, T3: 0.00195, T4: 0.00245, T5: 0.00305 },
+          notes: "Lower payment pressure, weaker residual profile.",
+        },
+      ],
+    },
+    {
+      id: "MSA",
+      name: "Metro Signature Auto Credit",
+      region: "Tri-State",
+      programs: [
+        {
+          id: "MSA-24-10",
+          label: "Promo Lease · 24m / 10k",
+          termMonths: 24,
+          annualMileage: 10000,
+          residualPct: 68,
+          acquisitionFee: 995,
+          tierBuyRates: { T1: 0.00105, T2: 0.0013, T3: 0.0017, T4: 0.00215, T5: 0.00265 },
+          notes: "Short-term promo with stronger residual and tighter MF.",
+        },
+        {
+          id: "MSA-36-15",
+          label: "High Mileage Lease · 36m / 15k",
+          termMonths: 36,
+          annualMileage: 15000,
+          residualPct: 56,
+          acquisitionFee: 995,
+          tierBuyRates: { T1: 0.00128, T2: 0.00156, T3: 0.00198, T4: 0.00248, T5: 0.0031 },
+          notes: "Mileage-heavy profile with lower residual carry.",
+        },
+      ],
+    },
+  ];
+}
+
 export function defaultLeaseDeskInputs() {
   return {
     creditScore: 725,
@@ -380,6 +439,8 @@ export function defaultLeaseDeskInputs() {
     salesTaxRatePct: 6.625,
     taxOnMonthlyPayment: true,
     firstPaymentDueAtSigning: true,
+    programName: "",
+    programTierBuyRates: null,
   };
 }
 
@@ -446,7 +507,11 @@ function computeLeaseWithTier(inputs, tier) {
   const totalFees = roundMoney(acqFee + docFee + regFee);
   const residualPct = clampPct(baseResidualPct + (tier?.residualAdjPct || 0), 5, 95);
   const residualValue = roundMoney(msrp * (residualPct / 100));
-  const buyRateMF = clampMF(tier?.buyRateMF || 0);
+  const programTierRate =
+    tier && inputs.programTierBuyRates && Number.isFinite(Number(inputs.programTierBuyRates[tier.id]))
+      ? Number(inputs.programTierBuyRates[tier.id])
+      : null;
+  const buyRateMF = clampMF(programTierRate !== null ? programTierRate : tier?.buyRateMF || 0);
   const moneyFactor = clampMF(buyRateMF + mfMarkup);
   const grossCapCost = roundMoney(sellingPrice + (rollFees ? totalFees : 0));
   const adjustedCapCost = roundMoney(Math.max(0, grossCapCost - incentives - capReduction));
@@ -495,6 +560,7 @@ function computeLeaseWithTier(inputs, tier) {
       buyRateMF,
       mfMarkup,
       moneyFactor,
+      mfSource: programTierRate !== null ? "Program tier buy rate" : "Tier matrix buy rate",
       taxRate,
       taxOnMonthly,
       firstPaymentDue,
@@ -532,6 +598,22 @@ export function calculateLeaseDesk(rawInputs, rawTiers = defaultLeaseTierMatrix(
     tiers,
     selectedTier: tier,
     ...result,
+  };
+}
+
+export function findLeaseProgram(
+  profileId,
+  programId,
+  profiles = defaultLeaseLenderProfiles()
+) {
+  const selectedProfile = (profiles || []).find((profile) => profile.id === profileId);
+  if (!selectedProfile) return { profile: null, program: null };
+  const selectedProgram = (selectedProfile.programs || []).find(
+    (program) => program.id === programId
+  );
+  return {
+    profile: selectedProfile,
+    program: selectedProgram || null,
   };
 }
 
@@ -795,6 +877,9 @@ export function initialDemoState() {
     desking: {
       inputs: defaultLeaseDeskInputs(),
       tiers: defaultLeaseTierMatrix(),
+      lenderProfiles: defaultLeaseLenderProfiles(),
+      selectedProfileId: "LNX",
+      selectedProgramId: "LNX-36-10",
     },
     customerIntakeDefaults: {
       name: "Alex Sample",

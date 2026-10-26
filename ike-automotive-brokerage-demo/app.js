@@ -10,6 +10,7 @@ import {
   createCaseFromIntake,
   createLeadFromWebsite,
   currency,
+  findLeaseProgram,
   initialDemoState,
   leaseTierScenarios,
   normalizeQuote,
@@ -61,6 +62,13 @@ function loadState() {
         tiers: Array.isArray(parsed.desking?.tiers)
           ? parsed.desking.tiers
           : seed.desking.tiers,
+        lenderProfiles: Array.isArray(parsed.desking?.lenderProfiles)
+          ? parsed.desking.lenderProfiles
+          : seed.desking.lenderProfiles,
+        selectedProfileId:
+          parsed.desking?.selectedProfileId || seed.desking.selectedProfileId,
+        selectedProgramId:
+          parsed.desking?.selectedProgramId || seed.desking.selectedProgramId,
       },
       customerIntakeDefaults: {
         ...seed.customerIntakeDefaults,
@@ -601,8 +609,21 @@ function renderMarketing() {
 }
 
 function renderLeaseDesk() {
-  const deskReport = calculateLeaseDesk(state.desking?.inputs || {}, state.desking?.tiers || []);
-  const scenarios = leaseTierScenarios(state.desking?.inputs || {}, state.desking?.tiers || []);
+  const profiles = state.desking?.lenderProfiles || [];
+  const selectedProfileId = state.desking?.selectedProfileId || "";
+  const selectedProgramId = state.desking?.selectedProgramId || "";
+  const { profile: selectedProfile, program: selectedProgram } = findLeaseProgram(
+    selectedProfileId,
+    selectedProgramId,
+    profiles
+  );
+  const deskInputs = {
+    ...(state.desking?.inputs || {}),
+    programName: selectedProgram?.label || "",
+    programTierBuyRates: selectedProgram?.tierBuyRates || null,
+  };
+  const deskReport = calculateLeaseDesk(deskInputs, state.desking?.tiers || []);
+  const scenarios = leaseTierScenarios(deskInputs, state.desking?.tiers || []);
   const assumptions = deskReport.assumptions;
   const totals = deskReport.totals;
   const selectedTier = deskReport.selectedTier;
@@ -616,6 +637,42 @@ function renderLeaseDesk() {
     <div class="warning-box">
       Demo boundaries: this tool does not submit deals, pull credit, or represent lender approval. Values are internal planning outputs only.
     </div>
+
+    <section class="card" style="margin-top:14px">
+      <h3>Lender profile and program presets</h3>
+      <p class="muted">Select a lender profile and program to prefill term/mileage/residual/acquisition assumptions and tier buy-rate references.</p>
+      <div class="grid-3">
+        <label>Lender profile
+          <select id="deskLenderProfile">
+            ${profiles
+              .map(
+                (profile) =>
+                  `<option value="${esc(profile.id)}" ${profile.id === selectedProfileId ? "selected" : ""}>${esc(profile.name)} (${esc(profile.region || "Region N/A")})</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <label>Lender program
+          <select id="deskLenderProgram">
+            ${(selectedProfile?.programs || [])
+              .map(
+                (program) =>
+                  `<option value="${esc(program.id)}" ${program.id === selectedProgramId ? "selected" : ""}>${esc(program.label)}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <div class="desk-actions">
+          <button type="button" class="secondary-btn" id="deskApplyProgram">Apply program preset</button>
+          <button type="button" class="primary-btn" id="deskPrintSheet">Print desk sheet</button>
+        </div>
+      </div>
+      ${
+        selectedProgram
+          ? `<p class="muted" style="margin-top:8px"><strong>Program notes:</strong> ${esc(selectedProgram.notes || "No notes")} · Buy-rate source for active tier: ${esc(assumptions.mfSource)}</p>`
+          : `<p class="muted" style="margin-top:8px">No program selected. Tier matrix rates will drive buy-rate MF.</p>`
+      }
+    </section>
 
     <section class="card" style="margin-top:14px">
       <h3>Lease deal assumptions</h3>
@@ -653,6 +710,9 @@ function renderLeaseDesk() {
           </label>
           <label>Base residual (%)
             <input name="baseResidualPct" type="number" min="1" max="95" step="0.1" value="${esc(state.desking.inputs.baseResidualPct)}">
+          </label>
+          <label>Base buy-rate MF (active tier source)
+            <input name="programBuyRateDisplay" value="${esc(assumptions.buyRateMF.toFixed(5))}" readonly>
           </label>
           <label>MF markup (decimal)
             <input name="mfMarkup" type="number" min="0" step="0.00001" value="${esc(state.desking.inputs.mfMarkup)}">
@@ -715,6 +775,7 @@ function renderLeaseDesk() {
       ${kpi("Active tier", selectedTier ? `${selectedTier.name} (>=${selectedTier.minScore})` : "N/A")}
       ${kpi("Residual value", currency(totals.residualValue))}
       ${kpi("Adjusted cap cost", currency(totals.adjustedCapCost))}
+      ${kpi("Buy-rate source", assumptions.mfSource)}
       ${kpi("Money factor", assumptions.moneyFactor.toFixed(5))}
       ${kpi("APR estimate", `${totals.aprEstimatePct.toFixed(2)}%`)}
       ${kpi("Base monthly", currency(totals.baseMonthly))}
@@ -1671,6 +1732,67 @@ function bindEconomics() {
 }
 
 function bindDesk() {
+  const profileSelect = document.getElementById("deskLenderProfile");
+  const programSelect = document.getElementById("deskLenderProgram");
+  const applyProgramButton = document.getElementById("deskApplyProgram");
+  const printButton = document.getElementById("deskPrintSheet");
+
+  profileSelect?.addEventListener("change", () => {
+    mutate((next) => {
+      next.desking.selectedProfileId = profileSelect.value;
+      const profile = (next.desking.lenderProfiles || []).find(
+        (item) => item.id === profileSelect.value
+      );
+      next.desking.selectedProgramId = profile?.programs?.[0]?.id || "";
+    });
+  });
+
+  programSelect?.addEventListener("change", () => {
+    mutate((next) => {
+      next.desking.selectedProgramId = programSelect.value;
+    });
+  });
+
+  applyProgramButton?.addEventListener("click", () => {
+    mutate((next) => {
+      const { program } = findLeaseProgram(
+        next.desking.selectedProfileId,
+        next.desking.selectedProgramId,
+        next.desking.lenderProfiles || []
+      );
+      if (!program) return;
+      next.desking.inputs = {
+        ...next.desking.inputs,
+        termMonths: Number(program.termMonths) || next.desking.inputs.termMonths,
+        annualMileage: Number(program.annualMileage) || next.desking.inputs.annualMileage,
+        baseResidualPct: Number(program.residualPct) || next.desking.inputs.baseResidualPct,
+        acquisitionFee: Number(program.acquisitionFee) || next.desking.inputs.acquisitionFee,
+      };
+    });
+    setFlash("Lender program preset applied to desk assumptions.", "ok");
+  });
+
+  printButton?.addEventListener("click", () => {
+    const inputs = {
+      ...(state.desking?.inputs || {}),
+      programTierBuyRates: (() => {
+        const { program } = findLeaseProgram(
+          state.desking?.selectedProfileId,
+          state.desking?.selectedProgramId,
+          state.desking?.lenderProfiles || []
+        );
+        return program?.tierBuyRates || null;
+      })(),
+    };
+    const report = calculateLeaseDesk(inputs, state.desking?.tiers || []);
+    const { profile, program } = findLeaseProgram(
+      state.desking?.selectedProfileId,
+      state.desking?.selectedProgramId,
+      state.desking?.lenderProfiles || []
+    );
+    printDeskSheet(report, profile, program);
+  });
+
   const form = document.getElementById("leaseDeskForm");
   if (form) {
     form.addEventListener("change", () => {
@@ -1720,6 +1842,80 @@ function bindDesk() {
       });
     });
   });
+}
+
+function printDeskSheet(report, profile, program) {
+  const win = window.open("", "_blank", "width=1024,height=900");
+  if (!win) {
+    setFlash("Pop-up blocked. Allow pop-ups to print the desk sheet.", "error");
+    return;
+  }
+  const tier = report.selectedTier;
+  win.document.write(`<!doctype html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <title>IAG Lease Desk Sheet</title>
+    <style>
+      body { font-family: Inter, Arial, sans-serif; color:#12243b; margin:24px; }
+      h1 { margin:0; font-size:28px; letter-spacing:-0.03em; }
+      h2 { margin:20px 0 8px; font-size:18px; }
+      .muted { color:#4d5f79; }
+      .row { display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; }
+      .kpi { border:1px solid #d6e0ed; border-radius:10px; padding:10px; min-width:180px; }
+      .kpi span { display:block; font-size:12px; color:#5b6f89; }
+      .kpi strong { font-size:20px; }
+      table { width:100%; border-collapse:collapse; margin-top:8px; }
+      th, td { border-bottom:1px solid #e7edf6; text-align:left; padding:7px; font-size:13px; }
+      th { background:#f4f8ff; }
+      .warn { border:1px solid #f0d8a8; background:#fff9ec; border-radius:10px; padding:10px; margin-top:16px; color:#6f5519;}
+      @media print { body { margin: 12mm; } .noprint { display:none; } }
+    </style>
+  </head>
+  <body>
+    <h1>IKE Automotive Group — Lease Desk Sheet</h1>
+    <p class="muted">Generated: ${new Date().toLocaleString()}</p>
+    <p><strong>Lender:</strong> ${esc(profile?.name || "Not selected")} · <strong>Program:</strong> ${esc(program?.label || "Not selected")}</p>
+    <p><strong>Active Tier:</strong> ${esc(tier?.name || "N/A")} (score >= ${esc(tier?.minScore ?? "N/A")})</p>
+
+    <div class="row">
+      <div class="kpi"><span>Monthly payment</span><strong>${currency(report.totals.monthlyPayment)}</strong></div>
+      <div class="kpi"><span>Drive-off due</span><strong>${currency(report.totals.driveOff)}</strong></div>
+      <div class="kpi"><span>Residual value</span><strong>${currency(report.totals.residualValue)}</strong></div>
+      <div class="kpi"><span>Money factor</span><strong>${report.assumptions.moneyFactor.toFixed(5)}</strong></div>
+      <div class="kpi"><span>APR estimate</span><strong>${report.totals.aprEstimatePct.toFixed(2)}%</strong></div>
+    </div>
+
+    <h2>Deal assumptions</h2>
+    <table>
+      <tbody>
+        <tr><th>MSRP</th><td>${currency(report.assumptions.msrp)}</td><th>Selling price</th><td>${currency(report.assumptions.sellingPrice)}</td></tr>
+        <tr><th>Incentives</th><td>${currency(report.assumptions.incentives)}</td><th>Cap reduction</th><td>${currency(report.assumptions.capReduction)}</td></tr>
+        <tr><th>Term</th><td>${report.assumptions.termMonths} months</td><th>Annual mileage</th><td>${report.assumptions.annualMileage.toLocaleString()}</td></tr>
+        <tr><th>Residual %</th><td>${report.assumptions.residualPct.toFixed(2)}%</td><th>Tax rate</th><td>${report.assumptions.taxRate.toFixed(3)}%</td></tr>
+        <tr><th>Buy-rate source</th><td>${esc(report.assumptions.mfSource)}</td><th>Buy-rate MF</th><td>${report.assumptions.buyRateMF.toFixed(5)}</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Payment math</h2>
+    <table>
+      <tbody>
+        <tr><th>Depreciation charge</th><td>${currency(report.totals.depreciationCharge)}</td><th>Rent charge</th><td>${currency(report.totals.rentCharge)}</td></tr>
+        <tr><th>Base monthly</th><td>${currency(report.totals.baseMonthly)}</td><th>Tax / month</th><td>${currency(report.totals.monthlyTax)}</td></tr>
+        <tr><th>Lease total</th><td>${currency(report.totals.leaseTotal)}</td><th>Cost per mile</th><td>${currency(report.totals.effectiveCostPerMile)}</td></tr>
+      </tbody>
+    </table>
+
+    ${
+      report.warnings.length
+        ? `<div class="warn"><strong>Warnings:</strong><ul>${report.warnings.map((warning) => `<li>${esc(warning)}</li>`).join("")}</ul></div>`
+        : ""
+    }
+
+    <p class="muted" style="margin-top:18px;">Internal estimate only. Not lender approval, not legal/financial advice, and not a customer contract.</p>
+    <button class="noprint" onclick="window.print()">Print</button>
+  </body></html>`);
+  win.document.close();
 }
 
 function bindMarketing() {

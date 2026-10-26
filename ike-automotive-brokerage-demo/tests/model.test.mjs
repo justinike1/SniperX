@@ -4,10 +4,12 @@ import {
   arithmeticScenarios,
   buildQuoteComparison,
   calculateLeaseDesk,
+  defaultLeaseLenderProfiles,
   calculateMarketingSnapshot,
   calculateEconomics,
   createCaseFromIntake,
   createLeadFromWebsite,
+  findLeaseProgram,
   initialDemoState,
   leaseTierScenarios,
   sanitizeReadinessItem,
@@ -218,4 +220,32 @@ test("lease tier scenarios return sorted tier outputs", () => {
   assert.equal(rows[0].tier.name, "Tier 1");
   assert.equal(rows[1].tier.name, "Tier 2");
   assert.ok(rows[0].monthlyPayment < rows[2].monthlyPayment);
+});
+
+test("lender profiles expose programs and findLeaseProgram resolves selection", () => {
+  const profiles = defaultLeaseLenderProfiles();
+  assert.ok(profiles.length >= 2);
+  const { profile, program } = findLeaseProgram("LNX", "LNX-36-10", profiles);
+  assert.equal(profile.name.includes("Luxe"), true);
+  assert.equal(program.termMonths, 36);
+  assert.ok(program.tierBuyRates.T1 > 0);
+});
+
+test("lease desk uses selected program tier buy-rate override when provided", () => {
+  const report = calculateLeaseDesk(
+    {
+      creditScore: 770,
+      msrp: 50000,
+      sellingPrice: 47000,
+      termMonths: 36,
+      annualMileage: 10000,
+      baseResidualPct: 60,
+      mfMarkup: 0.0001,
+      programTierBuyRates: { T1: 0.00111 },
+    },
+    [{ id: "T1", name: "Tier 1", minScore: 760, buyRateMF: 0.0015, residualAdjPct: 0 }]
+  );
+  assert.equal(report.assumptions.buyRateMF, 0.00111);
+  assert.equal(report.assumptions.moneyFactor, 0.00121);
+  assert.equal(report.assumptions.mfSource, "Program tier buy rate");
 });

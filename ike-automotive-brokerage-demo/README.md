@@ -21,6 +21,8 @@ It does **not** create real customer records, dealer outreach, payments, credit 
   - residual, money factor, APR-estimate, cap-cost, and payment calculations
   - editable credit-tier matrix (`min score`, `buy-rate MF`, `residual adjustment`)
   - tier scenario comparison for payment sensitivity
+  - lender profile + program presets (term/mileage/residual/acquisition + tier buy-rate grids)
+  - print-ready desk sheet export for internal quote walkthroughs
   - explicit warning flags for high MF / low residual / risky cap reduction assumptions
 - Customer-facing demo page with:
   - persistent pre-launch/demo notice
